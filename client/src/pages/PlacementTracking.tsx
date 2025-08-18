@@ -18,9 +18,26 @@ import { apiRequest, queryClient as appQueryClient } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/useAuth";
 import { 
   TrendingUp, Calendar, Users, PlayCircle, BarChart3, Download, ExternalLink, Podcast as PodcastIcon, 
-  Eye, Share2, MessageSquare, Search, Filter, Plus, Edit, CheckCircle, Clock, AlertCircle, Check, X, Trash2, AlertTriangle
+  Eye, Share2, MessageSquare, Search, Filter, Plus, Edit, CheckCircle, Clock, AlertCircle, Check, X, Trash2, AlertTriangle, ChevronLeft, ChevronRight, History
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 // --- Interfaces (align with backend schemas) ---
 interface Placement { // Matches PlacementInDB from backend
@@ -84,16 +101,31 @@ type PlacementFormData = z.infer<typeof placementFormSchema>;
 
 
 const statusConfig: Record<string, { label: string; icon: React.ElementType; color: string; dotColor: string }> = {
-  pending: { label: "Pending", icon: Clock, color: "bg-gray-100 text-gray-700", dotColor: "bg-gray-500" },
-  responded: { label: "Responded", icon: MessageSquare, color: "bg-blue-100 text-blue-800", dotColor: "bg-blue-500" },
-  interested: { label: "Interested", icon: Eye, color: "bg-teal-100 text-teal-800", dotColor: "bg-teal-500" },
-  form_submitted: { label: "Form Submitted", icon: CheckCircle, color: "bg-cyan-100 text-cyan-800", dotColor: "bg-cyan-500" },
-  meeting_booked: { label: "Meeting Booked", icon: Calendar, color: "bg-purple-100 text-purple-800", dotColor: "bg-purple-500" },
+  // Initial stages
+  initial_reply: { label: "Initial Reply", icon: MessageSquare, color: "bg-blue-100 text-blue-800", dotColor: "bg-blue-500" },
+  in_discussion: { label: "In Discussion", icon: MessageSquare, color: "bg-yellow-100 text-yellow-800", dotColor: "bg-yellow-500" },
+  
+  // Interest/Confirmation stages
+  confirmed_interest: { label: "Confirmed Interest", icon: Eye, color: "bg-teal-100 text-teal-800", dotColor: "bg-teal-500" },
+  confirmed: { label: "Confirmed", icon: CheckCircle, color: "bg-cyan-100 text-cyan-800", dotColor: "bg-cyan-500" },
+  
+  // Scheduling stages
+  scheduling: { label: "Scheduling", icon: Calendar, color: "bg-purple-100 text-purple-800", dotColor: "bg-purple-500" },
+  scheduled: { label: "Scheduled", icon: Calendar, color: "bg-indigo-100 text-indigo-800", dotColor: "bg-indigo-500" },
   recording_booked: { label: "Recording Booked", icon: Calendar, color: "bg-indigo-100 text-indigo-800", dotColor: "bg-indigo-500" },
+  
+  // Production stages
   recorded: { label: "Recorded", icon: PlayCircle, color: "bg-pink-100 text-pink-800", dotColor: "bg-pink-500" },
   live: { label: "Live", icon: ExternalLink, color: "bg-green-100 text-green-800", dotColor: "bg-green-500" },
   paid: { label: "Paid", icon: CheckCircle, color: "bg-emerald-100 text-emerald-800", dotColor: "bg-emerald-500" },
+  
+  // Other statuses
+  needs_info: { label: "Needs Info", icon: AlertCircle, color: "bg-orange-100 text-orange-800", dotColor: "bg-orange-500" },
+  declined: { label: "Declined", icon: X, color: "bg-red-100 text-red-800", dotColor: "bg-red-500" },
+  cancelled: { label: "Cancelled", icon: X, color: "bg-gray-100 text-gray-700", dotColor: "bg-gray-500" },
   rejected: { label: "Rejected", icon: X, color: "bg-red-100 text-red-800", dotColor: "bg-red-500" },
+  
+  // Default fallback
   default: { label: "Unknown", icon: AlertCircle, color: "bg-gray-100 text-gray-700", dotColor: "bg-gray-400" },
 };
 
@@ -274,12 +306,116 @@ function PlacementFormDialog({
 }
 
 
+// --- Status Change Dialog ---
+function StatusChangeDialog({ 
+  placement, 
+  open, 
+  onOpenChange, 
+  onSuccess 
+}: { 
+  placement: Placement | null;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onSuccess: () => void;
+}) {
+  const [newStatus, setNewStatus] = useState(placement?.current_status || 'pending');
+  const [notes, setNotes] = useState('');
+  const { toast } = useToast();
+  
+  const mutation = useMutation({
+    mutationFn: async () => {
+      if (!placement) return;
+      return apiRequest('PUT', `/placements/${placement.placement_id}`, {
+        current_status: newStatus,
+        notes: placement.notes ? `${placement.notes}\n\n[Status Change Note]: ${notes}` : notes
+      });
+    },
+    onSuccess: () => {
+      toast({ 
+        title: "Status Updated", 
+        description: `Placement status changed to ${statusConfig[newStatus]?.label || newStatus}. This change has been logged in the status history.` 
+      });
+      onOpenChange(false);
+      onSuccess();
+      setNotes('');
+    },
+    onError: (error: any) => {
+      toast({ 
+        title: "Error", 
+        description: error.message || "Failed to update status.", 
+        variant: "destructive" 
+      });
+    }
+  });
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Change Placement Status</DialogTitle>
+          <DialogDescription>
+            Update the status for {placement?.media_name || 'this placement'}. This will be tracked in the status history.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4 py-4">
+          <div className="space-y-2">
+            <label className="text-sm font-medium">New Status</label>
+            <Select value={newStatus} onValueChange={setNewStatus}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {Object.entries(statusConfig)
+                  .filter(([key]) => key !== 'default')
+                  .map(([key, config]) => (
+                    <SelectItem key={key} value={key}>
+                      <div className="flex items-center">
+                        <config.icon className="w-4 h-4 mr-2" />
+                        {config.label}
+                      </div>
+                    </SelectItem>
+                  ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Notes (Optional)</label>
+            <Textarea
+              placeholder="Add any notes about this status change..."
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              rows={3}
+            />
+          </div>
+          <div className="flex items-center text-sm text-muted-foreground">
+            <History className="w-4 h-4 mr-2" />
+            This change will be recorded in the placement's status history
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
+          <Button onClick={() => mutation.mutate()} disabled={mutation.isPending}>
+            {mutation.isPending ? "Updating..." : "Update Status"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 // --- Placement Table ---
-function PlacementTable({ placements, onEdit, onDelete, userRole }: { 
-    placements: Placement[]; 
-    onEdit: (placement: Placement) => void;
-    onDelete: (placementId: number) => void;
-    userRole?: string | null;
+function PlacementTable({ 
+  placements, 
+  onEdit, 
+  onDelete, 
+  onStatusChange,
+  userRole 
+}: { 
+  placements: Placement[]; 
+  onEdit: (placement: Placement) => void;
+  onDelete: (placementId: number) => void;
+  onStatusChange: (placement: Placement) => void;
+  userRole?: string | null;
 }) {
   return (
     <div className="border rounded-lg overflow-x-auto">
@@ -287,18 +423,22 @@ function PlacementTable({ placements, onEdit, onDelete, userRole }: {
         <TableHeader className="bg-gray-50">
           <TableRow>
             <TableHead>Podcast</TableHead>
-            <TableHead>Client</TableHead>
+            <TableHead>Client/Campaign</TableHead>
             <TableHead>Status</TableHead>
             <TableHead>Meeting</TableHead>
             <TableHead>Recording</TableHead>
             <TableHead>Go Live</TableHead>
             <TableHead>Episode Link</TableHead>
-            {userRole !== 'client' && <TableHead className="text-right">Actions</TableHead>}
+            <TableHead className="text-right">Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {placements.length === 0 && (
-            <TableRow><TableCell colSpan={userRole !== 'client' ? 8 : 7} className="text-center text-gray-500 py-4">No placements found.</TableCell></TableRow>
+            <TableRow>
+              <TableCell colSpan={8} className="text-center text-gray-500 py-8">
+                No placements found.
+              </TableCell>
+            </TableRow>
           )}
           {placements.map((placement) => {
             const currentStatusKey = placement.current_status || 'default';
@@ -307,36 +447,117 @@ function PlacementTable({ placements, onEdit, onDelete, userRole }: {
             return (
               <TableRow key={placement.placement_id} className="hover:bg-gray-50">
                 <TableCell>
-                    <div className="font-medium text-gray-900">{placement.media_name || `Media ID: ${placement.media_id}`}</div>
-                    {placement.media_website && <a href={placement.media_website} target="_blank" rel="noopener noreferrer" className="text-xs text-primary hover:underline">Website <ExternalLink className="inline h-3 w-3"/></a>}
+                  <div className="font-medium text-gray-900">
+                    {placement.media_name || `Media ID: ${placement.media_id}`}
+                  </div>
+                  {placement.media_website && (
+                    <a 
+                      href={placement.media_website} 
+                      target="_blank" 
+                      rel="noopener noreferrer" 
+                      className="text-xs text-primary hover:underline"
+                    >
+                      Website <ExternalLink className="inline h-3 w-3"/>
+                    </a>
+                  )}
                 </TableCell>
-                <TableCell className="text-sm text-gray-600">{placement.client_name || `Campaign ID: ${placement.campaign_id.substring(0,8)}...`}</TableCell>
                 <TableCell>
-                  <Badge className={`${config.color} font-medium text-xs`}>
-                    <StatusIcon className="w-3 h-3 mr-1.5" />
-                    {config.label}
-                  </Badge>
+                  <div className="text-sm">
+                    <div className="font-medium">{placement.client_name || 'Unknown Client'}</div>
+                    <div className="text-gray-500">{placement.campaign_name || 'No Campaign'}</div>
+                  </div>
+                </TableCell>
+                <TableCell>
+                  {userRole === 'client' ? (
+                    <Badge className={`${config.color} font-medium text-xs`}>
+                      <StatusIcon className="w-3 h-3 mr-1.5" />
+                      {config.label}
+                    </Badge>
+                  ) : (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="sm" className="h-auto p-0">
+                          <Badge className={`${config.color} font-medium text-xs cursor-pointer hover:opacity-80`}>
+                            <StatusIcon className="w-3 h-3 mr-1.5" />
+                            {config.label}
+                            <ChevronRight className="w-3 h-3 ml-1" />
+                          </Badge>
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="start">
+                        <DropdownMenuLabel>Change Status</DropdownMenuLabel>
+                        <DropdownMenuSeparator />
+                        {Object.entries(statusConfig)
+                          .filter(([key]) => key !== 'default' && key !== currentStatusKey)
+                          .map(([key, conf]) => (
+                            <DropdownMenuItem
+                              key={key}
+                              onClick={() => {
+                                const updatedPlacement = { ...placement, current_status: key };
+                                onStatusChange(updatedPlacement);
+                              }}
+                            >
+                              <conf.icon className="w-4 h-4 mr-2" />
+                              {conf.label}
+                            </DropdownMenuItem>
+                          ))}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  )}
                 </TableCell>
                 <TableCell>{placement.meeting_date ? new Date(placement.meeting_date + 'T00:00:00').toLocaleDateString() : "-"}</TableCell>
                 <TableCell>{placement.recording_date ? new Date(placement.recording_date + 'T00:00:00').toLocaleDateString() : "-"}</TableCell>
                 <TableCell>{placement.go_live_date ? new Date(placement.go_live_date + 'T00:00:00').toLocaleDateString() : "-"}</TableCell>
                 <TableCell>
                   {placement.episode_link ? (
-                    <a href={placement.episode_link} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline text-sm">
+                    <a 
+                      href={placement.episode_link} 
+                      target="_blank" 
+                      rel="noopener noreferrer" 
+                      className="text-primary hover:underline text-sm"
+                    >
                       <PlayCircle className="inline h-4 w-4 mr-1"/> Listen
                     </a>
                   ) : "-"}
                 </TableCell>
-                {userRole !== 'client' && (
-                    <TableCell className="text-right">
-                    <div className="flex items-center justify-end space-x-1">
-                        <Button size="sm" variant="outline" onClick={() => onEdit(placement)} title="Edit Placement"><Edit className="h-3 w-3" /></Button>
-                        {userRole === 'admin' && // Only admin can delete
-                            <Button size="sm" variant="destructive" onClick={() => onDelete(placement.placement_id)} title="Delete Placement"><Trash2 className="h-3 w-3" /></Button>
-                        }
-                    </div>
-                    </TableCell>
-                )}
+                <TableCell className="text-right">
+                  <div className="flex items-center justify-end space-x-1">
+                    {userRole !== 'client' && (
+                      <>
+                        <Button 
+                          size="sm" 
+                          variant="outline" 
+                          onClick={() => onEdit(placement)} 
+                          title="Edit Placement"
+                        >
+                          <Edit className="h-3 w-3" />
+                        </Button>
+                        {userRole === 'admin' && (
+                          <Button 
+                            size="sm" 
+                            variant="destructive" 
+                            onClick={() => onDelete(placement.placement_id)} 
+                            title="Delete Placement"
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                        )}
+                      </>
+                    )}
+                    {placement.episode_link && (
+                      <Button size="sm" variant="outline" asChild>
+                        <a 
+                          href={placement.episode_link} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          title="Open Episode"
+                        >
+                          <ExternalLink className="h-3 w-3" />
+                        </a>
+                      </Button>
+                    )}
+                  </div>
+                </TableCell>
               </TableRow>
             );
           })}
@@ -346,55 +567,6 @@ function PlacementTable({ placements, onEdit, onDelete, userRole }: {
   );
 }
 
-// --- Card View for Clients ---
-function ClientPlacementCard({ placement }: { placement: Placement }) {
-  const currentStatusKey = placement.current_status || 'default';
-  const config = statusConfig[currentStatusKey] || statusConfig.default;
-  const StatusIcon = config.icon;
-
-  const dates = [
-    { label: "Recording Date", date: placement.recording_date },
-    { label: "Go-Live Date", date: placement.go_live_date },
-  ].filter(d => d.date);
-
-  return (
-    <Card className="shadow-sm hover:shadow-md transition-shadow">
-      <CardHeader>
-        <div className="flex justify-between items-start">
-            <div>
-              <CardTitle className="text-lg">{placement.media_name}</CardTitle>
-              <CardDescription>Campaign: {placement.campaign_name}</CardDescription>
-            </div>
-            <Badge className={`${config.color} font-medium text-xs`}>
-              <StatusIcon className="w-3 h-3 mr-1.5" />
-              {config.label}
-            </Badge>
-        </div>
-      </CardHeader>
-      <CardContent className="space-y-3">
-        {dates.length > 0 && (
-            <div className="grid grid-cols-2 gap-4 text-sm">
-                {dates.map(d => (
-                    <div key={d.label}>
-                        <p className="font-medium text-gray-500">{d.label}</p>
-                        <p>{new Date(d.date + 'T00:00:00').toLocaleDateString()}</p>
-                    </div>
-                ))}
-            </div>
-        )}
-        {placement.episode_link && (
-            <div className="pt-3 border-t">
-                 <a href={placement.episode_link} target="_blank" rel="noopener noreferrer">
-                    <Button variant="outline" className="w-full">
-                        <PlayCircle className="h-4 w-4 mr-2"/> Listen to Episode
-                    </Button>
-                 </a>
-            </div>
-        )}
-      </CardContent>
-    </Card>
-  )
-}
 
 
 export default function PlacementTracking() {
@@ -403,6 +575,10 @@ export default function PlacementTracking() {
   const [campaignFilter, setCampaignFilter] = useState<string | "all">("all");
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingPlacement, setEditingPlacement] = useState<Placement | null>(null);
+  const [statusChangeDialogOpen, setStatusChangeDialogOpen] = useState(false);
+  const [placementForStatusChange, setPlacementForStatusChange] = useState<Placement | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 20;
 
   const { toast } = useToast();
   const tanstackQueryClient = useTanstackQueryClient();
@@ -411,11 +587,11 @@ export default function PlacementTracking() {
   const placementsQueryKey = ["/placements/", { 
     campaign_id: campaignFilter === "all" ? undefined : campaignFilter, 
     person_id: user?.role === 'client' ? user.person_id : undefined,
-    // page: currentPage, // Add if using pagination
-    // size: pageSize,    // Add if using pagination
+    page: currentPage,
+    size: pageSize,
   }];
 
-  const { data: placementsData, isLoading: isLoadingPlacements, error: placementsError } = useQuery<{items: Placement[], total: number}>({
+  const { data: placementsData, isLoading: isLoadingPlacements, error: placementsError } = useQuery<{items: Placement[], total: number, pages: number}>({
     queryKey: placementsQueryKey,
     queryFn: async ({ queryKey }) => {
         const params = queryKey[1] as any;
@@ -423,17 +599,18 @@ export default function PlacementTracking() {
         const queryParams = new URLSearchParams();
         if (params.campaign_id) queryParams.append("campaign_id", params.campaign_id);
         if (params.person_id) queryParams.append("person_id", params.person_id.toString());
-        // if (params.page) queryParams.append("page", params.page.toString());
-        // if (params.size) queryParams.append("size", params.size.toString());
+        if (params.page) queryParams.append("page", params.page.toString());
+        if (params.size) queryParams.append("size", params.size.toString());
         
         const response = await apiRequest("GET", url + queryParams.toString());
         if (!response.ok) throw new Error("Failed to fetch placements");
         return response.json();
     },
-    enabled: !authLoading && !!user, // Fetch only when user is loaded
+    enabled: !authLoading && !!user,
   });
   const placements = placementsData?.items || [];
   const totalPlacements = placementsData?.total || 0;
+  const totalPages = placementsData?.pages || 1;
 
   const campaignsQueryKey = ["clientCampaignsForFilter", user?.person_id, user?.role];
   const { data: campaignsForFilter = [], isLoading: isLoadingCampaignsForFilter } = useQuery<ClientCampaign[]>({
@@ -488,6 +665,16 @@ export default function PlacementTracking() {
     setIsFormOpen(true);
   };
 
+  const handleStatusChange = (placement: Placement) => {
+    setPlacementForStatusChange(placement);
+    setStatusChangeDialogOpen(true);
+  };
+
+  // Reset page when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, statusFilter, campaignFilter]);
+
   const filteredPlacements = placements.filter((placement: Placement) => {
     const searchTermLower = searchTerm.toLowerCase();
     const matchesSearch = 
@@ -502,8 +689,8 @@ export default function PlacementTracking() {
   const stats = {
     total: totalPlacements,
     paid: placements.filter((p: Placement) => p.current_status === 'paid').length,
-    totalReach: filteredPlacements.reduce((sum: number, p: Placement) => sum + (p.pitch_id || 0), 0), // Placeholder
-    averageReach: filteredPlacements.length > 0 ? filteredPlacements.reduce((sum: number, p: Placement) => sum + (p.pitch_id || 0), 0) / filteredPlacements.length : 0
+    live: placements.filter((p: Placement) => p.current_status === 'live').length,
+    scheduled: placements.filter((p: Placement) => ['scheduled', 'recording_booked'].includes(p.current_status || '')).length
   };
 
   if (authLoading) {
@@ -525,10 +712,50 @@ export default function PlacementTracking() {
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card><CardContent className="p-4"><div className="flex items-center justify-between"><div><p className="text-xs text-gray-500">Total Placements</p><p className="text-xl font-bold">{isLoadingPlacements ? <Skeleton className="h-6 w-12"/> : stats.total}</p></div><PodcastIcon className="h-6 w-6 text-gray-400" /></div></CardContent></Card>
-        <Card><CardContent className="p-4"><div className="flex items-center justify-between"><div><p className="text-xs text-gray-500">Paid/Completed</p><p className="text-xl font-bold text-green-600">{isLoadingPlacements ? <Skeleton className="h-6 w-12"/> : stats.paid}</p></div><CheckCircle className="h-6 w-6 text-green-400" /></div></CardContent></Card>
-        <Card><CardContent className="p-4"><div className="flex items-center justify-between"><div><p className="text-xs text-gray-500">Est. Total Reach</p><p className="text-xl font-bold text-blue-600">{isLoadingPlacements ? <Skeleton className="h-6 w-12"/> : stats.totalReach.toLocaleString()}</p></div><Users className="h-6 w-6 text-blue-400" /></div></CardContent></Card>
-        <Card><CardContent className="p-4"><div className="flex items-center justify-between"><div><p className="text-xs text-gray-500">Avg. Reach/Placement</p><p className="text-xl font-bold text-yellow-600">{isLoadingPlacements ? <Skeleton className="h-6 w-12"/> : stats.averageReach.toLocaleString(undefined, {maximumFractionDigits:0})}</p></div><TrendingUp className="h-6 w-6 text-yellow-400" /></div></CardContent></Card>
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs text-gray-500">Total Placements</p>
+                <p className="text-xl font-bold">{isLoadingPlacements ? <Skeleton className="h-6 w-12"/> : stats.total}</p>
+              </div>
+              <PodcastIcon className="h-6 w-6 text-gray-400" />
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs text-gray-500">Live Episodes</p>
+                <p className="text-xl font-bold text-green-600">{isLoadingPlacements ? <Skeleton className="h-6 w-12"/> : stats.live}</p>
+              </div>
+              <PlayCircle className="h-6 w-6 text-green-400" />
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs text-gray-500">Scheduled</p>
+                <p className="text-xl font-bold text-blue-600">{isLoadingPlacements ? <Skeleton className="h-6 w-12"/> : stats.scheduled}</p>
+              </div>
+              <Calendar className="h-6 w-6 text-blue-400" />
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs text-gray-500">Paid/Completed</p>
+                <p className="text-xl font-bold text-emerald-600">{isLoadingPlacements ? <Skeleton className="h-6 w-12"/> : stats.paid}</p>
+              </div>
+              <CheckCircle className="h-6 w-6 text-emerald-400" />
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       <Card>
@@ -601,23 +828,94 @@ export default function PlacementTracking() {
           <h3 className="text-lg font-medium text-gray-900">No placements found</h3>
           <p className="text-gray-600">Try adjusting your filters or search terms. {user?.role !== 'client' && "Or add a new placement."}</p>
         </div>
-      ) : user?.role === 'client' ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filteredPlacements.map(p => <ClientPlacementCard key={p.placement_id} placement={p} />)}
-        </div>
       ) : (
-        <div>
-          <div className="flex items-center justify-between mb-4">
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
             <p className="text-sm text-gray-600">
-              Showing {filteredPlacements.length} of {totalPlacements} placements
+              Showing {Math.min(pageSize, filteredPlacements.length)} of {totalPlacements} placements
             </p>
           </div>
           <PlacementTable 
             placements={filteredPlacements} 
             onEdit={handleEdit} 
             onDelete={handleDelete}
+            onStatusChange={handleStatusChange}
             userRole={user?.role}
           />
+          {totalPages > 1 && (
+            <div className="flex justify-center pt-4">
+              <Pagination>
+                <PaginationContent>
+                  <PaginationItem>
+                    <PaginationPrevious 
+                      onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                      className={currentPage === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                    />
+                  </PaginationItem>
+                  
+                  {/* Show first page */}
+                  <PaginationItem>
+                    <PaginationLink
+                      onClick={() => setCurrentPage(1)}
+                      isActive={currentPage === 1}
+                      className="cursor-pointer"
+                    >
+                      1
+                    </PaginationLink>
+                  </PaginationItem>
+                  
+                  {/* Show ellipsis if needed */}
+                  {currentPage > 3 && (
+                    <PaginationItem>
+                      <PaginationEllipsis />
+                    </PaginationItem>
+                  )}
+                  
+                  {/* Show pages around current page */}
+                  {Array.from({ length: totalPages }, (_, i) => i + 1)
+                    .filter(page => page > 1 && page < totalPages && Math.abs(page - currentPage) <= 1)
+                    .map(page => (
+                      <PaginationItem key={page}>
+                        <PaginationLink
+                          onClick={() => setCurrentPage(page)}
+                          isActive={currentPage === page}
+                          className="cursor-pointer"
+                        >
+                          {page}
+                        </PaginationLink>
+                      </PaginationItem>
+                    ))}
+                  
+                  {/* Show ellipsis if needed */}
+                  {currentPage < totalPages - 2 && (
+                    <PaginationItem>
+                      <PaginationEllipsis />
+                    </PaginationItem>
+                  )}
+                  
+                  {/* Show last page if more than 1 page */}
+                  {totalPages > 1 && (
+                    <PaginationItem>
+                      <PaginationLink
+                        onClick={() => setCurrentPage(totalPages)}
+                        isActive={currentPage === totalPages}
+                        className="cursor-pointer"
+                      >
+                        {totalPages}
+                      </PaginationLink>
+                    </PaginationItem>
+                  )}
+                  
+                  <PaginationItem>
+                    <PaginationNext 
+                      onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                      className={currentPage === totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                    />
+                  </PaginationItem>
+                </PaginationContent>
+              </Pagination>
+            </div>
+          )}
         </div>
       )}
 
@@ -634,6 +932,16 @@ export default function PlacementTracking() {
           mediaItems={mediaItemsForForm}
         />
       )}
+
+      <StatusChangeDialog
+        placement={placementForStatusChange}
+        open={statusChangeDialogOpen}
+        onOpenChange={setStatusChangeDialogOpen}
+        onSuccess={() => {
+          tanstackQueryClient.invalidateQueries({ queryKey: placementsQueryKey });
+          setPlacementForStatusChange(null);
+        }}
+      />
     </div>
   );
 }
