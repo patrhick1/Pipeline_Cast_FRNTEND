@@ -7,6 +7,7 @@ import { useAuth } from '@/hooks/useAuth';
 import PitchAnalyticsDashboard from '@/components/analytics/PitchAnalyticsDashboard';
 import PlacementAnalyticsDashboard from '@/components/analytics/PlacementAnalyticsDashboard';
 import { BarChart3, Target, TrendingUp, Calendar } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
 
 interface Campaign {
   id: string;
@@ -14,14 +15,28 @@ interface Campaign {
   client_name?: string;
 }
 
+interface AnalyticsSummary {
+  active_campaigns: number;
+  total_pitches_sent: number;
+  placements_secured: number;
+  upcoming_recordings: number;
+  pending_reviews: number;
+}
+
 export default function Analytics() {
   const { user } = useAuth();
   const [selectedCampaignId, setSelectedCampaignId] = useState<string>('all');
+  const [selectedDays, setSelectedDays] = useState<number>(30);
   
   // Fetch available campaigns
   const { data: campaigns } = useQuery<Campaign[]>({
     queryKey: ['/campaigns'],
     select: (data) => data || [],
+  });
+
+  // Fetch analytics summary (no parameters documented)
+  const { data: summary, isLoading: summaryLoading } = useQuery<AnalyticsSummary>({
+    queryKey: ['/analytics/summary'],
   });
 
   const isClient = user?.role?.toLowerCase() === 'client';
@@ -30,35 +45,55 @@ export default function Analytics() {
     <div className="container mx-auto px-4 py-8">
       {/* Page Header */}
       <div className="mb-8">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">Analytics & Insights</h1>
-            <p className="text-gray-600 mt-2">
-              Track your podcast outreach performance and placement metrics
-            </p>
+        <div className="flex flex-col gap-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900">Analytics & Insights</h1>
+              <p className="text-gray-600 mt-2">
+                Track your podcast outreach performance and placement metrics
+              </p>
+            </div>
           </div>
           
-          {/* Campaign Selector */}
-          {!isClient && campaigns && campaigns.length > 0 && (
-            <Select value={selectedCampaignId} onValueChange={setSelectedCampaignId}>
-              <SelectTrigger className="w-[250px]">
-                <SelectValue placeholder="Select a campaign" />
+          {/* Filters Row */}
+          <div className="flex gap-4 items-center">
+            {/* Date Range Selector */}
+            <Select value={selectedDays.toString()} onValueChange={(value) => setSelectedDays(Number(value))}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Select time range" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Campaigns</SelectItem>
-                {campaigns.map((campaign) => (
-                  <SelectItem key={campaign.id} value={campaign.id}>
-                    {campaign.name}
-                    {campaign.client_name && (
-                      <span className="text-gray-500 text-sm ml-2">
-                        ({campaign.client_name})
-                      </span>
-                    )}
-                  </SelectItem>
-                ))}
+                <SelectItem value="7">Last 7 days</SelectItem>
+                <SelectItem value="14">Last 14 days</SelectItem>
+                <SelectItem value="30">Last 30 days</SelectItem>
+                <SelectItem value="60">Last 60 days</SelectItem>
+                <SelectItem value="90">Last 90 days</SelectItem>
+                <SelectItem value="365">Last year</SelectItem>
               </SelectContent>
             </Select>
-          )}
+            
+            {/* Campaign Selector */}
+            {!isClient && campaigns && campaigns.length > 0 && (
+              <Select value={selectedCampaignId} onValueChange={setSelectedCampaignId}>
+                <SelectTrigger className="w-[250px]">
+                  <SelectValue placeholder="Select a campaign" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Campaigns</SelectItem>
+                  {campaigns.map((campaign) => (
+                    <SelectItem key={campaign.id} value={campaign.id}>
+                      {campaign.name}
+                      {campaign.client_name && (
+                        <span className="text-gray-500 text-sm ml-2">
+                          ({campaign.client_name})
+                        </span>
+                      )}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          </div>
         </div>
       </div>
 
@@ -90,7 +125,13 @@ export default function Analytics() {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">--</div>
+            <div className="text-2xl font-bold">
+              {summaryLoading ? (
+                <Skeleton className="h-8 w-16" />
+              ) : (
+                summary?.total_pitches_sent || 0
+              )}
+            </div>
           </CardContent>
         </Card>
 
@@ -104,7 +145,13 @@ export default function Analytics() {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">--</div>
+            <div className="text-2xl font-bold">
+              {summaryLoading ? (
+                <Skeleton className="h-8 w-16" />
+              ) : (
+                summary?.placements_secured || 0
+              )}
+            </div>
           </CardContent>
         </Card>
 
@@ -118,7 +165,13 @@ export default function Analytics() {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">--</div>
+            <div className="text-2xl font-bold">
+              {summaryLoading ? (
+                <Skeleton className="h-8 w-16" />
+              ) : (
+                summary?.upcoming_recordings || 0
+              )}
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -132,13 +185,15 @@ export default function Analytics() {
 
         <TabsContent value="pitches" className="space-y-6">
           <PitchAnalyticsDashboard 
-            campaignId={selectedCampaignId === 'all' ? undefined : selectedCampaignId} 
+            campaignId={selectedCampaignId === 'all' ? undefined : selectedCampaignId}
+            days={selectedDays}
           />
         </TabsContent>
 
         <TabsContent value="placements" className="space-y-6">
           <PlacementAnalyticsDashboard 
-            campaignId={selectedCampaignId === 'all' ? undefined : selectedCampaignId} 
+            campaignId={selectedCampaignId === 'all' ? undefined : selectedCampaignId}
+            days={selectedDays}
           />
         </TabsContent>
       </Tabs>

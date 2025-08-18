@@ -579,7 +579,7 @@ export default function CampaignDetail({ campaignIdParam }: CampaignDetailProps)
       queryKey: ["dashboardStats", campaignId],
       queryFn: async () => {
           if (!campaignId) return null;
-          const response = await apiRequest("GET", `/dashboard/stats?campaign_id=${campaignId}`);
+          const response = await apiRequest("GET", `/analytics/summary?campaign_id=${campaignId}`);
           if (!response.ok) {
               console.warn("Failed to fetch campaign-specific stats.");
               return null;

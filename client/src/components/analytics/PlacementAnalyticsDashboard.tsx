@@ -36,14 +36,19 @@ import type { PlacementMetrics, PlacementEvent } from '@/types/inbox';
 
 interface PlacementAnalyticsDashboardProps {
   campaignId?: string;
+  days?: number; // Optional days parameter for date filtering
 }
 
-export default function PlacementAnalyticsDashboard({ campaignId }: PlacementAnalyticsDashboardProps) {
-  // Fetch placement metrics
+export default function PlacementAnalyticsDashboard({ campaignId, days = 30 }: PlacementAnalyticsDashboardProps) {
+  // Fetch placement metrics - using the correct backend endpoints with days parameter
   const { data: metrics, isLoading } = useQuery<PlacementMetrics>({
-    queryKey: campaignId 
-      ? [`/api/campaigns/${campaignId}/placement-metrics`]
-      : ['/placements/metrics'],
+    queryKey: ['/placements/metrics', { campaign_id: campaignId, days }], // Single endpoint with optional filters
+  });
+
+  // Fetch monthly chart data
+  const { data: monthlyData } = useQuery({
+    queryKey: ['/placements/monthly-chart', { campaign_id: campaignId }], // Support campaign filter
+    select: (data: any[]) => data || [],
   });
 
   if (isLoading) {
@@ -239,13 +244,8 @@ export default function PlacementAnalyticsDashboard({ campaignId }: PlacementAna
                 <div className="h-[300px]">
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart
-                      data={[
-                        { month: 'Jan', placements: 12 },
-                        { month: 'Feb', placements: 15 },
-                        { month: 'Mar', placements: 18 },
-                        { month: 'Apr', placements: 22 },
-                        { month: 'May', placements: 20 },
-                        { month: 'Jun', placements: 25 },
+                      data={monthlyData && monthlyData.length > 0 ? monthlyData : [
+                        { month: 'No Data', placements: 0 }
                       ]}
                     >
                       <CartesianGrid strokeDasharray="3 3" />

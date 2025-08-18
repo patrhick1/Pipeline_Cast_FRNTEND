@@ -34,15 +34,20 @@ import type { PitchMetrics, CampaignMetrics } from '@/types/inbox';
 
 interface PitchAnalyticsDashboardProps {
   campaignId?: string;
+  days?: number; // Optional days parameter for date filtering
 }
 
-export default function PitchAnalyticsDashboard({ campaignId }: PitchAnalyticsDashboardProps) {
-  // Fetch metrics
+export default function PitchAnalyticsDashboard({ campaignId, days = 30 }: PitchAnalyticsDashboardProps) {
+  // Fetch metrics - using the correct backend endpoints with days parameter
   const { data: metrics, isLoading } = useQuery<CampaignMetrics | PitchMetrics>({
     queryKey: campaignId 
-      ? [`/api/campaigns/${campaignId}/metrics`]
-      : ['/pitches/metrics'],
+      ? [`/api/campaigns/${campaignId}/metrics`] // Campaign-specific metrics (no days param documented)
+      : ['/pitches/metrics', { campaign_id: campaignId, days }], // General pitch metrics with filters
   });
+
+  // Fetch timeline events if we have pitch data
+  // Note: This would need to be implemented per pitch or aggregated
+  // For now, we'll use the timeline_events from metrics if available
 
   if (isLoading) {
     return (

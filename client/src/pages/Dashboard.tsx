@@ -23,20 +23,31 @@ import RecentReplies from "@/components/dashboard/RecentReplies";
 // --- Interfaces to match backend dashboard_schemas.py ---
 interface DashboardStatsOverview {
   active_campaigns: number;
-  approved_placements: number;
+  total_pitches_sent: number;
+  placements_secured: number;
+  upcoming_recordings: number;
   pending_reviews: number;
-  success_rate_placements: number;
 }
 
 interface RecentPlacementItem {
   placement_id: number;
-  status?: string | null;
+  campaign_id: string;
+  media_id: number;
+  current_status?: string | null;
+  status_ts?: string | null;
   created_at: string;
-  podcast_name?: string | null;
-  podcast_category?: string | null;
-  podcast_cover_image_url?: string | null;
+  media_name?: string | null;
+  media_website?: string | null;
   campaign_name?: string | null;
   client_name?: string | null;
+  notes?: string | null;
+}
+
+interface PlacementsResponse {
+  items: RecentPlacementItem[];
+  total: number;
+  page: number;
+  size: number;
 }
 
 // --- End Interfaces ---
@@ -113,20 +124,38 @@ function QuickActionButton({
   );
 }
 
-// Status config for RecentBookingCard (can be shared or defined locally)
+// Status config for RecentBookingCard - matches backend placement statuses
 const placementStatusConfig: Record<string, { label: string; color: string }> = {
+  // Initial stages
+  initial_reply: { label: "Initial Reply", color: "bg-blue-100 text-blue-700" },
+  in_discussion: { label: "In Discussion", color: "bg-yellow-100 text-yellow-700" },
+  
+  // Interest/Confirmation stages
+  confirmed_interest: { label: "Confirmed Interest", color: "bg-teal-100 text-teal-700" },
+  confirmed: { label: "Confirmed", color: "bg-cyan-100 text-cyan-700" },
+  
+  // Scheduling stages
+  scheduling: { label: "Scheduling", color: "bg-purple-100 text-purple-700" },
+  scheduled: { label: "Scheduled", color: "bg-indigo-100 text-indigo-700" },
+  recording_booked: { label: "Recording Booked", color: "bg-indigo-100 text-indigo-700" },
+  
+  // Production stages
+  recorded: { label: "Recorded", color: "bg-pink-100 text-pink-700" },
   live: { label: "Live", color: "bg-green-100 text-green-700" },
   paid: { label: "Paid", color: "bg-emerald-100 text-emerald-700" },
-  recorded: { label: "Recorded", color: "bg-pink-100 text-pink-700" },
-  recording_booked: { label: "Recording Booked", color: "bg-indigo-100 text-indigo-700" },
-  meeting_booked: { label: "Meeting Booked", color: "bg-purple-100 text-purple-700" },
-  pending: { label: "Pending", color: "bg-yellow-100 text-yellow-700" },
+  
+  // Other statuses
+  needs_info: { label: "Needs Info", color: "bg-orange-100 text-orange-700" },
+  declined: { label: "Declined", color: "bg-red-100 text-red-700" },
+  cancelled: { label: "Cancelled", color: "bg-gray-100 text-gray-700" },
+  rejected: { label: "Rejected", color: "bg-red-100 text-red-700" },
+  
   default: { label: "Unknown", color: "bg-gray-100 text-gray-700" },
 };
 
 
 function RecentBookingCard({ booking }: { booking: RecentPlacementItem }) {
-  const statusKey = booking.status || 'default';
+  const statusKey = booking.current_status || 'default';
   const currentStatusConfig = placementStatusConfig[statusKey] || placementStatusConfig.default;
 
   const formatDate = (dateString: string) => {
@@ -143,20 +172,12 @@ function RecentBookingCard({ booking }: { booking: RecentPlacementItem }) {
     <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
       <div className="flex items-center space-x-4">
         <div className="w-12 h-12 bg-gray-200 rounded-lg flex items-center justify-center overflow-hidden">
-          {booking.podcast_cover_image_url ? (
-            <img
-              src={booking.podcast_cover_image_url}
-              alt={booking.podcast_name || 'Podcast'}
-              className="w-full h-full object-cover"
-            />
-          ) : (
-            <PodcastIcon className="h-6 w-6 text-gray-500" />
-          )}
+          <PodcastIcon className="h-6 w-6 text-gray-500" />
         </div>
         <div>
-          <h4 className="font-medium text-gray-900 text-sm">{booking.podcast_name || 'N/A'}</h4>
+          <h4 className="font-medium text-gray-900 text-sm">{booking.media_name || 'Unknown Podcast'}</h4>
           <p className="text-xs text-gray-600">
-            Campaign: {booking.campaign_name || 'N/A'} (Client: {booking.client_name || 'N/A'})
+            {booking.campaign_name || 'No Campaign'} • {booking.client_name || 'No Client'}
           </p>
         </div>
       </div>
@@ -175,15 +196,17 @@ export default function Dashboard() {
   const { user, isLoading: authLoading } = useAuth();
 
   const { data: stats, isLoading: statsLoading, error: statsError } = useQuery<DashboardStatsOverview>({
-    queryKey: ["/dashboard/stats", user?.person_id], // Add person_id to queryKey if backend filters by it
+    queryKey: ["/analytics/summary", user?.person_id], // Updated to use new analytics endpoint
     // queryFn will be handled by defaultQueryFn from queryClient, which uses queryKey[0] as URL
     enabled: !!user && !authLoading, // Only fetch if user is loaded
   });
 
-  const { data: recentPlacements, isLoading: placementsLoading, error: placementsError } = useQuery<RecentPlacementItem[]>({
-    queryKey: ["/dashboard/recent-placements", user?.person_id],
+  const { data: placementsData, isLoading: placementsLoading, error: placementsError } = useQuery<PlacementsResponse>({
+    queryKey: ["/placements", { sort_by: "created_at", sort_order: "DESC", size: 5 }], // Updated to use main placements endpoint with sorting
     enabled: !!user && !authLoading,
   });
+  
+  const recentPlacements = placementsData?.items || [];
 
 
   const handleBookDemo = () => {
