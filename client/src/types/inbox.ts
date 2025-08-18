@@ -2,18 +2,27 @@
 
 export interface EmailMessage {
   id: string;
+  message_id?: string;  // Backend uses this
   thread_id: string;
   subject: string;
   from: EmailParticipant[];
   to: EmailParticipant[];
   cc?: EmailParticipant[];
   bcc?: EmailParticipant[];
-  body: string;
+  sender_email?: string;   // Added from backend spec
+  sender_name?: string;    // Added from backend spec
+  recipient_emails?: string[]; // Added from backend spec
+  body?: string;           // DEPRECATED: Use body_text or body_html instead
+  body_text?: string;      // Plain text version from backend
+  body_html?: string;      // HTML formatted version from backend
   snippet: string;
   date: string;
+  message_date?: string;   // Alternative date field
+  direction?: 'inbound' | 'outbound';  // Added from backend
   unread: boolean;
   starred: boolean;
   folders: string[];
+  folder?: string;         // Single folder from backend
   labels?: string[];
   attachments?: EmailAttachment[];
   classification?: EmailClassification;
@@ -22,17 +31,27 @@ export interface EmailMessage {
 
 export interface EmailThread {
   id: string;
+  thread_id?: string;  // Backend uses this
   subject: string;
   snippet: string;
   participants: EmailParticipant[];
+  from_email?: string;  // Added from backend spec
+  from_name?: string;   // Added from backend spec
+  to_emails?: string[]; // Added from backend spec
   last_message_date: string;
+  date?: string;        // Alternative date field from backend
   message_count: number;
   unread_count: number;
+  unread?: boolean;     // Alternative unread field
   starred: boolean;
   folders: string[];
+  folder?: string;      // Single folder from backend
   labels?: string[];
   classification?: EmailClassification;
   messages?: EmailMessage[];
+  has_attachments?: boolean;
+  pitch_id?: number;
+  placement_id?: number;
 }
 
 export interface EmailParticipant {

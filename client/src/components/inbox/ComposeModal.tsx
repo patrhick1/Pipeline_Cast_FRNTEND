@@ -51,35 +51,53 @@ export default function ComposeModal({ isOpen, onClose, replyTo }: ComposeModalP
   // Send email mutation
   const sendEmailMutation = useMutation({
     mutationFn: async (email: ComposeEmail) => {
-      const formData = new FormData();
-      formData.append('to', JSON.stringify(email.to));
-      formData.append('subject', email.subject);
-      formData.append('body', email.body);
-      
-      if (email.cc && email.cc.length > 0) {
-        formData.append('cc', JSON.stringify(email.cc));
-      }
-      if (email.bcc && email.bcc.length > 0) {
-        formData.append('bcc', JSON.stringify(email.bcc));
-      }
-      if (replyTo) {
-        formData.append('thread_id', replyTo.threadId);
-        formData.append('reply_to_message_id', replyTo.messageId);
-      }
-      
-      // Add attachments
-      attachments.forEach(file => {
-        formData.append('attachments', file);
-      });
+      // Use JSON endpoint if no attachments, multipart if attachments
+      if (attachments.length === 0) {
+        // Use JSON endpoint for better performance
+        const res = await apiRequest('POST', '/inbox/send-json', {
+          to: email.to,
+          subject: email.subject,
+          body: email.body,
+          cc: email.cc && email.cc.length > 0 ? email.cc : undefined,
+          bcc: email.bcc && email.bcc.length > 0 ? email.bcc : undefined,
+          thread_id: replyTo?.threadId,
+          reply_to_message_id: replyTo?.messageId,
+        });
+        
+        if (!res.ok) throw new Error('Failed to send email');
+        return res.json();
+      } else {
+        // Use multipart for attachments
+        const formData = new FormData();
+        formData.append('to', JSON.stringify(email.to));
+        formData.append('subject', email.subject);
+        formData.append('body', email.body);
+        
+        if (email.cc && email.cc.length > 0) {
+          formData.append('cc', JSON.stringify(email.cc));
+        }
+        if (email.bcc && email.bcc.length > 0) {
+          formData.append('bcc', JSON.stringify(email.bcc));
+        }
+        if (replyTo) {
+          formData.append('thread_id', replyTo.threadId);
+          formData.append('reply_to_message_id', replyTo.messageId);
+        }
+        
+        // Add attachments
+        attachments.forEach(file => {
+          formData.append('attachments', file);
+        });
 
-      const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/inbox/send`, {
-        method: 'POST',
-        body: formData,
-        credentials: 'include',
-      });
-      
-      if (!res.ok) throw new Error('Failed to send email');
-      return res.json();
+        const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/inbox/send`, {
+          method: 'POST',
+          body: formData,
+          credentials: 'include',
+        });
+        
+        if (!res.ok) throw new Error('Failed to send email');
+        return res.json();
+      }
     },
     onSuccess: () => {
       toast({

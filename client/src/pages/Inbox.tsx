@@ -20,10 +20,17 @@ import {
   ChevronLeft,
   ChevronRight,
   Settings,
-  ExternalLink
+  ExternalLink,
+  MoreVertical
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import type { EmailThread, InboxFilters, NylasAuthStatus } from '@/types/inbox';
 import ThreadView from '@/components/inbox/ThreadView';
 import ComposeModal from '@/components/inbox/ComposeModal';
@@ -36,7 +43,7 @@ export default function Inbox() {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFolder, setActiveFolder] = useState('inbox');
   const [filters, setFilters] = useState<InboxFilters>({
-    folder: 'inbox'
+    folder: 'inbox'  // Always default to inbox
   });
   const { toast } = useToast();
 
@@ -48,21 +55,23 @@ export default function Inbox() {
 
   // Fetch email threads
   const { 
-    data: threadsData = [], // Default to empty array
+    data: threadsResponse, 
     isLoading, 
     refetch: refetchThreads 
-  } = useQuery<EmailThread[]>({
+  } = useQuery<{ threads: EmailThread[]; total: number; has_more: boolean } | EmailThread[]>({
     queryKey: ['/inbox/threads', filters],
     enabled: nylasStatus?.connected === true,
   });
 
-  // Ensure threads is always an array (double safety)
-  const threads = Array.isArray(threadsData) ? threadsData : [];
+  // Handle both wrapped and direct array responses
+  const threads = Array.isArray(threadsResponse) 
+    ? threadsResponse 
+    : (threadsResponse?.threads || []);
   
   // Debug logging
-  console.log('Inbox Debug - threadsData:', threadsData, 'threads:', threads, 'isArray:', Array.isArray(threads));
+  console.log('Inbox Debug - threadsResponse:', threadsResponse, 'threads:', threads, 'isArray:', Array.isArray(threads));
   if (!Array.isArray(threads)) {
-    console.error('CRITICAL: Threads is not an array:', threads, 'threadsData:', threadsData);
+    console.error('CRITICAL: Threads is not an array:', threads, 'threadsResponse:', threadsResponse);
   }
 
   // Mark thread as read mutation
@@ -89,6 +98,38 @@ export default function Inbox() {
     }
   });
 
+  // Archive thread mutation
+  const archiveThreadMutation = useMutation({
+    mutationFn: async (threadId: string) => {
+      const res = await apiRequest('POST', `/inbox/threads/${threadId}/archive`);
+      if (!res.ok) throw new Error('Failed to archive thread');
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: 'Thread archived',
+        description: 'The conversation has been archived.',
+      });
+      queryClient.invalidateQueries({ queryKey: ['/inbox/threads'] });
+    }
+  });
+
+  // Delete thread mutation (move to trash)
+  const deleteThreadMutation = useMutation({
+    mutationFn: async (threadId: string) => {
+      const res = await apiRequest('DELETE', `/inbox/threads/${threadId}`);
+      if (!res.ok) throw new Error('Failed to delete thread');
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: 'Thread deleted',
+        description: 'The conversation has been moved to trash.',
+      });
+      queryClient.invalidateQueries({ queryKey: ['/inbox/threads'] });
+    }
+  });
+
   // Handle search
   useEffect(() => {
     const delayDebounceFn = setTimeout(() => {
@@ -110,7 +151,8 @@ export default function Inbox() {
 
   const handleFolderChange = (folder: string) => {
     setActiveFolder(folder);
-    setFilters(prev => ({ ...prev, folder }));
+    // Always ensure folder parameter is set (default to 'inbox')
+    setFilters(prev => ({ ...prev, folder: folder || 'inbox' }));
     setSelectedThread(null);
   };
 
@@ -177,7 +219,7 @@ export default function Inbox() {
                 <span className="flex-1 text-left">{folder.label}</span>
                 {folder.id === 'inbox' && Array.isArray(threads) && threads.length > 0 && (
                   <span className="text-xs">
-                    {threads.filter((t: any) => t && typeof t.unread_count === 'number' && t.unread_count > 0).length}
+                    {threads.filter((t: any) => t && (t.unread_count > 0 || t.unread)).length}
                   </span>
                 )}
               </button>
@@ -258,24 +300,24 @@ export default function Inbox() {
             ) : Array.isArray(threads) && threads.length > 0 ? (
               <div className="divide-y">
                 {threads.map((thread: any) => (
-                  <button
-                    key={thread.id}
-                    onClick={() => setSelectedThread(thread.id)}
+                  <div
+                    key={thread.thread_id || thread.id}
+                    onClick={() => setSelectedThread(thread.thread_id || thread.id)}
                     className={cn(
-                      'w-full p-4 text-left hover:bg-gray-50 transition-colors',
-                      selectedThread === thread.id && 'bg-blue-50',
-                      thread.unread_count > 0 && 'bg-blue-50/50'
+                      'group w-full p-4 text-left hover:bg-gray-50 transition-colors cursor-pointer',
+                      selectedThread === (thread.thread_id || thread.id) && 'bg-blue-50',
+                      (thread.unread_count > 0 || thread.unread) && 'bg-blue-50/50'
                     )}
                   >
                     <div className="flex items-start justify-between mb-1">
                       <div className="flex items-center gap-2">
                         <h3 className={cn(
                           'text-sm truncate max-w-[250px]',
-                          thread.unread_count > 0 ? 'font-semibold' : 'font-medium'
+                          (thread.unread_count > 0 || thread.unread) ? 'font-semibold' : 'font-medium'
                         )}>
-                          {thread.participants.map(p => p.name || p.email).join(', ')}
+                          {thread.from_name || thread.from_email || 'Unknown'}
                         </h3>
-                        {thread.unread_count > 0 && (
+                        {(thread.unread_count > 0 || thread.unread) && (
                           <div className="w-2 h-2 bg-blue-500 rounded-full" />
                         )}
                       </div>
@@ -283,7 +325,7 @@ export default function Inbox() {
                         onClick={(e) => {
                           e.stopPropagation();
                           toggleStarMutation.mutate({ 
-                            threadId: thread.id, 
+                            threadId: thread.thread_id || thread.id, 
                             starred: !thread.starred 
                           });
                         }}
@@ -298,7 +340,7 @@ export default function Inbox() {
                     
                     <p className={cn(
                       'text-sm truncate mb-1',
-                      thread.unread_count > 0 ? 'font-medium text-gray-900' : 'text-gray-700'
+                      (thread.unread_count > 0 || thread.unread) ? 'font-medium text-gray-900' : 'text-gray-700'
                     )}>
                       {thread.subject}
                     </p>
@@ -316,11 +358,46 @@ export default function Inbox() {
                           </span>
                         )}
                       </div>
-                      <span className="text-xs text-gray-500">
-                        {format(new Date(thread.last_message_date), 'MMM d')}
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-gray-500">
+                          {format(new Date(thread.date || thread.last_message_date || new Date()), 'MMM d')}
+                        </span>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                              }}
+                              className="opacity-0 group-hover:opacity-100 p-1 hover:bg-gray-200 rounded transition-all"
+                            >
+                              <MoreVertical className="w-4 h-4 text-gray-500" />
+                            </button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                archiveThreadMutation.mutate(thread.thread_id || thread.id);
+                              }}
+                            >
+                              <Archive className="w-4 h-4 mr-2" />
+                              Archive
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                deleteThreadMutation.mutate(thread.thread_id || thread.id);
+                              }}
+                              className="text-red-600"
+                            >
+                              <Trash2 className="w-4 h-4 mr-2" />
+                              Delete
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
                     </div>
-                  </button>
+                  </div>
                 ))}
               </div>
             ) : (

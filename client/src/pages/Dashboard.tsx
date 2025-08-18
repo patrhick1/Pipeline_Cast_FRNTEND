@@ -17,8 +17,8 @@ import {
   Settings // Added Settings icon
 } from "lucide-react";
 import { Link } from "wouter";
-import { useAuth } // Assuming useAuth provides user role and person_id
-    from "@/hooks/useAuth"; 
+import { useAuth } from "@/hooks/useAuth";
+import RecentReplies from "@/components/dashboard/RecentReplies"; 
 
 // --- Interfaces to match backend dashboard_schemas.py ---
 interface DashboardStatsOverview {
@@ -217,6 +217,11 @@ export default function Dashboard() {
       </div>
       {statsError && <p className="text-sm text-red-500">Failed to load dashboard statistics.</p>}
 
+
+      {/* Recent Replies Widget */}
+      <div className="mb-8">
+        <RecentReplies limit={5} compact={true} />
+      </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Recent Activity */}

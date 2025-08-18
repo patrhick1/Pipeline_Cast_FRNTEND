@@ -30,6 +30,7 @@ import { UpgradePrompt } from "@/components/pitch/UpgradePrompt";
 import { ManualPitchEditor } from "@/components/pitch/ManualPitchEditor";
 import { RecipientEmailEditor } from "@/components/pitch/RecipientEmailEditor";
 import { useAuth } from "@/hooks/useAuth";
+import PitchEmailThread from "@/components/pitch/PitchEmailThread";
 
 // --- Interfaces (Aligned with expected enriched backend responses) ---
 
@@ -591,6 +592,13 @@ function ReadyToSendTab({
                                     <p className="text-xs text-gray-600 mt-1 italic line-clamp-2">
                                         Preview: {(pitch.final_text || pitch.draft_text || "No content").substring(0,100) + "..."}
                                     </p>
+                                    {pitch.pitch_state === 'replied' || pitch.pitch_state === 'replied_interested' ? (
+                                        <PitchEmailThread 
+                                            pitchId={pitch.pitch_id} 
+                                            podcastName={pitch.media_name}
+                                            compact={true}
+                                        />
+                                    ) : null}
                                      {pitch.media_website && (
                                         <a href={pitch.media_website} target="_blank" rel="noopener noreferrer" className="text-xs text-primary hover:underline inline-flex items-center mt-1">
                                             <ExternalLink className="h-3 w-3 mr-1"/> Visit Podcast
@@ -643,6 +651,7 @@ function SentPitchesTab({ pitches, isLoadingPitches }: { pitches: SentPitchStatu
                         <TableHead>Status</TableHead>
                         <TableHead>Sent At</TableHead>
                         <TableHead>Replied At</TableHead>
+                        <TableHead>Actions</TableHead>
                     </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -661,6 +670,23 @@ function SentPitchesTab({ pitches, isLoadingPitches }: { pitches: SentPitchStatu
                             <TableCell><Badge variant={pitch.pitch_state === 'replied' || pitch.pitch_state === 'replied_interested' ? 'default' : 'secondary'} className="capitalize text-xs">{pitch.pitch_state?.replace('_', ' ') || "N/A"}</Badge></TableCell>
                             <TableCell className="text-xs text-gray-500">{pitch.send_ts ? new Date(pitch.send_ts).toLocaleString() : "-"}</TableCell>
                             <TableCell className="text-xs text-gray-500">{pitch.reply_ts ? new Date(pitch.reply_ts).toLocaleString() : "-"}</TableCell>
+                            <TableCell>
+                                {(pitch.pitch_state === 'replied' || pitch.pitch_state === 'replied_interested') && (
+                                    <Button 
+                                        variant="ghost" 
+                                        size="sm"
+                                        onClick={() => {
+                                            // Open in a modal or navigate to detail view
+                                            const dialog = document.createElement('div');
+                                            dialog.innerHTML = `<div id="pitch-thread-modal-${pitch.pitch_id}"></div>`;
+                                            document.body.appendChild(dialog);
+                                        }}
+                                    >
+                                        <MessageSquare className="w-3 h-3 mr-1" />
+                                        View Thread
+                                    </Button>
+                                )}
+                            </TableCell>
                         </TableRow>
                     ))}
                 </TableBody>

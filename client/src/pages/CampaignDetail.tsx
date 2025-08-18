@@ -17,6 +17,7 @@ import { Separator } from "@/components/ui/separator"; // Added Separator
 import { useState } from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CampaignFunnel } from "@/components/CampaignFunnel";
+import CampaignThreads from "@/components/campaigns/CampaignThreads";
 
 // --- Interfaces (Ensure these match your actual backend responses) ---
 interface CampaignDetailData {
@@ -687,12 +688,13 @@ export default function CampaignDetail({ campaignIdParam }: CampaignDetailProps)
       </div>
 
       <Tabs defaultValue="overview" className="w-full">
-        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-1">
+        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-1">
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="profileContent">Profile & Content</TabsTrigger>
           <TabsTrigger value="matches">Podcast Matches</TabsTrigger>
           <TabsTrigger value="pitches">Pitches</TabsTrigger>
           <TabsTrigger value="placements">Placements</TabsTrigger>
+          <TabsTrigger value="emails">Email Threads</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="mt-6">
@@ -709,6 +711,9 @@ export default function CampaignDetail({ campaignIdParam }: CampaignDetailProps)
         </TabsContent>
         <TabsContent value="placements" className="mt-6">
           <PlacementsTab campaignId={campaign.campaign_id} userRole={user?.role || null} />
+        </TabsContent>
+        <TabsContent value="emails" className="mt-6">
+          <CampaignThreads campaignId={campaign.campaign_id} campaignName={campaign.campaign_name} />
         </TabsContent>
       </Tabs>
     </div>
