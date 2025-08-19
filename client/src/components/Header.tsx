@@ -1,7 +1,7 @@
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { CalendarPlus } from "lucide-react";
+import { CalendarPlus, Mic } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import logoName from "@/img/PGL logo name.png";
 
@@ -60,7 +60,19 @@ export default function Header() {
       <div className="px-4 sm:px-6 py-3 sm:py-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center min-w-0 flex-1 pl-14 lg:pl-0">
-            <img src={logoName} alt="Podcast Guest Launch" className="h-6 sm:h-8 flex-shrink-0" />
+            {/* Responsive Logo: Text with mic icon on mobile, image on desktop */}
+            <div className="flex items-center flex-shrink-0">
+              {/* Mobile Logo (text with mic icon) */}
+              <div className="flex items-center sm:hidden">
+                <span className="text-lg font-bold text-gray-900">P</span>
+                <Mic className="h-5 w-5 mx-0.5 text-purple-600" />
+                <span className="text-lg font-bold text-gray-900">dcast</span>
+                <span className="text-lg font-semibold text-purple-600 ml-1">Guest</span>
+                <span className="text-lg font-semibold text-gray-900 ml-1">Launch</span>
+              </div>
+              {/* Desktop Logo (original image) */}
+              <img src={logoName} alt="Podcast Guest Launch" className="h-8 hidden sm:block" />
+            </div>
             <div className="ml-3 sm:ml-6 min-w-0">
               <h2 className="text-base sm:text-xl font-semibold text-gray-700 truncate">{currentPage.title}</h2>
               <p className="text-xs sm:text-sm text-gray-600 mt-0.5 sm:mt-1 hidden sm:block">{currentPage.description}</p>
