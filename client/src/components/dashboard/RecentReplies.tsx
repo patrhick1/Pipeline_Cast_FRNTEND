@@ -41,16 +41,16 @@ export default function RecentReplies({
 
   const handleReplyClick = (thread: EmailThread) => {
     // Mark as read if unread
-    if (thread.unread_count > 0) {
-      markThreadAsRead.mutate(thread.id);
+    if (thread.unread || thread.unread_count > 0) {
+      markThreadAsRead.mutate(thread.thread_id || thread.id);
     }
     // Navigate to inbox with thread selected
-    setLocation(`/inbox?thread=${thread.id}`);
+    setLocation(`/inbox?thread=${thread.thread_id || thread.id}`);
   };
 
   // Ensure replies is always an array
   const repliesArray = Array.isArray(replies) ? replies : [];
-  const unreadCount = repliesArray.filter((t: EmailThread) => t.unread_count > 0).length;
+  const unreadCount = repliesArray.filter((t: EmailThread) => t.unread || t.unread_count > 0).length;
 
   if (isLoading) {
     return (
@@ -138,19 +138,19 @@ export default function RecentReplies({
           <div className="space-y-2">
             {repliesArray.slice(0, 5).map((thread: EmailThread) => (
               <button
-                key={thread.id}
+                key={thread.thread_id || thread.id}
                 onClick={() => handleReplyClick(thread)}
                 className={cn(
                   "w-full text-left p-2 rounded-lg hover:bg-gray-50 transition-colors",
-                  thread.unread_count > 0 && "bg-blue-50"
+                  (thread.unread || thread.unread_count > 0) && "bg-blue-50"
                 )}
               >
                 <div className="flex items-center justify-between mb-1">
                   <span className="text-sm font-medium truncate">
-                    {thread.participants?.[0]?.name || thread.participants?.[0]?.email || 'Unknown'}
+                    {thread.from_name || thread.from_email || thread.participants?.[0]?.name || thread.participants?.[0]?.email || 'Unknown'}
                   </span>
                   <span className="text-xs text-gray-500">
-                    {formatDistanceToNow(new Date(thread.last_message_date), { addSuffix: true })}
+                    {formatDistanceToNow(new Date(thread.date || thread.last_message_date), { addSuffix: true })}
                   </span>
                 </div>
                 <p className="text-xs text-gray-600 line-clamp-1">
@@ -211,36 +211,40 @@ export default function RecentReplies({
           <div className="space-y-3">
             {repliesArray.map((thread: EmailThread) => {
               const participant = thread.participants?.[0];
+              const fromName = thread.from_name || participant?.name || thread.from_email || participant?.email || 'Unknown';
+              const fromEmail = thread.from_email || participant?.email || '';
+              const threadDate = thread.date || thread.last_message_date;
+              
               return (
                 <Card
-                  key={thread.id}
+                  key={thread.thread_id || thread.id}
                   className={cn(
                     "cursor-pointer hover:shadow-md transition-all",
-                    thread.unread_count > 0 && "border-blue-200 bg-blue-50/50"
+                    (thread.unread || thread.unread_count > 0) && "border-blue-200 bg-blue-50/50"
                   )}
                   onClick={() => handleReplyClick(thread)}
                 >
                   <CardContent className="p-4">
                     <div className="flex items-start justify-between mb-2">
                       <div className="flex items-center gap-2">
-                        {thread.unread_count > 0 && (
+                        {(thread.unread || thread.unread_count > 0) && (
                           <Bell className="w-4 h-4 text-blue-500" />
                         )}
                         <div>
                           <h4 className="font-medium text-sm">
-                            {participant?.name || participant?.email || 'Unknown'}
+                            {fromName}
                           </h4>
                           <p className="text-xs text-gray-500">
-                            {participant?.email || ''}
+                            {fromEmail}
                           </p>
                         </div>
                       </div>
                       <div className="text-right">
                         <p className="text-xs text-gray-500">
-                          {format(new Date(thread.last_message_date), 'MMM d, h:mm a')}
+                          {format(new Date(threadDate), 'MMM d, h:mm a')}
                         </p>
                         <p className="text-xs text-gray-400">
-                          {formatDistanceToNow(new Date(thread.last_message_date), { addSuffix: true })}
+                          {formatDistanceToNow(new Date(threadDate), { addSuffix: true })}
                         </p>
                       </div>
                     </div>
@@ -257,7 +261,7 @@ export default function RecentReplies({
                     <div className="flex items-center justify-between">
                       {thread.classification && (
                         <Badge variant="outline" className="text-xs">
-                          {thread.classification.category}
+                          {thread.classification === 'pitch_response' ? 'Pitch Response' : thread.classification.category || thread.classification}
                         </Badge>
                       )}
                       <Button variant="ghost" size="sm" className="h-7 text-xs">

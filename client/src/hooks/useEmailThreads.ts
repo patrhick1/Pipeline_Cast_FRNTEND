@@ -128,6 +128,11 @@ export function useEmailThreads() {
           throw new Error('Failed to fetch recent replies');
         }
         const data = await res.json();
+        // Handle paginated response structure
+        if (data && data.threads && Array.isArray(data.threads)) {
+          return data.threads;
+        }
+        // Fallback for array response
         return Array.isArray(data) ? data : [];
       },
       refetchInterval: 60000, // Poll every minute for new replies
