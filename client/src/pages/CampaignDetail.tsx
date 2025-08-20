@@ -404,7 +404,7 @@ function PodcastMatchesTab({ campaignId, userRole }: { campaignId: string; userR
                         <span>Status: <Badge variant={match.status === 'approved' ? 'default' : 'outline'} className={`capitalize text-xs px-1.5 py-0.5 ${match.status === 'approved' ? 'bg-green-100 text-green-700' : ''}`}>{match.status.replace('_', ' ')}</Badge></span>
                         {typeof match.match_score === 'number' && (
                             <Badge variant="default" className="text-xs bg-blue-600 hover:bg-blue-700 text-white px-2 py-0.5">
-                                PGL Match Score: {Math.round(match.match_score)}/100
+                                Match: {Math.round(match.match_score)}%
                             </Badge>
                         )}
                     </div>

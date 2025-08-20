@@ -44,6 +44,8 @@ export interface ReviewTask {
   vetting_reasoning?: string | null;
   vetting_criteria_met?: any | null;
   match_score?: number | null;
+  reach_estimate_min?: number | null;
+  reach_estimate_max?: number | null;
   matched_keywords?: string[] | null;
   best_matching_episode_id?: number | null;
   recommendation?: string;
@@ -68,6 +70,8 @@ export interface MatchSuggestion { // MatchSuggestionInDB
   campaign_id: string; // UUID string
   media_id: number;
   match_score?: number | null;
+  reach_estimate_min?: number | null;
+  reach_estimate_max?: number | null;
   matched_keywords?: string[] | null;
   ai_reasoning?: string | null;
   vetting_reasoning?: string | null; // Added this field
@@ -211,6 +215,8 @@ function ReviewTaskItem({ task }: { task: ReviewTask }) {
       campaign_id: task.campaign_id || '',
       media_id: task.media_id || 0,
       match_score: task.match_score,
+      reach_estimate_min: task.reach_estimate_min,
+      reach_estimate_max: task.reach_estimate_max,
       matched_keywords: null, // Remove keyword overlap
       ai_reasoning: task.vetting_reasoning,
       vetting_reasoning: task.vetting_reasoning,
@@ -384,10 +390,17 @@ function ReviewTaskItem({ task }: { task: ReviewTask }) {
                 {currentStatusConfig.label}
               </Badge>
               <Badge variant="outline" className="capitalize text-xs px-2 py-0.5">{task.task_type.replace('_', ' ')}</Badge>
-              {task.task_type === 'match_suggestion' && typeof task.match_score === 'number' && (
-                <Badge variant="default" className="text-xs bg-blue-600 text-white">
-                    PGL Match Score: {Math.round(task.match_score)}/100
-                </Badge>
+              {task.task_type === 'match_suggestion' && (
+                <div className="flex items-center space-x-2">
+                  {typeof task.match_score === 'number' && (
+                    <Badge variant="default" className="text-xs bg-blue-600 text-white">
+                      Match: {Math.round(task.match_score)}%
+                    </Badge>
+                  )}
+                  <Badge variant="secondary" className="text-xs">
+                    Reach: {formatReachNumber(task.reach_estimate_min || 10000)}-{formatReachNumber(task.reach_estimate_max || 50000)}
+                  </Badge>
+                </div>
               )}
             </div>
             <CardTitle className="text-base md:text-md leading-tight">{relatedData?.entityName || `Task for ID: ${task.related_id}`}</CardTitle>
@@ -403,7 +416,7 @@ function ReviewTaskItem({ task }: { task: ReviewTask }) {
         {task.task_type === 'match_suggestion' && task.vetting_reasoning && (
             <div className="bg-indigo-50 p-2.5 rounded-md border border-indigo-200">
                 <h4 className="text-xs font-semibold text-indigo-700 mb-1 flex items-center">
-                    <MessageSquare className="w-3.5 h-3.5 mr-1.5" /> AI-Generated Reasoning:
+                    <MessageSquare className="w-3.5 h-3.5 mr-1.5" /> Fit Assessment:
                 </h4>
                 <p className="text-indigo-800 text-xs whitespace-pre-wrap">{task.vetting_reasoning}</p>
             </div>
@@ -469,6 +482,16 @@ function ReviewTaskItem({ task }: { task: ReviewTask }) {
   );
 }
 
+
+// Helper function to format reach numbers
+function formatReachNumber(num: number): string {
+  if (num >= 1000000) {
+    return `${(num / 1000000).toFixed(1)}M`;
+  } else if (num >= 1000) {
+    return `${(num / 1000).toFixed(0)}K`;
+  }
+  return num.toString();
+}
 
 // --- Main Approvals Page Component ---
 const ITEMS_PER_PAGE = 10;

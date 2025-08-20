@@ -16,8 +16,8 @@ const leadMagnetFormSchema = z.object({
   full_name: z.string().min(2, "Full name must be at least 2 characters."),
   email: z.string().email("Please enter a valid email address."),
   bio: z.string().min(30, "Please tell us a bit about yourself (at least 30 characters).").max(750, "Bio should be concise (max 750 characters)."),
-  expertise_topics: z.string().min(15, "Please list some key expertise or topics (at least 15 characters).").max(500, "Expertise/topics too long (max 500 characters)."),
-  achievements: z.string().max(500, "Achievements too long (max 500 chars).").optional().default(""),
+  expertise_topics: z.string().min(15, "Please list some key expertise or topics (at least 15 characters).").max(2000, "Expertise/topics too long (max 2000 characters)."),
+  achievements: z.string().max(2000, "Achievements too long (max 2000 chars).").optional().default(""),
 });
 type LeadMagnetFormData = z.infer<typeof leadMagnetFormSchema>;
 
@@ -65,7 +65,7 @@ export default function LeadMagnetQuestionnaire() {
     mutationFn: submitLeadMagnetData,
     onSuccess: (data: LeadMagnetSubmissionResponse) => {
       toast({ title: "Success!", description: data.message || "Your media kit preview is being generated!" });
-      setLocation(`/mk/${data.media_kit_slug}`);
+      setLocation(`/media-kit/${data.media_kit_slug}`);
     },
     onError: (error: Error) => {
       if (error.message && error.message.toLowerCase().includes("account with this email already exists")) {

@@ -78,7 +78,7 @@ function Router() {
           <Route path="/login" component={Login} />
           <Route path="/signup" component={SignupPage} />
           <Route path="/reset-password" component={ResetPasswordPage} /> {/* Added reset password route */}
-          <Route path="/lead-magnet/questionnaire" component={LeadMagnetQuestionnaire} /> {/* Added public route */}
+          <Route path="/free-media-kit-creator" component={LeadMagnetQuestionnaire} /> {/* Added public route */}
           {/* Redirect any other path to login if not authenticated */}
           <Route>
             <Redirect to="/" replace />

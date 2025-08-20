@@ -3,6 +3,16 @@ import { Badge } from "@/components/ui/badge";
 import { ThumbsUp, ThumbsDown, Check, Globe, Twitter, Linkedin, Instagram, Facebook, Youtube } from "lucide-react";
 import { Button } from './ui/button';
 
+// Helper function to format reach numbers
+function formatReachNumber(num: number): string {
+  if (num >= 1000000) {
+    return `${(num / 1000000).toFixed(1)}M`;
+  } else if (num >= 1000) {
+    return `${(num / 1000).toFixed(0)}K`;
+  }
+  return num.toString();
+}
+
 // --- Interfaces (Should align with backend schemas) ---
 interface Media {
   name: string | null;
@@ -28,6 +38,8 @@ interface MatchSuggestion {
   media_name?: string; // This is a fallback - make it optional
   vetting_reasoning?: string | null;
   vetting_score?: number | null;
+  reach_estimate_min?: number | null;
+  reach_estimate_max?: number | null;
   matched_keywords?: string[] | null;
   media?: Media; // The enriched media object
 }
@@ -52,13 +64,18 @@ export const MatchIntelligenceCard = ({ match, onApprove, onReject, isActionPend
         </div>
         <div className="p-4">
           {match.vetting_score !== null && match.vetting_score !== undefined && (
-            <div className="bg-blue-50 border border-blue-200 rounded-md p-3 mb-4">
-              <strong className="text-blue-800">PGL Match Score: {Math.round(match.vetting_score)}/100</strong>
+            <div className="flex gap-3 mb-4">
+              <div className="bg-blue-50 border border-blue-200 rounded-md p-3 flex-1">
+                <strong className="text-blue-800">Match Percentage: {Math.round(match.vetting_score)}%</strong>
+              </div>
+              <div className="bg-gray-50 border border-gray-200 rounded-md p-3 flex-1">
+                <strong className="text-gray-800">Reach Estimate: {formatReachNumber(match.reach_estimate_min || 10000)}-{formatReachNumber(match.reach_estimate_max || 50000)}</strong>
+              </div>
             </div>
           )}
           {match.vetting_reasoning && (
             <div className="bg-purple-50 border border-purple-200 rounded-md p-3 mb-4">
-              <strong className="text-purple-800">AI Assessment:</strong>
+              <strong className="text-purple-800">Fit Assessment:</strong>
               <p className="text-xs text-purple-900 italic mt-1">"{match.vetting_reasoning}"</p>
             </div>
           )}
@@ -152,15 +169,22 @@ export const MatchIntelligenceCard = ({ match, onApprove, onReject, isActionPend
       <div className="match-intelligence p-4 space-y-4">
         <h4 className="text-sm font-semibold uppercase text-gray-500 tracking-wider">Match Intelligence</h4>
         
-        <div className="intelligence-item p-3 bg-blue-50 border border-blue-200 rounded-md">
-          <strong className="flex items-center text-blue-800">
-            <Check className="h-4 w-4 mr-2 text-blue-600"/> PGL Match Score: {match.vetting_score !== null && match.vetting_score !== undefined ? `${Math.round(match.vetting_score)}/100` : 'N/A'}
-          </strong>
+        <div className="flex gap-3 mb-4">
+          <div className="intelligence-item p-3 bg-blue-50 border border-blue-200 rounded-md flex-1">
+            <strong className="flex items-center text-blue-800">
+              <Check className="h-4 w-4 mr-2 text-blue-600"/> Match Percentage: {match.vetting_score !== null && match.vetting_score !== undefined ? `${Math.round(match.vetting_score)}%` : 'N/A'}
+            </strong>
+          </div>
+          <div className="intelligence-item p-3 bg-gray-50 border border-gray-200 rounded-md flex-1">
+            <strong className="flex items-center text-gray-800">
+              <Check className="h-4 w-4 mr-2 text-gray-600"/> Reach Estimate: {formatReachNumber(match.reach_estimate_min || 10000)}-{formatReachNumber(match.reach_estimate_max || 50000)}
+            </strong>
+          </div>
         </div>
 
         <div className="intelligence-item p-3 bg-purple-50 border border-purple-200 rounded-md">
           <strong className="flex items-center text-purple-800">
-             <Check className="h-4 w-4 mr-2 text-purple-600"/> AI-Powered Fit Assessment
+             <Check className="h-4 w-4 mr-2 text-purple-600"/> Fit Assessment
           </strong>
           <p className="reasoning text-xs text-purple-900 italic mt-1 pl-6">"{match.vetting_reasoning || 'This podcast is a good fit based on content alignment.'}"</p>
         </div>
