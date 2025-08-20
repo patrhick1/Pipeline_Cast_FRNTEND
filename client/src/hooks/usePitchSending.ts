@@ -31,7 +31,7 @@ export function usePitchSending() {
     refetchInterval: 60000, // Check every minute
   });
 
-  const isEmailConnected = nylasStatus?.connected === true;
+  const isEmailConnected = nylasStatus?.connected === true && nylasStatus?.grants && nylasStatus.grants.length > 0;
   const connectedEmail = nylasStatus?.grants?.[0]?.email || nylasStatus?.email;
 
   // Send single pitch via Nylas
@@ -188,14 +188,17 @@ export function usePitchSending() {
   // Disconnect email
   const disconnectEmailMutation = useMutation({
     mutationFn: async () => {
-      const grantId = nylasStatus?.grants?.[0]?.id || nylasStatus?.grant_id;
-      if (!grantId) {
+      if (!isEmailConnected || !nylasStatus?.grants || nylasStatus.grants.length === 0) {
         throw new Error('No connected account found');
       }
 
+      // Get the grant_id from the first grant
+      const grantId = nylasStatus.grants[0].grant_id;
+      
       const response = await apiRequest(
         'POST',
-        `/inbox/nylas/disconnect?grant_id=${grantId}`
+        `/inbox/nylas/disconnect?grant_id=${grantId}`,
+        {}
       );
 
       if (!response.ok) {

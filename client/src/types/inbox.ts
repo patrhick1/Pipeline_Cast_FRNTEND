@@ -146,6 +146,12 @@ export interface NylasAuthStatus {
   last_sync?: string;
   sync_status?: 'syncing' | 'synced' | 'error';
   error_message?: string;
+  grants?: Array<{
+    grant_id: string;
+    email: string;
+    provider?: string;
+  }>;
+  status?: string;
 }
 
 export interface CampaignMetrics {
