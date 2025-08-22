@@ -9,18 +9,20 @@ import { Label } from "@/components/ui/label";
 import { ThumbsUp, ThumbsDown, Eye, Check, Globe, Twitter, Linkedin, Instagram, Facebook, Youtube, Edit, Save, X } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { RejectReasonDialog } from "./RejectReasonDialog";
 import type { ReviewTask } from "@/pages/Approvals";
 
 interface PitchReviewCardProps {
   task: ReviewTask;
   onApprove: () => void;
-  onReject: () => void;
+  onReject: (rejectReason?: string) => void;
   isActionPending: boolean;
 }
 
 export const PitchReviewCard = ({ task, onApprove, onReject, isActionPending }: PitchReviewCardProps) => {
   const [showFullPitch, setShowFullPitch] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+  const [showRejectDialog, setShowRejectDialog] = useState(false);
   const [editedSubject, setEditedSubject] = useState(task.pitch_subject_line || '');
   const [editedBody, setEditedBody] = useState(task.pitch_body_full || '');
   const { toast } = useToast();
@@ -65,6 +67,15 @@ export const PitchReviewCard = ({ task, onApprove, onReject, isActionPending }: 
     setEditedSubject(task.pitch_subject_line || '');
     setEditedBody(task.pitch_body_full || '');
     setIsEditing(false);
+  };
+
+  const handleRejectClick = () => {
+    setShowRejectDialog(true);
+  };
+
+  const handleRejectConfirm = (reason?: string) => {
+    onReject(reason);
+    setShowRejectDialog(false);
   };
 
   // Get preview of pitch body (first 500 chars)
@@ -206,7 +217,7 @@ export const PitchReviewCard = ({ task, onApprove, onReject, isActionPending }: 
           <Button 
             className="flex-1" 
             variant="destructive"
-            onClick={onReject}
+            onClick={handleRejectClick}
             disabled={isActionPending}
           >
             <ThumbsDown className="h-4 w-4 mr-2"/>
@@ -333,6 +344,16 @@ export const PitchReviewCard = ({ task, onApprove, onReject, isActionPending }: 
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Reject Reason Dialog */}
+      <RejectReasonDialog
+        isOpen={showRejectDialog}
+        onClose={() => setShowRejectDialog(false)}
+        onConfirm={handleRejectConfirm}
+        isLoading={isActionPending}
+        title="Reject Pitch"
+        mediaName={task.media_name}
+      />
     </>
   );
 };

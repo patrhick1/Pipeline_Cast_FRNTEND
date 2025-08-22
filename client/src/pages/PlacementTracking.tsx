@@ -18,7 +18,7 @@ import { apiRequest, queryClient as appQueryClient } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/useAuth";
 import { 
   TrendingUp, Calendar, Users, PlayCircle, BarChart3, Download, ExternalLink, Podcast as PodcastIcon, 
-  Eye, Share2, MessageSquare, Search, Filter, Plus, Edit, CheckCircle, Clock, AlertCircle, Check, X, Trash2, AlertTriangle, ChevronLeft, ChevronRight, History
+  Eye, Share2, MessageSquare, Search, Filter, Plus, Edit, CheckCircle, Clock, AlertCircle, Check, X, Trash2, AlertTriangle, ChevronLeft, ChevronRight, History, Timeline, LayoutGrid, List
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -38,6 +38,10 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { PlacementEditDialog } from "@/components/placements/PlacementEditDialog";
+import { PlacementTimeline } from "@/components/placements/PlacementTimeline";
+import { ClientPlacementCard } from "@/components/placements/ClientPlacementCard";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 
 // --- Interfaces (align with backend schemas) ---
 interface Placement { // Matches PlacementInDB from backend
@@ -522,27 +526,24 @@ function PlacementTable({
                 </TableCell>
                 <TableCell className="text-right">
                   <div className="flex items-center justify-end space-x-1">
-                    {userRole !== 'client' && (
-                      <>
-                        <Button 
-                          size="sm" 
-                          variant="outline" 
-                          onClick={() => onEdit(placement)} 
-                          title="Edit Placement"
-                        >
-                          <Edit className="h-3 w-3" />
-                        </Button>
-                        {userRole === 'admin' && (
-                          <Button 
-                            size="sm" 
-                            variant="destructive" 
-                            onClick={() => onDelete(placement.placement_id)} 
-                            title="Delete Placement"
-                          >
-                            <Trash2 className="h-3 w-3" />
-                          </Button>
-                        )}
-                      </>
+                    {/* Allow clients to edit their own placements */}
+                    <Button 
+                      size="sm" 
+                      variant="outline" 
+                      onClick={() => onEdit(placement)} 
+                      title="Edit Placement"
+                    >
+                      <Edit className="h-3 w-3" />
+                    </Button>
+                    {userRole === 'admin' && (
+                      <Button 
+                        size="sm" 
+                        variant="destructive" 
+                        onClick={() => onDelete(placement.placement_id)} 
+                        title="Delete Placement"
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </Button>
                     )}
                     {placement.episode_link && (
                       <Button size="sm" variant="outline" asChild>
@@ -578,15 +579,20 @@ export default function PlacementTracking() {
   const [statusChangeDialogOpen, setStatusChangeDialogOpen] = useState(false);
   const [placementForStatusChange, setPlacementForStatusChange] = useState<Placement | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
+  const [viewMode, setViewMode] = useState<"table" | "cards">("table");
   const pageSize = 20;
 
   const { toast } = useToast();
   const tanstackQueryClient = useTanstackQueryClient();
   const { user, isLoading: authLoading } = useAuth();
 
-  const placementsQueryKey = ["/placements/", { 
-    campaign_id: campaignFilter === "all" ? undefined : campaignFilter, 
-    person_id: user?.role === 'client' ? user.person_id : undefined,
+  // Use my-placements endpoint for clients, regular endpoint for staff/admin
+  const isClient = user?.role === 'client';
+  const placementsEndpoint = isClient ? "/placements/my-placements" : "/placements/";
+  
+  const placementsQueryKey = [placementsEndpoint, { 
+    campaign_id: campaignFilter === "all" ? undefined : campaignFilter,
+    status: statusFilter === "all" ? undefined : statusFilter,
     page: currentPage,
     size: pageSize,
   }];
@@ -594,15 +600,16 @@ export default function PlacementTracking() {
   const { data: placementsData, isLoading: isLoadingPlacements, error: placementsError } = useQuery<{items: Placement[], total: number, pages: number}>({
     queryKey: placementsQueryKey,
     queryFn: async ({ queryKey }) => {
-        const params = queryKey[1] as any;
-        let url = "/placements/?";
+        const [endpoint, params] = queryKey as [string, any];
         const queryParams = new URLSearchParams();
+        
         if (params.campaign_id) queryParams.append("campaign_id", params.campaign_id);
-        if (params.person_id) queryParams.append("person_id", params.person_id.toString());
+        if (params.status) queryParams.append("status", params.status);
         if (params.page) queryParams.append("page", params.page.toString());
         if (params.size) queryParams.append("size", params.size.toString());
         
-        const response = await apiRequest("GET", url + queryParams.toString());
+        const url = queryParams.toString() ? `${endpoint}?${queryParams.toString()}` : endpoint;
+        const response = await apiRequest("GET", url);
         if (!response.ok) throw new Error("Failed to fetch placements");
         return response.json();
     },
@@ -800,14 +807,26 @@ export default function PlacementTracking() {
               )}
             </div>
 
-            {user?.role !== 'client' && (
-                <div className="flex items-center space-x-2 mt-2 md:mt-0">
+            <div className="flex items-center gap-2 mt-2 md:mt-0">
+              {/* View toggle for clients */}
+              {isClient && (
+                <ToggleGroup type="single" value={viewMode} onValueChange={(value) => value && setViewMode(value as "table" | "cards")}>
+                  <ToggleGroupItem value="table" aria-label="Table view">
+                    <List className="h-4 w-4" />
+                  </ToggleGroupItem>
+                  <ToggleGroupItem value="cards" aria-label="Card view">
+                    <LayoutGrid className="h-4 w-4" />
+                  </ToggleGroupItem>
+                </ToggleGroup>
+              )}
+              
+              {!isClient && (
                 <Button variant="outline" size="sm">
-                    <Download className="h-4 w-4 mr-2" />
-                    Export
+                  <Download className="h-4 w-4 mr-2" />
+                  Export
                 </Button>
-                </div>
-            )}
+              )}
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -835,13 +854,28 @@ export default function PlacementTracking() {
               Showing {Math.min(pageSize, filteredPlacements.length)} of {totalPlacements} placements
             </p>
           </div>
-          <PlacementTable 
-            placements={filteredPlacements} 
-            onEdit={handleEdit} 
-            onDelete={handleDelete}
-            onStatusChange={handleStatusChange}
-            userRole={user?.role}
-          />
+          {/* Show cards for clients in card view, table otherwise */}
+          {isClient && viewMode === "cards" ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {filteredPlacements.map((placement) => (
+                <ClientPlacementCard
+                  key={placement.placement_id}
+                  placement={placement}
+                  onUpdate={() => {
+                    tanstackQueryClient.invalidateQueries({ queryKey: placementsQueryKey });
+                  }}
+                />
+              ))}
+            </div>
+          ) : (
+            <PlacementTable 
+              placements={filteredPlacements} 
+              onEdit={handleEdit} 
+              onDelete={handleDelete}
+              onStatusChange={handleStatusChange}
+              userRole={user?.role}
+            />
+          )}
           {totalPages > 1 && (
             <div className="flex justify-center pt-4">
               <Pagination>
@@ -919,7 +953,21 @@ export default function PlacementTracking() {
         </div>
       )}
 
-      {isFormOpen && (user?.role !== 'client') && (
+      {/* Show PlacementEditDialog for clients, PlacementFormDialog for staff/admin */}
+      {isFormOpen && isClient && editingPlacement && (
+        <PlacementEditDialog
+          placement={editingPlacement}
+          open={isFormOpen}
+          onOpenChange={setIsFormOpen}
+          onSuccess={() => {
+            tanstackQueryClient.invalidateQueries({ queryKey: placementsQueryKey });
+            setEditingPlacement(null);
+          }}
+          userRole={user?.role}
+        />
+      )}
+      
+      {isFormOpen && !isClient && (
         <PlacementFormDialog
           placement={editingPlacement}
           open={isFormOpen}

@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Badge } from "@/components/ui/badge";
 import { ThumbsUp, ThumbsDown, Check, Globe, Twitter, Linkedin, Instagram, Facebook, Youtube } from "lucide-react";
 import { Button } from './ui/button';
+import { RejectReasonDialog } from './RejectReasonDialog';
 
 // Helper function to format reach numbers
 function formatReachNumber(num: number): string {
@@ -47,13 +48,24 @@ interface MatchSuggestion {
 interface MatchIntelligenceCardProps {
   match: MatchSuggestion;
   onApprove: (matchId: number) => void;
-  onReject: (matchId: number) => void;
+  onReject: (matchId: number, rejectReason?: string) => void;
   isActionPending: boolean;
+  rejectReason?: string; // Display existing reject reason if any
 }
 
 
-export const MatchIntelligenceCard = ({ match, onApprove, onReject, isActionPending }: MatchIntelligenceCardProps) => {
+export const MatchIntelligenceCard = ({ match, onApprove, onReject, isActionPending, rejectReason }: MatchIntelligenceCardProps) => {
+  const [showRejectDialog, setShowRejectDialog] = useState(false);
   const media = match.media;
+
+  const handleRejectClick = () => {
+    setShowRejectDialog(true);
+  };
+
+  const handleRejectConfirm = (reason?: string) => {
+    onReject(match.match_id, reason);
+    setShowRejectDialog(false);
+  };
   if (!media) {
     // Fallback: Show basic card with available information instead of error
     return (
@@ -92,13 +104,23 @@ export const MatchIntelligenceCard = ({ match, onApprove, onReject, isActionPend
           <Button 
               className="flex-1" 
               variant="destructive"
-              onClick={() => onReject(match.match_id)}
+              onClick={handleRejectClick}
               disabled={isActionPending}
           >
             <ThumbsDown className="h-4 w-4 mr-2"/>
             Reject
           </Button>
         </div>
+
+        {/* Reject Reason Dialog for fallback card */}
+        <RejectReasonDialog
+          isOpen={showRejectDialog}
+          onClose={() => setShowRejectDialog(false)}
+          onConfirm={handleRejectConfirm}
+          isLoading={isActionPending}
+          title="Reject Match"
+          mediaName={match.media_name || undefined}
+        />
       </div>
     );
   }
@@ -168,6 +190,16 @@ export const MatchIntelligenceCard = ({ match, onApprove, onReject, isActionPend
 
       <div className="match-intelligence p-4 space-y-4">
         <h4 className="text-sm font-semibold uppercase text-gray-500 tracking-wider">Match Intelligence</h4>
+
+        {/* Display existing rejection reason if present */}
+        {rejectReason && (
+          <div className="intelligence-item p-3 bg-red-50 border border-red-200 rounded-md">
+            <strong className="flex items-center text-red-800">
+              <ThumbsDown className="h-4 w-4 mr-2 text-red-600"/> Previous Rejection Reason
+            </strong>
+            <p className="text-xs text-red-900 mt-1 pl-6">{rejectReason}</p>
+          </div>
+        )}
         
         <div className="flex gap-3 mb-4">
           <div className="intelligence-item p-3 bg-blue-50 border border-blue-200 rounded-md flex-1">
@@ -203,13 +235,23 @@ export const MatchIntelligenceCard = ({ match, onApprove, onReject, isActionPend
         <Button 
             className="flex-1" 
             variant="destructive"
-            onClick={() => onReject(match.match_id)}
+            onClick={handleRejectClick}
             disabled={isActionPending}
         >
           <ThumbsDown className="h-4 w-4 mr-2"/>
           Reject
         </Button>
       </div>
+
+      {/* Reject Reason Dialog */}
+      <RejectReasonDialog
+        isOpen={showRejectDialog}
+        onClose={() => setShowRejectDialog(false)}
+        onConfirm={handleRejectConfirm}
+        isLoading={isActionPending}
+        title="Reject Match"
+        mediaName={media.name || undefined}
+      />
     </div>
   );
 }; 

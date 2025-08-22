@@ -27,6 +27,7 @@ export interface ReviewTask {
   assigned_to_id?: number | null; // Corresponds to 'assigned_to' in DB
   status: 'pending' | 'approved' | 'rejected' | 'completed' | string;
   notes?: string | null;
+  reject_reason?: string | null; // NEW field for rejection reasons
   created_at: string; // ISO datetime string
   completed_at?: string | null; // ISO datetime string
 
@@ -306,11 +307,15 @@ function ReviewTaskItem({ task }: { task: ReviewTask }) {
     });
   };
 
-  const handleReject = () => {
-    // Use the new approve endpoint with rejected status
+  const handleReject = (rejectReason?: string) => {
+    // Use the new approve endpoint with rejected status and optional reject_reason
     reviewActionMutation.mutate({ 
       endpoint: `/review-tasks/${task.review_task_id}/approve`, 
-      payload: { status: 'rejected', notes: 'Rejected by team via UI' } 
+      payload: { 
+        status: 'rejected', 
+        notes: 'Rejected by team via UI',
+        reject_reason: rejectReason || undefined
+      } 
     });
   };
 
@@ -359,8 +364,9 @@ function ReviewTaskItem({ task }: { task: ReviewTask }) {
       <MatchIntelligenceCard
         match={relatedData.match_suggestion}
         onApprove={() => handleApprove()} // `handleApprove` already knows the context
-        onReject={() => handleReject()}   // `handleReject` already knows the context
+        onReject={(matchId, rejectReason) => handleReject(rejectReason)}   // Pass reject reason
         isActionPending={isActionPending}
+        rejectReason={task.reject_reason || undefined}
       />
     );
   }
@@ -372,7 +378,7 @@ function ReviewTaskItem({ task }: { task: ReviewTask }) {
       <PitchReviewCard
         task={task}
         onApprove={() => handleApprove()}
-        onReject={() => handleReject()}
+        onReject={(rejectReason) => handleReject(rejectReason)}
         isActionPending={isActionPending}
       />
     );
@@ -437,6 +443,12 @@ function ReviewTaskItem({ task }: { task: ReviewTask }) {
           <div className="bg-yellow-50 p-2.5 rounded-md border border-yellow-200">
             <h4 className="text-xs font-semibold text-yellow-700 mb-1">NOTES:</h4>
             <p className="text-yellow-800 text-xs">{task.notes}</p>
+          </div>
+        )}
+        {task.reject_reason && (
+          <div className="bg-red-50 p-2.5 rounded-md border border-red-200">
+            <h4 className="text-xs font-semibold text-red-700 mb-1">REJECTION REASON:</h4>
+            <p className="text-red-800 text-xs">{task.reject_reason}</p>
           </div>
         )}
 
