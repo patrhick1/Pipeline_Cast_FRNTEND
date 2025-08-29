@@ -117,7 +117,7 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center relative z-10">
           <div className="max-w-3xl mx-auto">
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6 leading-tight">
-              Land High-Impact Podcast Interviews — Without Cold Outreach
+              Automated Podcast Booking That Actually Works
             </h1>
             <p className="text-lg md:text-xl mb-10 text-indigo-100 max-w-2xl mx-auto">
               Our AI-powered platform finds your perfect shows, vets them for quality, 
@@ -157,22 +157,22 @@ export default function Home() {
               <div className="w-20 h-20 bg-indigo-600 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
                 <span className="text-3xl font-bold text-white">1</span>
               </div>
-              <h3 className="text-xl font-bold text-gray-900 mb-2">Tell Us Your Story</h3>
-              <p className="text-gray-600">Share your expertise and what makes you unique</p>
+              <h3 className="text-xl font-bold text-gray-900 mb-2">Build Your Profile</h3>
+              <p className="text-gray-600">10-minute setup creates your media kit and pitch angles</p>
             </div>
             <div className="text-center">
               <div className="w-20 h-20 bg-indigo-600 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
                 <span className="text-3xl font-bold text-white">2</span>
               </div>
-              <h3 className="text-xl font-bold text-gray-900 mb-2">Approve Podcasts</h3>
-              <p className="text-gray-600">We find shows, you pick which ones to pitch</p>
+              <h3 className="text-xl font-bold text-gray-900 mb-2">Review Matches</h3>
+              <p className="text-gray-600">AI scores shows by fit - approve with one click</p>
             </div>
             <div className="text-center">
               <div className="w-20 h-20 bg-indigo-600 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
                 <span className="text-3xl font-bold text-white">3</span>
               </div>
-              <h3 className="text-xl font-bold text-gray-900 mb-2">Get Famous</h3>
-              <p className="text-gray-600">Show up, shine, and grow your influence</p>
+              <h3 className="text-xl font-bold text-gray-900 mb-2">Get Booked</h3>
+              <p className="text-gray-600">Automated outreach delivers 85% booking rate</p>
             </div>
           </div>
           <div className="text-center mt-10">
@@ -192,19 +192,19 @@ export default function Home() {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
             <div>
               <div className="text-3xl font-bold text-indigo-600">500+</div>
-              <div className="text-sm text-gray-600 mt-1">Podcasts Booked</div>
+              <div className="text-sm text-gray-600 mt-1">Active Users</div>
             </div>
             <div>
               <div className="text-3xl font-bold text-indigo-600">85%</div>
               <div className="text-sm text-gray-600 mt-1">Acceptance Rate</div>
             </div>
             <div>
-              <div className="text-3xl font-bold text-indigo-600">20hrs</div>
-              <div className="text-sm text-gray-600 mt-1">Saved Per Week</div>
+              <div className="text-3xl font-bold text-indigo-600">7 days</div>
+              <div className="text-sm text-gray-600 mt-1">To First Booking</div>
             </div>
             <div>
-              <div className="text-3xl font-bold text-indigo-600">4.9★</div>
-              <div className="text-sm text-gray-600 mt-1">Client Rating</div>
+              <div className="text-3xl font-bold text-indigo-600">10K+</div>
+              <div className="text-sm text-gray-600 mt-1">Pitches Sent</div>
             </div>
           </div>
         </div>
@@ -215,11 +215,11 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
             <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-              Everything You Need to Get Booked
+              Complete Podcast Booking Automation
             </h2>
             <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-              Stop spending hours searching for shows and crafting pitches. 
-              We handle the entire process so you can focus on being a great guest.
+              From discovery to booking in one platform. PGL's workflow engine handles 
+              every step while you focus on preparing great content.
             </p>
           </div>
           
@@ -228,22 +228,22 @@ export default function Home() {
               <div className="w-12 h-12 bg-indigo-100 rounded-lg flex items-center justify-center mb-4">
                 <Search className="h-6 w-6 text-indigo-600" />
               </div>
-              <h3 className="text-xl font-semibold mb-3">Find Your Perfect Shows</h3>
+              <h3 className="text-xl font-semibold mb-3">Discovery Engine</h3>
               <p className="text-gray-600 mb-4">
-                We match you with podcasts whose audience fits your niche — no endless searching required.
+                PGL's algorithm matches you with 200+ relevant podcasts weekly using AI-powered audience analysis.
               </p>
               <ul className="space-y-2 text-sm text-gray-600">
                 <li className="flex items-start">
                   <CheckCircle className="h-4 w-4 text-green-500 mr-2 mt-0.5 flex-shrink-0" />
-                  AI-powered matching algorithm
+                  2M+ podcast database with daily updates
                 </li>
                 <li className="flex items-start">
                   <CheckCircle className="h-4 w-4 text-green-500 mr-2 mt-0.5 flex-shrink-0" />
-                  Verified show metrics & reach
+                  Proprietary fit scoring (0-100)
                 </li>
                 <li className="flex items-start">
                   <CheckCircle className="h-4 w-4 text-green-500 mr-2 mt-0.5 flex-shrink-0" />
-                  Topic & audience alignment
+                  Real-time booking probability metrics
                 </li>
               </ul>
             </Card>
@@ -252,22 +252,22 @@ export default function Home() {
               <div className="w-12 h-12 bg-indigo-100 rounded-lg flex items-center justify-center mb-4">
                 <FileText className="h-6 w-6 text-indigo-600" />
               </div>
-              <h3 className="text-xl font-semibold mb-3">Media Kit That Sells You</h3>
+              <h3 className="text-xl font-semibold mb-3">Auto-Generated Media Kit</h3>
               <p className="text-gray-600 mb-4">
-                Our system builds a beautiful media kit from your bio and social presence so hosts instantly see your value.
+                The platform creates a professional media kit webpage from your profile with a shareable URL.
               </p>
               <ul className="space-y-2 text-sm text-gray-600">
                 <li className="flex items-start">
                   <CheckCircle className="h-4 w-4 text-green-500 mr-2 mt-0.5 flex-shrink-0" />
-                  Professional one-pager design
+                  Dynamic webpage with shareable URL
                 </li>
                 <li className="flex items-start">
                   <CheckCircle className="h-4 w-4 text-green-500 mr-2 mt-0.5 flex-shrink-0" />
-                  Key talking points & expertise
+                  A/B tested conversion templates
                 </li>
                 <li className="flex items-start">
                   <CheckCircle className="h-4 w-4 text-green-500 mr-2 mt-0.5 flex-shrink-0" />
-                  Social proof & credentials
+                  Auto-pulled social metrics
                 </li>
               </ul>
             </Card>
@@ -276,22 +276,22 @@ export default function Home() {
               <div className="w-12 h-12 bg-indigo-100 rounded-lg flex items-center justify-center mb-4">
                 <Send className="h-6 w-6 text-indigo-600" />
               </div>
-              <h3 className="text-xl font-semibold mb-3">Hands-Off Outreach</h3>
+              <h3 className="text-xl font-semibold mb-3">Automated Pitch Sequences</h3>
               <p className="text-gray-600 mb-4">
-                Custom AI-crafted pitches sent from your email — so you look personal, not spammy.
+                Smart workflows send personalized pitches and follow-ups through your email integration.
               </p>
               <ul className="space-y-2 text-sm text-gray-600">
                 <li className="flex items-start">
                   <CheckCircle className="h-4 w-4 text-green-500 mr-2 mt-0.5 flex-shrink-0" />
-                  Personalized for each show
+                  Email API integration (Gmail/Outlook)
                 </li>
                 <li className="flex items-start">
                   <CheckCircle className="h-4 w-4 text-green-500 mr-2 mt-0.5 flex-shrink-0" />
-                  Follow-up sequences included
+                  3-touch follow-up sequences
                 </li>
                 <li className="flex items-start">
                   <CheckCircle className="h-4 w-4 text-green-500 mr-2 mt-0.5 flex-shrink-0" />
-                  Response tracking & analytics
+                  Real-time response dashboard
                 </li>
               </ul>
             </Card>
@@ -323,10 +323,10 @@ export default function Home() {
                   </div>
                 </div>
                 <div className="flex-1">
-                  <h3 className="text-xl font-semibold mb-2">Tell Us About You</h3>
+                  <h3 className="text-xl font-semibold mb-2">Quick Profile Setup</h3>
                   <p className="text-gray-600">
-                    Share your goals, niche, and topics you love to speak on. Our onboarding 
-                    process takes less than 10 minutes and helps us understand your unique value.
+                    10-minute onboarding creates your guest profile. PGL's AI analyzes your expertise 
+                    to generate talking points and pitch angles automatically.
                   </p>
                 </div>
               </div>
@@ -338,10 +338,10 @@ export default function Home() {
                   </div>
                 </div>
                 <div className="flex-1">
-                  <h3 className="text-xl font-semibold mb-2">We Find & Vet Shows</h3>
+                  <h3 className="text-xl font-semibold mb-2">AI Discovery & Scoring</h3>
                   <p className="text-gray-600">
-                    Using Podscan, Listen Notes, and our AI filters, we identify podcasts that 
-                    match your expertise and audience. Every show is vetted for quality and relevance.
+                    The platform scans 2M+ podcasts daily. Machine learning scores each match by 
+                    audience fit, engagement rates, and booking probability.
                   </p>
                 </div>
               </div>
@@ -353,10 +353,10 @@ export default function Home() {
                   </div>
                 </div>
                 <div className="flex-1">
-                  <h3 className="text-xl font-semibold mb-2">You Approve</h3>
+                  <h3 className="text-xl font-semibold mb-2">One-Click Approval</h3>
                   <p className="text-gray-600">
-                    Review our curated list of podcast matches. You have full control over which 
-                    shows to pitch. Approve with one click or request different options.
+                    Dashboard shows scored matches with reach estimates. Bulk approve or customize 
+                    targeting filters. Campaign launches automatically after approval.
                   </p>
                 </div>
               </div>
@@ -368,10 +368,10 @@ export default function Home() {
                   </div>
                 </div>
                 <div className="flex-1">
-                  <h3 className="text-xl font-semibold mb-2">We Pitch & Book</h3>
+                  <h3 className="text-xl font-semibold mb-2">Automated Outreach</h3>
                   <p className="text-gray-600">
-                    Custom pitches are sent on your behalf. We handle follow-ups, scheduling, 
-                    and booking confirmations. You just show up prepared to deliver value.
+                    Pitch sequences deploy through your email. Smart follow-ups and response 
+                    tracking happen automatically. Average time to first booking: 7 days.
                   </p>
                 </div>
               </div>
@@ -484,9 +484,9 @@ export default function Home() {
             <div className="flex gap-4">
               <Target className="h-8 w-8 text-indigo-600 flex-shrink-0" />
               <div>
-                <h3 className="font-semibold mb-1">Smart Targeting</h3>
+                <h3 className="font-semibold mb-1">Match Scoring Algorithm</h3>
                 <p className="text-sm text-gray-600">
-                  AI analyzes show topics, guest history, and audience demographics
+                  ML model scores 100+ signals: topics, reach, engagement, booking history
                 </p>
               </div>
             </div>
@@ -494,9 +494,9 @@ export default function Home() {
             <div className="flex gap-4">
               <Users className="h-8 w-8 text-indigo-600 flex-shrink-0" />
               <div>
-                <h3 className="font-semibold mb-1">Campaign Management</h3>
+                <h3 className="font-semibold mb-1">Campaign Dashboard</h3>
                 <p className="text-sm text-gray-600">
-                  Run multiple outreach campaigns for different topics or audiences
+                  Launch unlimited campaigns with custom filters and targeting rules
                 </p>
               </div>
             </div>
@@ -504,9 +504,9 @@ export default function Home() {
             <div className="flex gap-4">
               <TrendingUp className="h-8 w-8 text-indigo-600 flex-shrink-0" />
               <div>
-                <h3 className="font-semibold mb-1">Performance Tracking</h3>
+                <h3 className="font-semibold mb-1">Analytics Dashboard</h3>
                 <p className="text-sm text-gray-600">
-                  Monitor open rates, responses, and booking conversion metrics
+                  Track opens, replies, bookings. Export reports. API webhook support.
                 </p>
               </div>
             </div>
@@ -514,9 +514,9 @@ export default function Home() {
             <div className="flex gap-4">
               <Clock className="h-8 w-8 text-indigo-600 flex-shrink-0" />
               <div>
-                <h3 className="font-semibold mb-1">Automated Follow-ups</h3>
+                <h3 className="font-semibold mb-1">Smart Follow-up Engine</h3>
                 <p className="text-sm text-gray-600">
-                  Strategic follow-up sequences that respect host boundaries
+                  3-touch sequences with 48-72hr delays. Stops on reply detection.
                 </p>
               </div>
             </div>
@@ -524,9 +524,9 @@ export default function Home() {
             <div className="flex gap-4">
               <Mail className="h-8 w-8 text-indigo-600 flex-shrink-0" />
               <div>
-                <h3 className="font-semibold mb-1">Email Integration</h3>
+                <h3 className="font-semibold mb-1">Native Email APIs</h3>
                 <p className="text-sm text-gray-600">
-                  Sends from your email address for authentic communication
+                  OAuth integration with Gmail/Outlook. Sends from your actual inbox.
                 </p>
               </div>
             </div>
@@ -534,9 +534,9 @@ export default function Home() {
             <div className="flex gap-4">
               <Sparkles className="h-8 w-8 text-indigo-600 flex-shrink-0" />
               <div>
-                <h3 className="font-semibold mb-1">AI Personalization</h3>
+                <h3 className="font-semibold mb-1">Dynamic Pitch Generation</h3>
                 <p className="text-sm text-gray-600">
-                  Each pitch references specific episodes and show themes
+                  AI crafts personalized pitches referencing specific episodes and themes
                 </p>
               </div>
             </div>
@@ -548,10 +548,10 @@ export default function Home() {
       <section className="py-20 bg-gradient-to-r from-indigo-700 to-indigo-900 text-white">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <h2 className="text-3xl md:text-4xl font-bold mb-4">
-            Be the Guest Every Host Wants
+            Your First Booking in 7 Days or Less
           </h2>
           <p className="text-xl mb-8 text-indigo-100">
-            Start landing podcast interviews in less than 7 days.
+            Join 500+ founders using PGL to automate their podcast outreach.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link href="/signup">
