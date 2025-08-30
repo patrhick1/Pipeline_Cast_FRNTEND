@@ -549,6 +549,11 @@ export default function CampaignDetail({ campaignIdParam }: CampaignDetailProps)
   const { user, isLoading: authLoading } = useAuth();
   const tanstackQueryClient = useTanstackQueryClient();
   const { toast } = useToast(); // Added toast for reprocess button
+  
+  // Get tab from URL query parameter
+  const [, setLocation] = useLocation();
+  const urlParams = new URLSearchParams(window.location.search);
+  const tabFromUrl = urlParams.get('tab') || 'overview';
 
   const { data: campaign, isLoading, error, refetch: refetchCampaignDetail } = useQuery<CampaignDetailData>({
     queryKey: ["campaignDetail", campaignId],
@@ -687,7 +692,7 @@ export default function CampaignDetail({ campaignIdParam }: CampaignDetailProps)
         )}
       </div>
 
-      <Tabs defaultValue="overview" className="w-full">
+      <Tabs defaultValue={tabFromUrl} className="w-full">
         <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-1">
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="profileContent">Profile & Content</TabsTrigger>

@@ -7,7 +7,23 @@ import { ProgressIndicator } from './ProgressIndicator';
 import { ChatInput } from './ChatInput';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
-import { AlertCircle, RefreshCw, CheckCircle, Loader2 } from 'lucide-react';
+import { AlertCircle, RefreshCw, CheckCircle, Loader2, MoreVertical, RotateCcw } from 'lucide-react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 interface ChatInterfaceProps {
   campaignId: string;
@@ -21,6 +37,7 @@ export function ChatInterface({ campaignId, onComplete, isOnboarding = false }: 
   const [isCompleted, setIsCompleted] = useState(false);
   const [conversationAlreadyComplete, setConversationAlreadyComplete] = useState(false);
   const [showCompleteButton, setShowCompleteButton] = useState(false);
+  const [showRestartDialog, setShowRestartDialog] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   
   const {
@@ -34,6 +51,7 @@ export function ChatInterface({ campaignId, onComplete, isOnboarding = false }: 
     resumeConversation,
     completeConversation,
     pauseConversation,
+    restartConversation,
     getSummary,
     isLoading,
     connectionStatus,
@@ -47,18 +65,26 @@ export function ChatInterface({ campaignId, onComplete, isOnboarding = false }: 
     
     try {
       // Complete the conversation on the backend
-      await completeConversation.mutateAsync();
+      const result = await completeConversation.mutateAsync();
       
       // Mark as completed
       setIsCompleted(true);
       
-      // Notify parent component
-      onComplete({});
+      // Open media kit in new tab after a short delay to show success message
+      setTimeout(() => {
+        // Navigate to campaign detail page with profile content tab in new tab
+        const mediaKitUrl = `/my-campaigns/${campaignId}?tab=profileContent`;
+        window.open(mediaKitUrl, '_blank');
+        
+        // Notify parent component
+        onComplete({});
+      }, 1500); // 1.5 second delay to show success message
+      
     } catch (err) {
       setError('Failed to complete conversation. Please try again.');
       console.error('Error completing conversation:', err);
     }
-  }, [isCompleted, completeConversation, onComplete]);
+  }, [isCompleted, completeConversation, onComplete, campaignId]);
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
@@ -132,6 +158,20 @@ export function ChatInterface({ campaignId, onComplete, isOnboarding = false }: 
     handleSendMessage(reply);
   };
 
+  const handleRestartConversation = async () => {
+    try {
+      setShowRestartDialog(false);
+      setError(null);
+      setIsCompleted(false);
+      setShowCompleteButton(false);
+      setConversationAlreadyComplete(false);
+      await restartConversation.mutateAsync();
+    } catch (err) {
+      console.error('Error restarting conversation:', err);
+      setError('Failed to restart conversation. Please try again.');
+    }
+  };
+
   // Remove old automatic completion logic - now handled by ready_for_completion flag
   // The backend will set ready_for_completion=true only after user confirms their profile
 
@@ -199,8 +239,49 @@ export function ChatInterface({ campaignId, onComplete, isOnboarding = false }: 
   const currentQuickReplies = lastBotMessage?.quickReplies || [];
 
   return (
-    <div className="flex flex-col h-[600px] bg-white rounded-lg shadow-lg chat-interface-container">
-      <ProgressIndicator progress={progress} phase={phase} keywordsFound={keywordsCount} />
+    <>
+      <AlertDialog open={showRestartDialog} onOpenChange={setShowRestartDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Restart Conversation?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will end your current conversation and start fresh.
+              Your previous responses have been saved and can be reviewed later.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleRestartConversation}>
+              Restart Conversation
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <div className="flex flex-col h-[600px] bg-white rounded-lg shadow-lg chat-interface-container">
+        <ProgressIndicator progress={progress} phase={phase} keywordsFound={keywordsCount} />
+        
+        {!isCompleted && !conversationAlreadyComplete && conversationId && (
+          <div className="flex justify-end px-4 py-2 border-b">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="sm" className="h-8">
+                  <MoreVertical className="h-4 w-4 mr-2" />
+                  Options
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem 
+                  onClick={() => setShowRestartDialog(true)}
+                  disabled={restartConversation.isPending}
+                >
+                  <RotateCcw className="mr-2 h-4 w-4" />
+                  Restart Conversation
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        )}
       
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
         {isResumedConversation && messages.length > 0 && (
@@ -238,13 +319,16 @@ export function ChatInterface({ campaignId, onComplete, isOnboarding = false }: 
         <div className="p-4 bg-green-50 border-t border-green-200">
           <div className="flex items-center justify-center space-x-2 text-green-700">
             <CheckCircle className="h-5 w-5" />
-            <span className="font-medium">Conversation Complete!</span>
+            <span className="font-medium">Success! Your Profile is Ready!</span>
           </div>
-          <p className="text-center text-sm text-green-600 mt-1">
-            {isOnboarding 
-              ? "Your profile is being created. Moving to the next step..." 
-              : "Your media kit is being generated. You'll be redirected shortly."}
-          </p>
+          <div className="text-center space-y-1 mt-2">
+            <p className="text-sm text-green-600">
+              ✨ Media kit generated and opening in a new tab...
+            </p>
+            <p className="text-sm text-green-600">
+              🎯 Finding perfect podcast matches based on your expertise...
+            </p>
+          </div>
         </div>
       ) : !showCompleteButton ? (
         <ChatInput 
@@ -300,6 +384,7 @@ export function ChatInterface({ campaignId, onComplete, isOnboarding = false }: 
           </div>
         </div>
       )}
-    </div>
+      </div>
+    </>
   );
 }

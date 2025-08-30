@@ -15,11 +15,18 @@ import { z } from "zod";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { 
-  Users, Plus, Edit, Trash2, KeyRound, Search, Briefcase, Settings as SettingsIcon, Eye, EyeOff, CheckCircle, RefreshCw
+  Users, Plus, Edit, Trash2, KeyRound, Search, Briefcase, Settings as SettingsIcon, Eye, EyeOff, CheckCircle, RefreshCw, Radar, CircleSlash, Info
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import CreateCampaignDialog, { PersonForClientSelection as PersonForCampaignDialogs } from "@/components/dialogs/CreateCampaignDialog";
 import EditCampaignDialog from "@/components/dialogs/EditCampaignDialog";
+import { Switch } from "@/components/ui/switch";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 
 // --- Person Schemas (Align with backend: podcast_outreach/api/schemas/person_schemas.py) ---
@@ -127,6 +134,13 @@ interface Campaign {
   embedding_ready?: boolean; // NEW - Placeholder for embedding status (e.g., true if embedding exists)
   // Potentially add client_name if needed for display and not easily joinable in all contexts
   client_name?: string;
+  // Auto-discovery fields from backend
+  auto_discovery_enabled?: boolean;
+  auto_discovery_status?: string | null; // pending, running, completed, disabled, error
+  auto_discovery_last_run?: string | null;
+  auto_discovery_last_heartbeat?: string | null;
+  auto_discovery_progress?: Record<string, any> | null;
+  auto_discovery_error?: string | null;
 }
 
 // --- Create Person Dialog ---
@@ -411,13 +425,33 @@ function PeopleTable({ people, onEditPerson, onDeletePerson, onSetPassword }: {
 
 // --- Campaigns Table ---
 function CampaignsTable({ 
-  campaigns, onEditCampaign, onDeleteCampaign, onTriggerContentProcessing 
+  campaigns, onEditCampaign, onDeleteCampaign, onTriggerContentProcessing, onToggleAutoDiscovery, onViewAutoDiscoveryDetails 
 }: { 
   campaigns: Campaign[];
   onEditCampaign: (campaign: Campaign) => void;
   onDeleteCampaign: (campaignId: string) => void;
   onTriggerContentProcessing: (campaignId: string) => void;
+  onToggleAutoDiscovery: (campaignId: string, enabled: boolean) => void;
+  onViewAutoDiscoveryDetails: (campaign: Campaign) => void;
 }) {
+  // Local state to track toggle states for immediate UI feedback
+  const [toggleStates, setToggleStates] = useState<Record<string, boolean>>({});
+  
+  // Initialize toggle states from campaigns data
+  useEffect(() => {
+    const initialStates: Record<string, boolean> = {};
+    campaigns.forEach(campaign => {
+      initialStates[campaign.campaign_id] = campaign.auto_discovery_enabled || false;
+    });
+    setToggleStates(initialStates);
+  }, [campaigns]);
+  
+  const handleToggle = (campaignId: string, checked: boolean) => {
+    // Optimistically update the UI
+    setToggleStates(prev => ({ ...prev, [campaignId]: checked }));
+    // Call the API
+    onToggleAutoDiscovery(campaignId, checked);
+  };
   return (
     <div className="border rounded-lg overflow-x-auto">
       <Table>
@@ -428,13 +462,14 @@ function CampaignsTable({
             <TableHead>Type</TableHead>
             <TableHead>Keywords</TableHead>
             <TableHead>Embedding Status</TableHead>
+            <TableHead>Auto-Discovery</TableHead>
             <TableHead>Created</TableHead>
             <TableHead className="text-right">Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {campaigns.length === 0 && (
-            <TableRow><TableCell colSpan={7} className="text-center text-gray-500 py-4">No campaigns found.</TableCell></TableRow>
+            <TableRow><TableCell colSpan={8} className="text-center text-gray-500 py-4">No campaigns found.</TableCell></TableRow>
           )}
           {campaigns.map((campaign) => (
             <TableRow key={campaign.campaign_id}>
@@ -461,6 +496,76 @@ function CampaignsTable({
                         {campaign.embedding_status.replace(/_/g, ' ')}
                     </Badge>
                     ) : <Badge variant="secondary" className="text-xs">N/A</Badge>}
+              </TableCell>
+              <TableCell>
+                <TooltipProvider>
+                  <div className="flex items-center space-x-2">
+                    <Switch
+                      checked={toggleStates[campaign.campaign_id] ?? campaign.auto_discovery_enabled ?? false}
+                      onCheckedChange={(checked) => handleToggle(campaign.campaign_id, checked)}
+                      aria-label="Toggle auto-discovery"
+                    />
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <div className="flex flex-col space-y-1 cursor-help">
+                          <span className="text-xs text-muted-foreground">
+                            {(toggleStates[campaign.campaign_id] ?? campaign.auto_discovery_enabled) ? (
+                              <div className="flex items-center space-x-1">
+                                <Radar className="h-3 w-3 text-green-600" />
+                                <span>Enabled</span>
+                              </div>
+                            ) : (
+                              <div className="flex items-center space-x-1">
+                                <CircleSlash className="h-3 w-3 text-gray-400" />
+                                <span>Disabled</span>
+                              </div>
+                            )}
+                          </span>
+                          {campaign.auto_discovery_status && (toggleStates[campaign.campaign_id] ?? campaign.auto_discovery_enabled) && (
+                            <Badge 
+                              variant={
+                                campaign.auto_discovery_status === 'completed' ? 'default' :
+                                campaign.auto_discovery_status === 'running' ? 'secondary' :
+                                campaign.auto_discovery_status === 'pending' ? 'outline' :
+                                campaign.auto_discovery_status === 'error' ? 'destructive' :
+                                'secondary'
+                              }
+                              className="text-xs px-1 py-0"
+                            >
+                              {campaign.auto_discovery_status}
+                            </Badge>
+                          )}
+                        </div>
+                      </TooltipTrigger>
+                      <TooltipContent side="left" className="max-w-xs">
+                        <div className="space-y-2">
+                          <p className="font-semibold">Auto-Discovery Details</p>
+                          <div className="text-xs space-y-1">
+                            <p><strong>Status:</strong> {campaign.auto_discovery_status || 'Not started'}</p>
+                            {campaign.auto_discovery_last_run && (
+                              <p><strong>Last Run:</strong> {new Date(campaign.auto_discovery_last_run).toLocaleString()}</p>
+                            )}
+                            {campaign.auto_discovery_error && (
+                              <p className="text-red-500"><strong>Error:</strong> {campaign.auto_discovery_error}</p>
+                            )}
+                          </div>
+                          <Button 
+                            size="sm" 
+                            variant="link" 
+                            className="text-xs mt-2 p-0 h-auto"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onViewAutoDiscoveryDetails(campaign);
+                            }}
+                          >
+                            <Info className="h-3 w-3 mr-1" />
+                            View Details
+                          </Button>
+                        </div>
+                      </TooltipContent>
+                    </Tooltip>
+                  </div>
+                </TooltipProvider>
               </TableCell>
               <TableCell>{new Date(campaign.created_at).toLocaleDateString()}</TableCell>
               <TableCell className="text-right">
@@ -570,6 +675,12 @@ export default function AdminPanel() {
   const [isCreateCampaignDialogOpen, setIsCreateCampaignDialogOpen] = useState(false);
   const [editingCampaign, setEditingCampaign] = useState<Campaign | null>(null);
   const [isEditCampaignDialogOpen, setIsEditCampaignDialogOpen] = useState(false);
+  
+  // State for auto-discovery details dialog
+  const [selectedCampaignForDiscovery, setSelectedCampaignForDiscovery] = useState<Campaign | null>(null);
+  const [isAutoDiscoveryDetailsOpen, setIsAutoDiscoveryDetailsOpen] = useState(false);
+  const [autoDiscoveryDetails, setAutoDiscoveryDetails] = useState<any>(null);
+  const [isLoadingDiscoveryDetails, setIsLoadingDiscoveryDetails] = useState(false);
 
   // State for running tasks
   const [runningUiTasks, setRunningUiTasks] = useState<Record<string, boolean>>({});
@@ -703,6 +814,83 @@ export default function AdminPanel() {
     processCampaignContentMutation.mutate(campaignId);
   };
 
+  const handleToggleAutoDiscovery = (campaignId: string, enabled: boolean) => {
+    toggleAutoDiscoveryMutation.mutate({ campaignId, enabled });
+  };
+  
+  // Function to revert toggle state on error
+  const revertToggleState = (campaignId: string) => {
+    // Find the campaign and revert to its original state
+    const campaign = campaignsWithClientNames.find(c => c.campaign_id === campaignId);
+    if (campaign) {
+      // This will trigger a re-render of CampaignsTable with the original state
+      tanstackQueryClient.invalidateQueries({ queryKey: ["/campaigns/"] });
+    }
+  };
+
+  const handleViewAutoDiscoveryDetails = async (campaign: Campaign) => {
+    setSelectedCampaignForDiscovery(campaign);
+    setIsAutoDiscoveryDetailsOpen(true);
+    setIsLoadingDiscoveryDetails(true);
+    
+    try {
+      const response = await apiRequest('GET', `/campaigns/${campaign.campaign_id}/admin/auto-discovery-details`);
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch auto-discovery details');
+      }
+      
+      const data = await response.json();
+      setAutoDiscoveryDetails(data);
+    } catch (error) {
+      console.error('Error fetching auto-discovery details:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load auto-discovery details",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoadingDiscoveryDetails(false);
+    }
+  };
+
+  const toggleAutoDiscoveryMutation = useMutation<any, Error, { campaignId: string; enabled: boolean }>({
+    mutationFn: async ({ campaignId, enabled }) => {
+      const response = await apiRequest(
+        'PATCH', 
+        `/campaigns/${campaignId}/admin/auto-discovery?enabled=${enabled}&reset_status=${enabled}`,
+        {}
+      );
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ detail: 'Failed to update auto-discovery setting' }));
+        throw new Error(errorData.detail || 'Failed to update auto-discovery');
+      }
+      
+      return response.json();
+    },
+    onSuccess: (data, { campaignId, enabled }) => {
+      toast({
+        title: enabled ? "Auto-Discovery Enabled" : "Auto-Discovery Disabled",
+        description: enabled 
+          ? "The system will now automatically discover podcasts for this campaign."
+          : "Auto-discovery has been turned off for this campaign.",
+      });
+      
+      // Invalidate campaigns query to refresh the data
+      tanstackQueryClient.invalidateQueries({ queryKey: ["/campaigns"] });
+    },
+    onError: (error: Error, { campaignId, enabled }) => {
+      toast({
+        title: "Update Failed",
+        description: `Failed to ${enabled ? 'enable' : 'disable'} auto-discovery: ${error.message}`,
+        variant: "destructive",
+      });
+      // Revert the toggle state by refreshing the data
+      tanstackQueryClient.invalidateQueries({ queryKey: ["/campaigns/"] });
+    },
+  });
+
   const processCampaignContentMutation = useMutation<any, Error, string>({
     mutationFn: async (campaignId: string) => {
       toast({ title: "Task Triggered", description: `Attempting to process content for campaign: ${campaignId}...` });
@@ -816,6 +1004,8 @@ export default function AdminPanel() {
                 onEditCampaign={openEditCampaignDialog}
                 onDeleteCampaign={handleDeleteCampaign}
                 onTriggerContentProcessing={handleTriggerCampaignContentProcessing}
+                onToggleAutoDiscovery={handleToggleAutoDiscovery}
+                onViewAutoDiscoveryDetails={handleViewAutoDiscoveryDetails}
             />
           )}
         </CardContent>
@@ -1061,6 +1251,134 @@ export default function AdminPanel() {
             <p className="text-gray-500">System settings management will be implemented here.</p>
         </CardContent>
       </Card>
+
+      {/* Auto-Discovery Details Dialog */}
+      <Dialog open={isAutoDiscoveryDetailsOpen} onOpenChange={setIsAutoDiscoveryDetailsOpen}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Auto-Discovery Details</DialogTitle>
+            <DialogDescription>
+              {selectedCampaignForDiscovery?.campaign_name}
+            </DialogDescription>
+          </DialogHeader>
+          
+          {isLoadingDiscoveryDetails ? (
+            <div className="space-y-3">
+              <Skeleton className="h-20 w-full" />
+              <Skeleton className="h-20 w-full" />
+              <Skeleton className="h-20 w-full" />
+            </div>
+          ) : autoDiscoveryDetails ? (
+            <div className="space-y-4">
+              {/* Status Section */}
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm">Current Status</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm font-medium">Enabled:</span>
+                    <Badge variant={autoDiscoveryDetails.auto_discovery?.enabled ? "default" : "secondary"}>
+                      {autoDiscoveryDetails.auto_discovery?.enabled ? "Yes" : "No"}
+                    </Badge>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm font-medium">Status:</span>
+                    <Badge 
+                      variant={
+                        autoDiscoveryDetails.auto_discovery?.status === 'completed' ? 'default' :
+                        autoDiscoveryDetails.auto_discovery?.status === 'running' ? 'secondary' :
+                        autoDiscoveryDetails.auto_discovery?.status === 'error' ? 'destructive' :
+                        'outline'
+                      }
+                    >
+                      {autoDiscoveryDetails.auto_discovery?.status || 'Not started'}
+                    </Badge>
+                  </div>
+                  {autoDiscoveryDetails.auto_discovery?.last_run && (
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm font-medium">Last Run:</span>
+                      <span className="text-sm text-muted-foreground">
+                        {new Date(autoDiscoveryDetails.auto_discovery.last_run).toLocaleString()}
+                      </span>
+                    </div>
+                  )}
+                  {autoDiscoveryDetails.auto_discovery?.error && (
+                    <div className="mt-2 p-2 bg-red-50 rounded text-red-700 text-sm">
+                      <strong>Error:</strong> {autoDiscoveryDetails.auto_discovery.error}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Statistics Section */}
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm">Discovery Statistics</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-3 gap-4">
+                    <div className="text-center">
+                      <div className="text-2xl font-bold">{autoDiscoveryDetails.statistics?.total_discoveries || 0}</div>
+                      <div className="text-xs text-muted-foreground">Total Discovered</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-blue-600">{autoDiscoveryDetails.statistics?.qualified_discoveries || 0}</div>
+                      <div className="text-xs text-muted-foreground">Qualified</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-green-600">{autoDiscoveryDetails.statistics?.approved_matches || 0}</div>
+                      <div className="text-xs text-muted-foreground">Approved</div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Recent Discoveries */}
+              {autoDiscoveryDetails.recent_discoveries && autoDiscoveryDetails.recent_discoveries.length > 0 && (
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm">Recent Discoveries</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-2">
+                      {autoDiscoveryDetails.recent_discoveries.slice(0, 5).map((discovery: any, idx: number) => (
+                        <div key={idx} className="flex justify-between items-center py-2 border-b last:border-0">
+                          <div>
+                            <div className="font-medium text-sm">{discovery.media_name}</div>
+                            <div className="text-xs text-muted-foreground">
+                              {new Date(discovery.date).toLocaleDateString()}
+                            </div>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <Badge variant="outline" className="text-xs">
+                              Score: {discovery.vetting_score}
+                            </Badge>
+                            <Badge 
+                              variant={discovery.status === 'approved' ? 'default' : 'secondary'}
+                              className="text-xs"
+                            >
+                              {discovery.status}
+                            </Badge>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+          ) : (
+            <p className="text-center text-muted-foreground">No details available</p>
+          )}
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsAutoDiscoveryDetailsOpen(false)}>
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

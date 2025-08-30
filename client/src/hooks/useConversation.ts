@@ -471,6 +471,60 @@ export function useConversation(campaignId: string, isOnboarding: boolean = fals
     }
   };
 
+  // Restart conversation
+  const restartConversation = useMutation({
+    mutationFn: async () => {
+      console.log('Restarting conversation for campaign:', campaignId);
+      
+      const response = await apiRequest('POST', `/campaigns/${campaignId}/chatbot/restart`, {});
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Failed to restart conversation:', response.status, errorText);
+        throw new Error('Failed to restart conversation');
+      }
+      
+      return response.json();
+    },
+    onSuccess: (data) => {
+      console.log('Conversation restarted successfully:', data);
+      
+      // Clear current state
+      setConversationId(data.conversation_id);
+      setIsConversationComplete(false);
+      setProgress(0);
+      setPhase('introduction');
+      setKeywordsCount(0);
+      
+      // Set new initial message
+      const welcomeMessage: Message = {
+        id: `bot-${Date.now()}`,
+        text: data.initial_message || "Hi! I'm here to help you create an amazing podcast guest profile. Don't worry about getting everything perfect - you'll be able to edit your media kit after I generate it for you. Let's start with your name - what should I call you?",
+        sender: 'bot',
+        timestamp: new Date()
+      };
+      
+      setMessages([welcomeMessage]);
+      
+      // Clear any saved state
+      localStorage.removeItem(`chat-progress-${campaignId}`);
+      localStorage.removeItem(`chat-paused-${campaignId}`);
+      
+      toast({
+        title: "New Conversation Started",
+        description: "Let's start fresh! Your previous responses have been saved.",
+      });
+    },
+    onError: (error) => {
+      console.error('Failed to restart conversation:', error);
+      toast({
+        title: "Restart Failed",
+        description: "Unable to restart the conversation. Please try again.",
+        variant: "destructive"
+      });
+    }
+  });
+
   // Auto-save conversation
   const autoSaveConversation = () => {
     setLastSaveTime(Date.now());
@@ -489,8 +543,9 @@ export function useConversation(campaignId: string, isOnboarding: boolean = fals
     resumeConversation,
     completeConversation,
     pauseConversation,
+    restartConversation,
     getSummary,
-    isLoading: sendMessage.isPending || startConversation.isPending || completeConversation.isPending || pauseConversation.isPending,
+    isLoading: sendMessage.isPending || startConversation.isPending || completeConversation.isPending || pauseConversation.isPending || restartConversation.isPending,
     connectionStatus,
     isConversationComplete
   };

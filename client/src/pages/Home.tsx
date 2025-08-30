@@ -536,7 +536,7 @@ export default function Home() {
               <div>
                 <h3 className="font-semibold mb-1">Dynamic Pitch Generation</h3>
                 <p className="text-sm text-gray-600">
-                  AI crafts personalized pitches referencing specific episodes and themes
+                  Crafts personalized pitches referencing specific episodes and themes
                 </p>
               </div>
             </div>
