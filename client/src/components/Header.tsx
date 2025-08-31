@@ -1,7 +1,14 @@
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { CalendarPlus, Mic } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { CalendarPlus, Mic, AlertTriangle, ClipboardList } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import logoName from "@/img/PGL logo name.png";
 
@@ -87,15 +94,48 @@ export default function Header() {
               <span className="hidden sm:inline">Book Demo</span>
               <span className="sm:hidden">Book</span>
             </Button>
-            <Avatar className="h-8 w-8 sm:h-10 sm:w-10">
-              <AvatarImage 
-                src={user?.profile_image_url ? `${user.profile_image_url}?t=${Date.now()}` : undefined} 
-                alt={user?.full_name || user?.username || "User"}
-              />
-              <AvatarFallback className="bg-gray-300 text-gray-700 text-xs sm:text-sm">
-                {user?.full_name ? user.full_name.split(' ').map(n => n[0]).join('').toUpperCase() : user?.username?.[0]?.toUpperCase() || "U"}
-              </AvatarFallback>
-            </Avatar>
+            {/* Status indicators */}
+            <div className="flex items-center space-x-2">
+              <TooltipProvider>
+                {user?.show_verification_banner && (
+                  <Tooltip>
+                    <TooltipTrigger>
+                      <Badge variant="outline" className="border-amber-200 bg-amber-50 text-amber-700">
+                        <AlertTriangle className="h-3 w-3 mr-1" />
+                        <span className="hidden sm:inline">Verify Email</span>
+                      </Badge>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Please verify your email address</p>
+                    </TooltipContent>
+                  </Tooltip>
+                )}
+                
+                {user?.show_onboarding_button && (
+                  <Tooltip>
+                    <TooltipTrigger>
+                      <Badge variant="outline" className="border-blue-200 bg-blue-50 text-blue-700">
+                        <ClipboardList className="h-3 w-3 mr-1" />
+                        <span className="hidden sm:inline">Setup</span>
+                      </Badge>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Complete your profile setup</p>
+                    </TooltipContent>
+                  </Tooltip>
+                )}
+              </TooltipProvider>
+              
+              <Avatar className="h-8 w-8 sm:h-10 sm:w-10">
+                <AvatarImage 
+                  src={user?.profile_image_url ? `${user.profile_image_url}?t=${Date.now()}` : undefined} 
+                  alt={user?.full_name || user?.username || "User"}
+                />
+                <AvatarFallback className="bg-gray-300 text-gray-700 text-xs sm:text-sm">
+                  {user?.full_name ? user.full_name.split(' ').map(n => n[0]).join('').toUpperCase() : user?.username?.[0]?.toUpperCase() || "U"}
+                </AvatarFallback>
+              </Avatar>
+            </div>
           </div>
         </div>
       </div>

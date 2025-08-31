@@ -5,7 +5,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-import { LogIn, Mail, Eye, EyeOff } from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { LogIn, Mail, Eye, EyeOff, AlertCircle, CheckCircle2 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useLocation, Link } from "wouter"; // Added Link
 import { useToast } from "@/hooks/use-toast";
@@ -20,6 +21,8 @@ export default function Landing() {
   const [forgotPasswordEmail, setForgotPasswordEmail] = useState("");
   const [isResetLoading, setIsResetLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [showEmailVerificationAlert, setShowEmailVerificationAlert] = useState(false);
+  const [emailVerified, setEmailVerified] = useState(false);
   const { toast } = useToast();
   const [, navigate] = useLocation();
   const { isAuthenticated, isLoading: authLoading } = useAuth();
@@ -37,6 +40,7 @@ export default function Landing() {
     
     // Handle success messages
     if (message === "email-verified") {
+      setEmailVerified(true);
       toast({
         title: "Email Verified! ✅",
         description: "Your email has been verified. You can now log in.",
@@ -44,11 +48,7 @@ export default function Landing() {
       // Clean up URL
       window.history.replaceState({}, document.title, window.location.pathname);
     } else if (message === "check-email") {
-      toast({
-        title: "Check Your Email 📧",
-        description: "We've sent you a verification email. Please verify your account to continue.",
-        duration: 8000
-      });
+      setShowEmailVerificationAlert(true);
       // Clean up URL
       window.history.replaceState({}, document.title, window.location.pathname);
     } else if (message === "google-signup-success") {
@@ -127,13 +127,33 @@ export default function Landing() {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ detail: "Login failed. Please check your credentials." }));
+        
+        // Check if the error is related to email verification
+        if (response.status === 403) {
+          // Check headers for verification requirement
+          const verificationRequired = response.headers.get('X-Verification-Required');
+          if (verificationRequired === 'true' || errorData.detail?.toLowerCase().includes("email")) {
+            setShowEmailVerificationAlert(true);
+            throw new Error("Please verify your email before logging in. Check your inbox for the verification link.");
+          }
+        }
+        
         throw new Error(errorData.detail || "Login failed");
       }
       
-      // const responseData = await response.json(); // Contains user role, person_id etc.
-      // console.log("Login successful, response data:", responseData); // For debugging
+      const responseData = await response.json(); // Contains user role, person_id etc.
+      console.log("Login successful, response data:", responseData); // For debugging
 
-      toast({ title: "Login Successful", description: "Redirecting to dashboard..." });
+      // Check for grace period warning
+      if (responseData.email_verification_warning) {
+        toast({ 
+          title: "Email Verification Needed", 
+          description: responseData.warning_message || "Please verify your email to continue using all features.",
+          duration: 8000
+        });
+      } else {
+        toast({ title: "Login Successful", description: "Redirecting to dashboard..." });
+      }
       await queryClient.invalidateQueries({ queryKey: ["/auth/me"] }); // Corrected queryKey
       // The useAuth hook will pick up the new auth state, and App.tsx router will redirect.
       // Explicit navigation might still be good for immediate feedback.
@@ -242,6 +262,29 @@ export default function Landing() {
                   <h1 className="text-2xl font-bold text-gray-900 mb-2">Welcome Back</h1>
                   <p className="text-gray-600">Sign in to your account</p>
                 </div>
+
+                {/* Email Verification Alert */}
+                {showEmailVerificationAlert && (
+                  <Alert className="mb-6 border-orange-200 bg-orange-50">
+                    <AlertCircle className="h-4 w-4 text-orange-600" />
+                    <AlertTitle className="text-orange-800">Email Verification Required</AlertTitle>
+                    <AlertDescription className="text-orange-700">
+                      Please check your email and click the verification link to activate your account. 
+                      Once verified, you can log in here.
+                    </AlertDescription>
+                  </Alert>
+                )}
+
+                {/* Email Verified Success Alert */}
+                {emailVerified && (
+                  <Alert className="mb-6 border-green-200 bg-green-50">
+                    <CheckCircle2 className="h-4 w-4 text-green-600" />
+                    <AlertTitle className="text-green-800">Email Verified Successfully!</AlertTitle>
+                    <AlertDescription className="text-green-700">
+                      Your email has been verified. You can now log in to your account.
+                    </AlertDescription>
+                  </Alert>
+                )}
 
                 <form onSubmit={handleSignIn} className="space-y-6">
                   <div>

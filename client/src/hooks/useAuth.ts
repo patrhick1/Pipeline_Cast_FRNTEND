@@ -7,9 +7,24 @@ interface AuthUser {
   role: string | null;
   person_id: number | null; // Changed from optional to match backend session data more closely
   full_name: string | null; // Changed from optional
-  // Onboarding status
+  
+  // Email verification fields
+  email_verified?: boolean;
+  email_verified_at?: string | null;
+  email_verification_required?: boolean;
+  grace_period_end_date?: string | null;
+  
+  // Onboarding fields
   onboarding_completed?: boolean;
   onboarding_completed_at?: string | null;
+  needs_onboarding?: boolean;
+  has_campaign_data?: boolean;
+  has_onboarding_token?: boolean;
+  
+  // UI flags
+  show_verification_banner?: boolean;
+  show_onboarding_button?: boolean;
+  
   // Fields from Person schema / settings page
   bio?: string | null;
   website?: string | null;

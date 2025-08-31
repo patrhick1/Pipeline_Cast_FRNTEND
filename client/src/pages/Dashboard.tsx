@@ -18,7 +18,9 @@ import {
 } from "lucide-react";
 import { Link } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
-import RecentReplies from "@/components/dashboard/RecentReplies"; 
+import RecentReplies from "@/components/dashboard/RecentReplies";
+import { EmailVerificationBanner } from "@/components/EmailVerificationBanner";
+import { OnboardingPrompt } from "@/components/OnboardingPrompt"; 
 
 // --- Interfaces to match backend dashboard_schemas.py ---
 interface DashboardStatsOverview {
@@ -223,6 +225,19 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-8 p-4 md:p-6">
+      {/* Email Verification Banner */}
+      {user?.show_verification_banner && (
+        <EmailVerificationBanner 
+          email={user.username}
+          gracePeriodEndDate={user.grace_period_end_date}
+        />
+      )}
+      
+      {/* Onboarding Prompt */}
+      {user?.show_onboarding_button && (
+        <OnboardingPrompt />
+      )}
+      
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {statsLoading || statsError ? (

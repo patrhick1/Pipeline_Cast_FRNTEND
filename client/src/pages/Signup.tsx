@@ -4,7 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { UserPlus, Eye, EyeOff } from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { UserPlus, Eye, EyeOff, Mail } from "lucide-react";
 import { useLocation, Link } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
@@ -29,6 +30,8 @@ export default function SignupPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [showVerificationMessage, setShowVerificationMessage] = useState(false);
+  const [registeredEmail, setRegisteredEmail] = useState("");
   const { toast } = useToast();
   const [, navigate] = useLocation();
 
@@ -82,12 +85,17 @@ export default function SignupPage() {
         navigate(`/login?redirect=/profile-setup&campaignId=${responseData.campaign_id}`);
       } else {
         // For regular signups, show email verification message
+        setRegisteredEmail(data.email);
+        setShowVerificationMessage(true);
         toast({ 
           title: "Account Created Successfully! 📧", 
-          description: "Please check your email to verify your account. After verification, you'll receive an onboarding email to set up your profile.",
+          description: "Please check your email to verify your account.",
           duration: 8000 // Keep it visible longer
         });
-        navigate("/login?message=check-email");
+        // Don't navigate away immediately, let user see the verification message
+        setTimeout(() => {
+          navigate("/login?message=check-email");
+        }, 3000);
       }
 
     } catch (error: any) {
@@ -130,6 +138,45 @@ export default function SignupPage() {
       setIsLoading(false);
     }
   };
+
+  // If verification message should be shown, display it instead of the form
+  if (showVerificationMessage) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-indigo-600 to-indigo-800">
+        <div className="min-h-screen flex items-center justify-center p-4">
+          <div className="max-w-md w-full">
+            <Card className="shadow-2xl">
+              <CardContent className="p-8">
+                <div className="text-center">
+                  <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-green-100 mb-4">
+                    <Mail className="h-8 w-8 text-green-600" />
+                  </div>
+                  <h2 className="text-2xl font-bold text-gray-900 mb-2">Check Your Email!</h2>
+                  <Alert className="mb-6 border-blue-200 bg-blue-50 text-left">
+                    <Mail className="h-4 w-4 text-blue-600" />
+                    <AlertTitle className="text-blue-800">Verification Email Sent</AlertTitle>
+                    <AlertDescription className="text-blue-700">
+                      We've sent a verification email to <strong>{registeredEmail}</strong>. 
+                      Please click the link in the email to verify your account before logging in.
+                    </AlertDescription>
+                  </Alert>
+                  <p className="text-gray-600 mb-6">
+                    Didn't receive the email? Check your spam folder or contact support.
+                  </p>
+                  <Button 
+                    onClick={() => navigate("/login?message=check-email")}
+                    className="w-full"
+                  >
+                    Go to Login
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-600 to-indigo-800">
