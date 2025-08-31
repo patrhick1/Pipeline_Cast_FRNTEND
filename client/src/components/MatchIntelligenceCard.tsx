@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { Badge } from "@/components/ui/badge";
-import { ThumbsUp, ThumbsDown, Check, Globe, Twitter, Linkedin, Instagram, Facebook, Youtube } from "lucide-react";
+import { ThumbsUp, ThumbsDown, Check, Globe, Twitter, Linkedin, Instagram, Facebook, Youtube, Info } from "lucide-react";
 import { Button } from './ui/button';
 import { RejectReasonDialog } from './RejectReasonDialog';
+import { PodcastDetailsModal } from './modals/PodcastDetailsModal';
 
 // Helper function to format reach numbers
 function formatReachNumber(num: number): string {
@@ -56,6 +57,7 @@ interface MatchIntelligenceCardProps {
 
 export const MatchIntelligenceCard = ({ match, onApprove, onReject, isActionPending, rejectReason }: MatchIntelligenceCardProps) => {
   const [showRejectDialog, setShowRejectDialog] = useState(false);
+  const [showPodcastDetails, setShowPodcastDetails] = useState(false);
   const media = match.media;
 
   const handleRejectClick = () => {
@@ -71,8 +73,24 @@ export const MatchIntelligenceCard = ({ match, onApprove, onReject, isActionPend
     return (
       <div className="match-card bg-white rounded-lg shadow-md overflow-hidden">
         <div className="p-4 bg-gray-50 border-b border-gray-200">
-          <h3 className="font-bold text-lg">{match.media_name || `Media ID: ${match.media_id}`}</h3>
-          <p className="text-sm text-yellow-600">⚠️ Detailed media information is being loaded...</p>
+          <div className="flex items-start justify-between">
+            <div>
+              <h3 className="font-bold text-lg">{match.media_name || `Media ID: ${match.media_id}`}</h3>
+              <p className="text-sm text-yellow-600">⚠️ Detailed media information is being loaded...</p>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 px-2 text-xs"
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowPodcastDetails(true);
+              }}
+            >
+              <Info className="h-3 w-3 mr-1" />
+              Details
+            </Button>
+          </div>
         </div>
         <div className="p-4">
           {match.vetting_score !== null && match.vetting_score !== undefined && (
@@ -121,6 +139,14 @@ export const MatchIntelligenceCard = ({ match, onApprove, onReject, isActionPend
           title="Reject Match"
           mediaName={match.media_name || undefined}
         />
+        
+        {/* Podcast Details Modal for fallback card */}
+        <PodcastDetailsModal
+          isOpen={showPodcastDetails}
+          onClose={() => setShowPodcastDetails(false)}
+          mediaId={match.media_id}
+          podcastName={match.media_name || undefined}
+        />
       </div>
     );
   }
@@ -141,16 +167,32 @@ export const MatchIntelligenceCard = ({ match, onApprove, onReject, isActionPend
           />
         </a>
         <div className="podcast-info flex-1">
-          <a 
-            href={media.website || '#'} 
-            target="_blank" 
-            rel="noopener noreferrer"
-            className="hover:underline"
-          >
-            <h3 className="font-bold text-lg">{media.name}</h3>
-          </a>
-          <p className="text-sm text-gray-600">Host: {media.host_names?.join(', ') || 'N/A'}</p>
-          <p className="text-sm text-gray-500">Category: {media.category || 'N/A'}</p>
+          <div className="flex items-start justify-between">
+            <div className="flex-1">
+              <a 
+                href={media.website || '#'} 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="hover:underline"
+              >
+                <h3 className="font-bold text-lg">{media.name}</h3>
+              </a>
+              <p className="text-sm text-gray-600">Host: {media.host_names?.join(', ') || 'N/A'}</p>
+              <p className="text-sm text-gray-500">Category: {media.category || 'N/A'}</p>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 px-2 text-xs"
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowPodcastDetails(true);
+              }}
+            >
+              <Info className="h-3 w-3 mr-1" />
+              Details
+            </Button>
+          </div>
           
           {/* Social Media Icons */}
           <div className="flex gap-2 mt-2">
@@ -251,6 +293,14 @@ export const MatchIntelligenceCard = ({ match, onApprove, onReject, isActionPend
         isLoading={isActionPending}
         title="Reject Match"
         mediaName={media.name || undefined}
+      />
+      
+      {/* Podcast Details Modal */}
+      <PodcastDetailsModal
+        isOpen={showPodcastDetails}
+        onClose={() => setShowPodcastDetails(false)}
+        mediaId={match.media_id}
+        podcastName={media.name || undefined}
       />
     </div>
   );
