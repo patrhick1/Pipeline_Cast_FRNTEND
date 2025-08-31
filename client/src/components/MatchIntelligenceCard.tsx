@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Badge } from "@/components/ui/badge";
-import { ThumbsUp, ThumbsDown, Check, Globe, Twitter, Linkedin, Instagram, Facebook, Youtube, Info } from "lucide-react";
+import { ThumbsUp, ThumbsDown, Check, Globe, Twitter, Linkedin, Instagram, Facebook, Youtube, Info, CheckSquare, Square } from "lucide-react";
 import { Button } from './ui/button';
 import { RejectReasonDialog } from './RejectReasonDialog';
 import { PodcastDetailsModal } from './modals/PodcastDetailsModal';
@@ -52,10 +52,22 @@ interface MatchIntelligenceCardProps {
   onReject: (matchId: number, rejectReason?: string) => void;
   isActionPending: boolean;
   rejectReason?: string; // Display existing reject reason if any
+  isSelectable?: boolean; // Whether this card can be selected for bulk actions
+  isSelected?: boolean; // Whether this card is currently selected
+  onSelect?: (matchId: number) => void; // Callback when selection checkbox is clicked
 }
 
 
-export const MatchIntelligenceCard = ({ match, onApprove, onReject, isActionPending, rejectReason }: MatchIntelligenceCardProps) => {
+export const MatchIntelligenceCard = ({ 
+  match, 
+  onApprove, 
+  onReject, 
+  isActionPending, 
+  rejectReason,
+  isSelectable = false,
+  isSelected = false,
+  onSelect
+}: MatchIntelligenceCardProps) => {
   const [showRejectDialog, setShowRejectDialog] = useState(false);
   const [showPodcastDetails, setShowPodcastDetails] = useState(false);
   const media = match.media;
@@ -71,25 +83,45 @@ export const MatchIntelligenceCard = ({ match, onApprove, onReject, isActionPend
   if (!media) {
     // Fallback: Show basic card with available information instead of error
     return (
-      <div className="match-card bg-white rounded-lg shadow-md overflow-hidden">
+      <div className={`match-card bg-white rounded-lg shadow-md overflow-hidden ${isSelected ? 'ring-2 ring-blue-500' : ''}`}>
         <div className="p-4 bg-gray-50 border-b border-gray-200">
-          <div className="flex items-start justify-between">
-            <div>
-              <h3 className="font-bold text-lg">{match.media_name || `Media ID: ${match.media_id}`}</h3>
-              <p className="text-sm text-yellow-600">⚠️ Detailed media information is being loaded...</p>
+          <div className="flex items-start gap-3">
+            {/* Selection Checkbox for fallback card */}
+            {isSelectable && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="p-1 h-auto"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onSelect?.(match.match_id);
+                }}
+              >
+                {isSelected ? (
+                  <CheckSquare className="h-5 w-5 text-blue-600" />
+                ) : (
+                  <Square className="h-5 w-5 text-gray-400" />
+                )}
+              </Button>
+            )}
+            <div className="flex items-start justify-between flex-1">
+              <div>
+                <h3 className="font-bold text-lg">{match.media_name || `Media ID: ${match.media_id}`}</h3>
+                <p className="text-sm text-yellow-600">⚠️ Detailed media information is being loaded...</p>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 px-2 text-xs"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowPodcastDetails(true);
+                }}
+              >
+                <Info className="h-3 w-3 mr-1" />
+                Details
+              </Button>
             </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-8 px-2 text-xs"
-              onClick={(e) => {
-                e.stopPropagation();
-                setShowPodcastDetails(true);
-              }}
-            >
-              <Info className="h-3 w-3 mr-1" />
-              Details
-            </Button>
           </div>
         </div>
         <div className="p-4">
@@ -152,8 +184,26 @@ export const MatchIntelligenceCard = ({ match, onApprove, onReject, isActionPend
   }
   
   return (
-    <div className="match-card bg-white rounded-lg shadow-md overflow-hidden">
+    <div className={`match-card bg-white rounded-lg shadow-md overflow-hidden ${isSelected ? 'ring-2 ring-blue-500' : ''}`}>
       <div className="p-4 bg-gray-50 border-b border-gray-200 flex items-start gap-4">
+        {/* Selection Checkbox */}
+        {isSelectable && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="p-1 h-auto"
+            onClick={(e) => {
+              e.stopPropagation();
+              onSelect?.(match.match_id);
+            }}
+          >
+            {isSelected ? (
+              <CheckSquare className="h-5 w-5 text-blue-600" />
+            ) : (
+              <Square className="h-5 w-5 text-gray-400" />
+            )}
+          </Button>
+        )}
         <a 
           href={media.website || '#'} 
           target="_blank" 
@@ -161,9 +211,14 @@ export const MatchIntelligenceCard = ({ match, onApprove, onReject, isActionPend
           className="block hover:opacity-90 transition-opacity cursor-pointer"
         >
           <img 
-            src={media.image_url || '/default-podcast.png'} 
+            src={media.image_url || '/default-podcast.svg'} 
             alt={media.name || 'Podcast Cover'} 
-            className="w-20 h-20 rounded-md object-cover border"
+            className="w-20 h-20 rounded-md object-cover border bg-gray-50"
+            onError={(e) => {
+              const target = e.target as HTMLImageElement;
+              target.onerror = null; // Prevent infinite loop
+              target.src = '/default-podcast.svg'; // Fallback image
+            }}
           />
         </a>
         <div className="podcast-info flex-1">

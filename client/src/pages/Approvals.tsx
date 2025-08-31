@@ -13,7 +13,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { apiRequest, queryClient as appQueryClient } from "@/lib/queryClient"; // Use appQueryClient
 import { 
   CheckCircle, Clock, XCircle, Search, Filter, Podcast, Users, ExternalLink, ThumbsUp, ThumbsDown, Edit3, Eye, MessageSquare,
-  ChevronLeft, ChevronRight, ListChecks, Info // Added ListChecks for Total icon and Info for details
+  ChevronLeft, ChevronRight, ListChecks, Info, CheckSquare, Square // Added ListChecks for Total icon and Info for details
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton"; // For loading states
 import { MatchIntelligenceCard } from "@/components/MatchIntelligenceCard";
@@ -201,7 +201,17 @@ const reviewTaskStatusConfig = {
 };
 
 // --- ReviewTaskItem Component ---
-function ReviewTaskItem({ task }: { task: ReviewTask }) {
+function ReviewTaskItem({ 
+  task, 
+  isSelectable = false,
+  isSelected = false,
+  onSelect
+}: { 
+  task: ReviewTask;
+  isSelectable?: boolean;
+  isSelected?: boolean;
+  onSelect?: (taskId: number) => void;
+}) {
   const { toast } = useToast();
   const tanstackQueryClient = useTanstackQueryClient();
   const [showPodcastDetails, setShowPodcastDetails] = useState(false);
@@ -369,6 +379,9 @@ function ReviewTaskItem({ task }: { task: ReviewTask }) {
         onReject={(matchId, rejectReason) => handleReject(rejectReason)}   // Pass reject reason
         isActionPending={isActionPending}
         rejectReason={task.reject_reason || undefined}
+        isSelectable={isSelectable && task.status === 'pending'}
+        isSelected={isSelected}
+        onSelect={() => onSelect?.(task.review_task_id)}
       />
     );
   }
@@ -540,10 +553,14 @@ const ITEMS_PER_PAGE = 10;
 
 export default function Approvals() {
   const { user } = useAuth();
+  const tanstackQueryClient = useTanstackQueryClient();
+  const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("pending");
   const [taskTypeFilter, setTaskTypeFilter] = useState<"all" | "match_suggestion">("match_suggestion");
   const [currentPage, setCurrentPage] = useState(1);
+  const [selectedTasks, setSelectedTasks] = useState<Set<number>>(new Set());
+  const [isBulkApproving, setIsBulkApproving] = useState(false);
   
   // Determine if user is a client
   const isClient = user?.role?.toLowerCase() === 'client';
@@ -638,7 +655,104 @@ export default function Approvals() {
 
   useEffect(() => {
     setCurrentPage(1);
+    setSelectedTasks(new Set()); // Clear selections when filters change
   }, [statusFilter, taskTypeFilter]);
+
+  // Get pending tasks that can be selected (only for clients viewing pending tasks)
+  const selectableTasks = displayedTasks.filter(task => 
+    task.status === 'pending' && 
+    task.task_type === 'match_suggestion'
+  );
+
+  // Handle select all for current page
+  const handleSelectAll = () => {
+    if (selectedTasks.size === selectableTasks.length && selectableTasks.length > 0) {
+      // All are selected, deselect all
+      setSelectedTasks(new Set());
+    } else {
+      // Select all on current page
+      const newSelected = new Set(selectedTasks);
+      selectableTasks.forEach(task => {
+        newSelected.add(task.review_task_id);
+      });
+      setSelectedTasks(newSelected);
+    }
+  };
+
+  // Handle individual task selection
+  const handleTaskSelect = (taskId: number) => {
+    const newSelected = new Set(selectedTasks);
+    if (newSelected.has(taskId)) {
+      newSelected.delete(taskId);
+    } else {
+      newSelected.add(taskId);
+    }
+    setSelectedTasks(newSelected);
+  };
+
+  // Handle bulk approval
+  const handleBulkApprove = async () => {
+    if (selectedTasks.size === 0) {
+      toast({
+        title: "No tasks selected",
+        description: "Please select at least one task to approve.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsBulkApproving(true);
+    try {
+      const response = await apiRequest("POST", "/review-tasks/bulk-approve", {
+        review_task_ids: Array.from(selectedTasks),
+        status: "approved",
+        notes: "Bulk approved by client via UI"
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ detail: "Bulk approval failed" }));
+        throw new Error(errorData.detail);
+      }
+
+      const result = await response.json();
+      
+      // Show success message with details
+      // The API returns successful_count and failed_count directly
+      const successCount = result.successful_count || 0;
+      const failureCount = result.failed_count || 0;
+      
+      if (successCount > 0) {
+        toast({
+          title: "Bulk Approval Successful",
+          description: `Successfully approved ${successCount} match${successCount > 1 ? 'es' : ''}${failureCount > 0 ? `. ${failureCount} failed.` : '.'}`,
+        });
+      } else if (failureCount > 0) {
+        toast({
+          title: "Partial Success",
+          description: `${failureCount} match${failureCount > 1 ? 'es' : ''} failed to approve. Please try again.`,
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Bulk Approval Failed",
+          description: "No matches were approved. Please try again.",
+          variant: "destructive",
+        });
+      }
+
+      // Clear selections and refresh data
+      setSelectedTasks(new Set());
+      tanstackQueryClient.invalidateQueries({ queryKey: ["/review-tasks/enhanced"] });
+    } catch (error: any) {
+      toast({
+        title: "Bulk Approval Failed",
+        description: error.message || "Could not process bulk approval.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsBulkApproving(false);
+    }
+  };
 
   if (error) {
     return (
@@ -743,6 +857,56 @@ export default function Approvals() {
             </div>
           </div>
 
+          {/* Bulk Actions Bar - Only show for clients viewing pending tasks */}
+          {isClient && statusFilter === 'pending' && selectableTasks.length > 0 && (
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4 flex flex-col sm:flex-row items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="p-1"
+                  onClick={handleSelectAll}
+                >
+                  {selectedTasks.size === selectableTasks.length && selectableTasks.length > 0 ? (
+                    <CheckSquare className="h-5 w-5 text-blue-600" />
+                  ) : (
+                    <Square className="h-5 w-5 text-gray-600" />
+                  )}
+                </Button>
+                <span className="text-sm text-gray-700">
+                  {selectedTasks.size > 0 ? (
+                    <>
+                      {selectedTasks.size} of {selectableTasks.length} selected
+                    </>
+                  ) : (
+                    <>Select all ({selectableTasks.length})</>
+                  )}
+                </span>
+              </div>
+              
+              {selectedTasks.size > 0 && (
+                <Button
+                  size="sm"
+                  onClick={handleBulkApprove}
+                  disabled={isBulkApproving}
+                  className="bg-green-600 hover:bg-green-700 text-white"
+                >
+                  {isBulkApproving ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
+                      Approving...
+                    </>
+                  ) : (
+                    <>
+                      <ThumbsUp className="h-4 w-4 mr-2" />
+                      Bulk Approve ({selectedTasks.size})
+                    </>
+                  )}
+                </Button>
+              )}
+            </div>
+          )}
+
           {isLoading ? ( 
             <div className="space-y-4">
               <div className="flex items-center justify-center py-4">
@@ -786,7 +950,13 @@ export default function Approvals() {
               )}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
                 {displayedTasks.map((task) => (
-                  <ReviewTaskItem key={task.review_task_id} task={task} />
+                  <ReviewTaskItem 
+                    key={task.review_task_id} 
+                    task={task}
+                    isSelectable={isClient && task.status === 'pending' && task.task_type === 'match_suggestion'}
+                    isSelected={selectedTasks.has(task.review_task_id)}
+                    onSelect={handleTaskSelect}
+                  />
                 ))}
               </div>
             </div>
