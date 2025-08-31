@@ -34,6 +34,9 @@ import { RecipientEmailEditor } from "@/components/pitch/RecipientEmailEditor";
 import { useAuth } from "@/hooks/useAuth";
 import PitchEmailThread from "@/components/pitch/PitchEmailThread";
 import { SmartSendSettings } from "@/components/pitch/SmartSendSettings";
+import { AIGeneratePitchButton } from "@/components/pitch/AIGeneratePitchButton";
+import { AIGenerateFollowUpButton } from "@/components/pitch/AIGenerateFollowUpButton";
+import { BatchAIGenerateButton } from "@/components/pitch/BatchAIGenerateButton";
 
 // --- Interfaces (Aligned with expected enriched backend responses) ---
 
@@ -162,6 +165,8 @@ function ReadyForDraftTab({
 }) {
     const [selectedMediaId, setSelectedMediaId] = useState<number | null>(null);
     const [showPodcastDetails, setShowPodcastDetails] = useState(false);
+    const { canUseAI } = usePitchCapabilities();
+    const queryClient = useTanstackQueryClient();
 
     if (isLoadingMatches) {
         return (
@@ -177,6 +182,31 @@ function ReadyForDraftTab({
 
     return (
         <div className="space-y-4">
+            {/* Batch AI Generation for all approved matches */}
+            {canUseAI && approvedMatches.length > 1 && (
+                <div className="bg-gradient-to-r from-purple-50 to-blue-50 border border-purple-200 rounded-lg p-4">
+                    <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
+                        <div>
+                            <h3 className="font-medium text-purple-900">Generate AI Pitches for All</h3>
+                            <p className="text-sm text-purple-700">
+                                Create personalized pitches for all {approvedMatches.length} approved matches at once.
+                            </p>
+                        </div>
+                        <BatchAIGenerateButton
+                            matches={approvedMatches.map(m => ({ 
+                                match_id: m.match_id, 
+                                media_name: m.media_name 
+                            }))}
+                            onComplete={() => {
+                                queryClient.invalidateQueries({ queryKey: ["/pitches"] });
+                                queryClient.invalidateQueries({ queryKey: ["/match-suggestions"] });
+                            }}
+                            size="sm"
+                        />
+                    </div>
+                </div>
+            )}
+            
             <div className="space-y-3 max-h-[60vh] overflow-y-auto pr-2">
                 {approvedMatches.map((match) => (
                     <Card key={match.match_id} className="p-4 hover:shadow-md transition-shadow">
@@ -209,14 +239,30 @@ function ReadyForDraftTab({
                                     )}
                                 </div>
                             </div>
-                            <Button
-                                size="sm"
-                                onClick={() => onCreateSequence && onCreateSequence(match)}
-                                className="bg-primary text-primary-foreground hover:bg-primary/90 w-full sm:w-auto"
-                            >
-                                <Send className="h-4 w-4 mr-1"/>
-                                Create Pitch
-                            </Button>
+                            <div className="flex gap-2">
+                                {canUseAI ? (
+                                    <AIGeneratePitchButton
+                                        matchId={match.match_id}
+                                        mediaName={match.media_name}
+                                        campaignName={match.campaign_name}
+                                        onSuccess={() => {
+                                            // Refresh the pitches data
+                                            queryClient.invalidateQueries({ queryKey: ["/pitches"] });
+                                            queryClient.invalidateQueries({ queryKey: ["/match-suggestions"] });
+                                        }}
+                                        size="sm"
+                                    />
+                                ) : (
+                                    <Button
+                                        size="sm"
+                                        onClick={() => onCreateSequence && onCreateSequence(match)}
+                                        className="bg-primary text-primary-foreground hover:bg-primary/90"
+                                    >
+                                        <Send className="h-4 w-4 mr-1"/>
+                                        Create Manual Pitch
+                                    </Button>
+                                )}
+                            </div>
                         </div>
                     </Card>
                 ))}
@@ -548,7 +594,9 @@ function ReadyToSendTab({
 }
 
 function SentPitchesTab({ pitches, isLoadingPitches }: { pitches: SentPitchStatus[]; isLoadingPitches: boolean; }) {
-     if (isLoadingPitches) {
+    const { canUseAI } = usePitchCapabilities();
+    
+    if (isLoadingPitches) {
         return <div className="border rounded-lg"><Skeleton className="h-48 w-full" /></div>;
     }
     if (!pitches || pitches.length === 0) {
@@ -585,21 +633,35 @@ function SentPitchesTab({ pitches, isLoadingPitches }: { pitches: SentPitchStatu
                             <TableCell className="text-xs text-gray-500">{pitch.send_ts ? new Date(pitch.send_ts).toLocaleString() : "-"}</TableCell>
                             <TableCell className="text-xs text-gray-500">{pitch.reply_ts ? new Date(pitch.reply_ts).toLocaleString() : "-"}</TableCell>
                             <TableCell>
-                                {(pitch.pitch_state === 'replied' || pitch.pitch_state === 'replied_interested') && (
-                                    <Button 
-                                        variant="ghost" 
-                                        size="sm"
-                                        onClick={() => {
-                                            // Open in a modal or navigate to detail view
-                                            const dialog = document.createElement('div');
-                                            dialog.innerHTML = `<div id="pitch-thread-modal-${pitch.pitch_id}"></div>`;
-                                            document.body.appendChild(dialog);
-                                        }}
-                                    >
-                                        <MessageSquare className="w-3 h-3 mr-1" />
-                                        View Thread
-                                    </Button>
-                                )}
+                                <div className="flex gap-2">
+                                    {/* AI Generate Follow-up Button */}
+                                    {canUseAI && pitch.pitch_state !== 'replied_interested' && (
+                                        <AIGenerateFollowUpButton
+                                            pitchId={pitch.pitch_id}
+                                            pitchGenId={pitch.pitch_id} // Using pitch_id as we don't have pitch_gen_id in this interface
+                                            mediaName={pitch.media_name}
+                                            followUpNumber={1} // You might want to track this in the backend
+                                            size="sm"
+                                            variant="outline"
+                                        />
+                                    )}
+                                    
+                                    {(pitch.pitch_state === 'replied' || pitch.pitch_state === 'replied_interested') && (
+                                        <Button 
+                                            variant="ghost" 
+                                            size="sm"
+                                            onClick={() => {
+                                                // Open in a modal or navigate to detail view
+                                                const dialog = document.createElement('div');
+                                                dialog.innerHTML = `<div id="pitch-thread-modal-${pitch.pitch_id}"></div>`;
+                                                document.body.appendChild(dialog);
+                                            }}
+                                        >
+                                            <MessageSquare className="w-3 h-3 mr-1" />
+                                            View Thread
+                                        </Button>
+                                    )}
+                                </div>
                             </TableCell>
                         </TableRow>
                     ))}

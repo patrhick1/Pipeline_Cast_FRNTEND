@@ -13,12 +13,14 @@ import { useAuth } from "@/hooks/useAuth";
 import { apiRequest, queryClient as appQueryClient } from "@/lib/queryClient"; // Use appQueryClient
 import { 
   CheckCircle, Clock, XCircle, Search, Filter, Podcast, Users, ExternalLink, ThumbsUp, ThumbsDown, Edit3, Eye, MessageSquare,
-  ChevronLeft, ChevronRight, ListChecks, Info, CheckSquare, Square // Added ListChecks for Total icon and Info for details
+  ChevronLeft, ChevronRight, ListChecks, Info, CheckSquare, Square, Sparkles // Added ListChecks for Total icon and Info for details
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton"; // For loading states
 import { MatchIntelligenceCard } from "@/components/MatchIntelligenceCard";
 import { PitchReviewCard } from "@/components/PitchReviewCard";
 import { PodcastDetailsModal } from "@/components/modals/PodcastDetailsModal";
+import { BatchAIGenerateButton } from "@/components/pitch/BatchAIGenerateButton";
+import { usePitchCapabilities } from "@/hooks/usePitchCapabilities";
 
 export interface ReviewTask {
   review_task_id: number;
@@ -561,9 +563,12 @@ export default function Approvals() {
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedTasks, setSelectedTasks] = useState<Set<number>>(new Set());
   const [isBulkApproving, setIsBulkApproving] = useState(false);
+  const [approvedMatches, setApprovedMatches] = useState<any[]>([]);
+  const [showBatchAIGenerate, setShowBatchAIGenerate] = useState(false);
   
   // Determine if user is a client
   const isClient = user?.role?.toLowerCase() === 'client';
+  const { canUseAI } = usePitchCapabilities();
 
   interface PaginatedReviewTasks {
     items: ReviewTask[];
@@ -722,6 +727,15 @@ export default function Approvals() {
       const failureCount = result.failed_count || 0;
       
       if (successCount > 0) {
+        // Collect successfully approved matches for AI generation
+        const approvedMatchData = result.details?.filter((d: any) => d.status === "success").map((d: any) => ({
+          match_id: d.match_id,
+          media_name: displayedTasks.find(t => t.review_task_id === d.review_task_id)?.media_name
+        })) || [];
+        
+        setApprovedMatches(approvedMatchData);
+        setShowBatchAIGenerate(true);
+        
         toast({
           title: "Bulk Approval Successful",
           description: `Successfully approved ${successCount} match${successCount > 1 ? 'es' : ''}${failureCount > 0 ? `. ${failureCount} failed.` : '.'}`,
@@ -856,6 +870,57 @@ export default function Approvals() {
               {/* Task type filter removed - only showing match suggestions */}
             </div>
           </div>
+
+          {/* Batch AI Generation Bar - Show after successful bulk approval */}
+          {showBatchAIGenerate && approvedMatches.length > 0 && (
+            <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-4">
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
+                <div className="flex items-center gap-2">
+                  <CheckCircle className="h-5 w-5 text-green-600" />
+                  <div>
+                    <p className="font-medium text-green-900">
+                      {approvedMatches.length} Match{approvedMatches.length > 1 ? 'es' : ''} Approved!
+                    </p>
+                    <p className="text-sm text-green-700">
+                      Would you like to generate AI pitches for these matches?
+                    </p>
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  {canUseAI ? (
+                    <BatchAIGenerateButton
+                      matches={approvedMatches}
+                      size="sm"
+                      onComplete={() => {
+                        setShowBatchAIGenerate(false);
+                        setApprovedMatches([]);
+                      }}
+                    />
+                  ) : (
+                    <Button
+                      size="sm"
+                      variant="default"
+                      className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white"
+                      onClick={() => window.location.href = '/settings/subscription'}
+                    >
+                      <Sparkles className="h-4 w-4 mr-2" />
+                      Upgrade for AI Pitches
+                    </Button>
+                  )}
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      setShowBatchAIGenerate(false);
+                      setApprovedMatches([]);
+                    }}
+                  >
+                    Later
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Bulk Actions Bar - Only show for clients viewing pending tasks */}
           {isClient && statusFilter === 'pending' && selectableTasks.length > 0 && (
