@@ -13,11 +13,12 @@ import { useAuth } from "@/hooks/useAuth";
 import { apiRequest, queryClient as appQueryClient } from "@/lib/queryClient"; // Use appQueryClient
 import { 
   CheckCircle, Clock, XCircle, Search, Filter, Podcast, Users, ExternalLink, ThumbsUp, ThumbsDown, Edit3, Eye, MessageSquare,
-  ChevronLeft, ChevronRight, ListChecks // Added ListChecks for Total icon
+  ChevronLeft, ChevronRight, ListChecks, Info // Added ListChecks for Total icon and Info for details
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton"; // For loading states
 import { MatchIntelligenceCard } from "@/components/MatchIntelligenceCard";
 import { PitchReviewCard } from "@/components/PitchReviewCard";
+import { PodcastDetailsModal } from "@/components/modals/PodcastDetailsModal";
 
 export interface ReviewTask {
   review_task_id: number;
@@ -203,6 +204,7 @@ const reviewTaskStatusConfig = {
 function ReviewTaskItem({ task }: { task: ReviewTask }) {
   const { toast } = useToast();
   const tanstackQueryClient = useTanstackQueryClient();
+  const [showPodcastDetails, setShowPodcastDetails] = useState(false);
 
   // Enhanced endpoint provides all data, no need for separate queries
   const relatedData = {
@@ -386,6 +388,7 @@ function ReviewTaskItem({ task }: { task: ReviewTask }) {
   
   // --- Fallback to original card for other task types ---
   return (
+    <>
     <Card className="hover:shadow-lg transition-shadow duration-150">
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between">
@@ -409,7 +412,23 @@ function ReviewTaskItem({ task }: { task: ReviewTask }) {
                 </div>
               )}
             </div>
-            <CardTitle className="text-base md:text-md leading-tight">{relatedData?.entityName || `Task for ID: ${task.related_id}`}</CardTitle>
+            <div className="flex items-center">
+              <CardTitle className="text-base md:text-md leading-tight">{relatedData?.entityName || `Task for ID: ${task.related_id}`}</CardTitle>
+              {task.media_id && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="ml-2 h-6 px-2 text-xs"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowPodcastDetails(true);
+                  }}
+                >
+                  <Info className="w-3 h-3 mr-1" />
+                  Details
+                </Button>
+              )}
+            </div>
             <p className="text-xs text-gray-500 mt-0.5">
               Campaign: {relatedData?.campaignName || "N/A"} | Client: {relatedData?.clientName || "N/A"}
             </p>
@@ -491,6 +510,17 @@ function ReviewTaskItem({ task }: { task: ReviewTask }) {
         )}
       </CardContent>
     </Card>
+    
+    {/* Podcast Details Modal */}
+    {task.media_id && (
+      <PodcastDetailsModal
+        isOpen={showPodcastDetails}
+        onClose={() => setShowPodcastDetails(false)}
+        mediaId={task.media_id}
+        podcastName={task.media_name}
+      />
+    )}
+    </>
   );
 }
 

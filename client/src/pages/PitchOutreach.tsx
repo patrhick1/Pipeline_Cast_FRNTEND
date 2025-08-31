@@ -15,7 +15,8 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import { Send, Edit3, Check, X, ListChecks, MailCheck, MailOpen, RefreshCw, ExternalLink, Eye, MessageSquare, Filter, Search, Lightbulb, Info, Save, LinkIcon, SendHorizontal, CheckSquare } from "lucide-react";
+import { Send, Edit3, Check, X, ListChecks, MailCheck, MailOpen, RefreshCw, ExternalLink, Eye, MessageSquare, Filter, Search, Lightbulb, Info, Save, LinkIcon, SendHorizontal, CheckSquare, Clock } from "lucide-react";
+import { PodcastDetailsModal } from "@/components/modals/PodcastDetailsModal";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Link, useLocation } from "wouter";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -27,10 +28,12 @@ import { SendPitchButton } from "@/components/pitch/SendPitchButton";
 import { BatchSendButton } from "@/components/pitch/BatchSendButton";
 import { usePitchCapabilities } from "@/hooks/usePitchCapabilities";
 import { UpgradePrompt } from "@/components/pitch/UpgradePrompt";
-import { ManualPitchEditor } from "@/components/pitch/ManualPitchEditor";
+// ManualPitchEditor removed - using PitchSequenceEditor for all pitch creation
+import { PitchSequenceEditor } from "@/components/pitch/PitchSequenceEditor";
 import { RecipientEmailEditor } from "@/components/pitch/RecipientEmailEditor";
 import { useAuth } from "@/hooks/useAuth";
 import PitchEmailThread from "@/components/pitch/PitchEmailThread";
+import { SmartSendSettings } from "@/components/pitch/SmartSendSettings";
 
 // --- Interfaces (Aligned with expected enriched backend responses) ---
 
@@ -68,6 +71,7 @@ interface PitchDraftForReview { // From GET /review-tasks/?task_type=pitch_revie
   client_name?: string | null;
   media_website?: string | null; // Added for context
   relevant_episode_analysis?: EpisodeAnalysisData | null; // NEW - To be populated by backend
+  status?: string; // Status of the review task
 }
 
 interface PitchReadyToSend { // From GET /pitches/?pitch_state=ready_to_send (enriched)
@@ -83,6 +87,9 @@ interface PitchReadyToSend { // From GET /pitches/?pitch_state=ready_to_send (en
   campaign_name?: string | null;
   client_name?: string | null;
   media_website?: string | null; // Added for context
+  pitch_type?: string | null; // To identify if it's initial or follow-up
+  parent_pitch_gen_id?: number | null; // To identify if it has follow-ups
+  follow_up_count?: number; // Number of follow-ups configured
 }
 
 interface SentPitchStatus { // From GET /pitches/?pitch_state__in=... (enriched)
@@ -114,22 +121,12 @@ type EditDraftFormData = z.infer<typeof editDraftSchema>;
 
 // --- Helper Components ---
 
-function CampaignSelector({ selectedCampaignId, onCampaignChange, isClient }: {
+function CampaignSelector({ selectedCampaignId, onCampaignChange, campaigns, isLoading }: {
     selectedCampaignId: string | null;
     onCampaignChange: (campaignId: string | null) => void;
-    isClient?: boolean;
+    campaigns?: any[];
+    isLoading?: boolean;
 }) {
-    const { data: campaigns, isLoading } = useQuery({
-        queryKey: ['/campaigns', isClient ? 'client' : 'all'],
-        queryFn: async () => {
-            // Use the campaigns endpoint for all users
-            const url = '/campaigns';
-            const response = await apiRequest('GET', url);
-            if (!response.ok) throw new Error('Failed to fetch campaigns');
-            return response.json();
-        },
-    });
-
     if (isLoading) {
         return <Skeleton className="h-10 w-full" />;
     }
@@ -157,60 +154,14 @@ function CampaignSelector({ selectedCampaignId, onCampaignChange, isClient }: {
 // --- Tab Components ---
 
 function ReadyForDraftTab({
-    approvedMatches, onGenerate, onGenerateBatch, isLoadingGenerateForMatchId, isLoadingBatchGenerate, templates, isLoadingMatches, canUseAI, isFreePlan
+    approvedMatches, isLoadingMatches, onCreateSequence
 }: {
     approvedMatches: ApprovedMatchForPitching[];
-    onGenerate: (matchId: number, templateId: string) => void;
-    onGenerateBatch: (items: { match_id: number; pitch_template_id: string }[]) => void;
-    isLoadingGenerateForMatchId: number | null;
-    isLoadingBatchGenerate: boolean;
-    templates: PitchTemplate[];
     isLoadingMatches: boolean;
-    canUseAI?: boolean;
-    isFreePlan?: boolean;
+    onCreateSequence?: (match: ApprovedMatchForPitching) => void;
 }) {
-    const [selectedTemplateId, setSelectedTemplateId] = useState<string>("manual");
-    const [selectedMatchIds, setSelectedMatchIds] = useState<number[]>([]);
-    const [selectAll, setSelectAll] = useState(false);
-
-    // Filter out subject_line_v1 template
-    const filteredTemplates = templates.filter(t => t.template_id !== "subject_line_v1");
-
-    useEffect(() => {
-        // Only auto-select a template if we have AI access and templates available
-        if (canUseAI && filteredTemplates && filteredTemplates.length > 0 && selectedTemplateId === "manual") {
-            setSelectedTemplateId(filteredTemplates[0].template_id);
-        }
-    }, [filteredTemplates, selectedTemplateId, canUseAI]);
-
-    const handleSelectAll = (checked: boolean) => {
-        setSelectAll(checked);
-        if (checked) {
-            setSelectedMatchIds(approvedMatches.map(m => m.match_id));
-        } else {
-            setSelectedMatchIds([]);
-        }
-    };
-
-    const handleSelectMatch = (matchId: number, checked: boolean) => {
-        if (checked) {
-            setSelectedMatchIds([...selectedMatchIds, matchId]);
-        } else {
-            setSelectedMatchIds(selectedMatchIds.filter(id => id !== matchId));
-            setSelectAll(false);
-        }
-    };
-
-    const handleBatchGenerate = () => {
-        if (selectedMatchIds.length === 0 || !selectedTemplateId) return;
-        const batchItems = selectedMatchIds.map(match_id => ({
-            match_id,
-            pitch_template_id: selectedTemplateId
-        }));
-        onGenerateBatch(batchItems);
-        setSelectedMatchIds([]);
-        setSelectAll(false);
-    };
+    const [selectedMediaId, setSelectedMediaId] = useState<number | null>(null);
+    const [showPodcastDetails, setShowPodcastDetails] = useState(false);
 
     if (isLoadingMatches) {
         return (
@@ -225,112 +176,64 @@ function ReadyForDraftTab({
     }
 
     return (
-        <div className="space-y-6">
-            {isFreePlan && (
-                <UpgradePrompt 
-                    message="Upgrade to Premium to use AI-powered pitch generation and access all templates"
-                    features={[
-                        'AI generates personalized pitches',
-                        'Access to proven pitch templates',
-                        'Bulk pitch generation'
-                    ]}
-                    variant="inline"
-                />
-            )}
-            <div className="flex flex-col md:flex-row gap-4 items-start md:items-end">
-                <div className="flex-1">
-                    <label htmlFor="pitch-template-select" className="text-sm font-medium block mb-2 text-gray-700">
-                        {canUseAI ? 'Select Pitch Template:' : 'Manual Pitch Creation (Premium templates not available)'}
-                    </label>
-                    <Select 
-                        value={selectedTemplateId === "" ? "manual" : selectedTemplateId} 
-                        onValueChange={setSelectedTemplateId} 
-                        disabled={!canUseAI}
-                    >
-                      <SelectTrigger id="pitch-template-select" className="w-full md:w-2/3">
-                          <SelectValue placeholder="Select pitch template..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {!canUseAI ? (
-                            <SelectItem value="manual">Manual Pitch (Upgrade for AI Templates)</SelectItem>
-                        ) : (
-                            (!filteredTemplates || filteredTemplates.length === 0) ? (
-                                <SelectItem value="manual">Manual Pitch Creation</SelectItem>
-                            ) : (
-                                filteredTemplates.map(opt => <SelectItem key={opt.template_id} value={opt.template_id}>{opt.template_id} (Tone: {opt.tone || 'N/A'})</SelectItem>)
-                            )
-                        )}
-                      </SelectContent>
-                    </Select>
-                </div>
-                
-                {/* Batch Actions */}
-                <div className="flex items-center gap-3">
-                    <div className="flex items-center space-x-2">
-                        <Checkbox 
-                            checked={selectAll}
-                            onCheckedChange={handleSelectAll}
-                            disabled={isLoadingBatchGenerate}
-                        />
-                        <span className="text-sm text-gray-600">
-                            {selectedMatchIds.length === 0 
-                                ? "Select all" 
-                                : `${selectedMatchIds.length} selected`}
-                        </span>
-                    </div>
-                    <Button
-                        size="sm"
-                        variant="default"
-                        onClick={handleBatchGenerate}
-                        disabled={selectedMatchIds.length === 0 || !selectedTemplateId || isLoadingBatchGenerate || !canUseAI}
-                        className="bg-primary hover:bg-primary/90"
-                    >
-                        {isLoadingBatchGenerate ? (
-                            <><RefreshCw className="h-4 w-4 animate-spin mr-1.5"/> Generating...</>
-                        ) : (
-                            <><Lightbulb className="h-4 w-4 mr-1.5"/> {canUseAI ? `Generate Selected (${selectedMatchIds.length})` : 'AI Generation (Premium)'}</>
-                        )}
-                    </Button>
-                </div>
-            </div>
-            
-            <div className="space-y-3 max-h-[55vh] overflow-y-auto pr-2">
+        <div className="space-y-4">
+            <div className="space-y-3 max-h-[60vh] overflow-y-auto pr-2">
                 {approvedMatches.map((match) => (
                     <Card key={match.match_id} className="p-4 hover:shadow-md transition-shadow">
-                        <div className="flex items-start space-x-3">
-                            <Checkbox
-                                checked={selectedMatchIds.includes(match.match_id)}
-                                onCheckedChange={(checked) => handleSelectMatch(match.match_id, checked as boolean)}
-                                disabled={isLoadingBatchGenerate || isLoadingGenerateForMatchId === match.match_id}
-                                className="mt-1"
-                            />
-                            <div className="flex-1 flex flex-col sm:flex-row justify-between sm:items-center">
-                                <div className="mb-3 sm:mb-0 flex-1">
-                                    <h4 className="font-semibold text-gray-800">{match.media_name || `Media ID: ${match.media_id}`}</h4>
-                                    <p className="text-xs text-gray-500">
-                                        For Campaign: {match.campaign_name || `ID: ${match.campaign_id.substring(0,8)}...`}
-                                        {match.client_name && ` (Client: ${match.client_name})`}
-                                    </p>
+                        <div className="flex flex-col sm:flex-row justify-between sm:items-center">
+                            <div className="mb-3 sm:mb-0 flex-1">
+                                <h4 className="font-semibold text-gray-800">{match.media_name || `Media ID: ${match.media_id}`}</h4>
+                                <p className="text-xs text-gray-500">
+                                    For Campaign: {match.campaign_name || `ID: ${match.campaign_id.substring(0,8)}...`}
+                                    {match.client_name && ` (Client: ${match.client_name})`}
+                                </p>
+                                <div className="flex items-center gap-2 mt-1">
                                     {match.media_website && (
-                                        <a href={match.media_website} target="_blank" rel="noopener noreferrer" className="text-xs text-primary hover:underline inline-flex items-center mt-1">
-                                            <ExternalLink className="h-3 w-3 mr-1"/> Visit Podcast
+                                        <a href={match.media_website} target="_blank" rel="noopener noreferrer" className="text-xs text-primary hover:underline inline-flex items-center">
+                                            <ExternalLink className="h-3 w-3 mr-1"/> Visit
                                         </a>
                                     )}
+                                    {match.media_id && (
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            className="h-5 px-2 text-xs"
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                setSelectedMediaId(match.media_id);
+                                                setShowPodcastDetails(true);
+                                            }}
+                                        >
+                                            <Info className="h-3 w-3 mr-1"/> Details
+                                        </Button>
+                                    )}
                                 </div>
-                                <Button
-                                    size="sm"
-                                    onClick={() => onGenerate(match.match_id, canUseAI ? selectedTemplateId : "manual")}
-                                    disabled={isLoadingBatchGenerate || isLoadingGenerateForMatchId === match.match_id}
-                                    className="bg-primary text-primary-foreground hover:bg-primary/90 w-full sm:w-auto"
-                                >
-                                    {isLoadingGenerateForMatchId === match.match_id ? <RefreshCw className="h-4 w-4 animate-spin mr-1"/> : <Lightbulb className="h-4 w-4 mr-1"/>}
-                                    {canUseAI ? 'Generate Pitch' : 'Create Manual Pitch'}
-                                </Button>
                             </div>
+                            <Button
+                                size="sm"
+                                onClick={() => onCreateSequence && onCreateSequence(match)}
+                                className="bg-primary text-primary-foreground hover:bg-primary/90 w-full sm:w-auto"
+                            >
+                                <Send className="h-4 w-4 mr-1"/>
+                                Create Pitch
+                            </Button>
                         </div>
                     </Card>
                 ))}
             </div>
+            
+            {/* Podcast Details Modal */}
+            {selectedMediaId && (
+                <PodcastDetailsModal
+                    isOpen={showPodcastDetails}
+                    onClose={() => {
+                        setShowPodcastDetails(false);
+                        setSelectedMediaId(null);
+                    }}
+                    mediaId={selectedMediaId}
+                    podcastName={approvedMatches.find(m => m.media_id === selectedMediaId)?.media_name || undefined}
+                />
+            )}
         </div>
     );
 }
@@ -575,7 +478,15 @@ function ReadyToSendTab({
                             />
                             <div className="flex-1 flex flex-col sm:flex-row justify-between sm:items-start">
                                 <div className="flex-1 mb-3 sm:mb-0">
-                                    <h4 className="font-semibold text-gray-800">{pitch.media_name || `Media ID: ${pitch.media_id}`}</h4>
+                                    <div className="flex items-center gap-2 mb-1">
+                                        <h4 className="font-semibold text-gray-800">{pitch.media_name || `Media ID: ${pitch.media_id}`}</h4>
+                                        {pitch.pitch_type === 'initial' && pitch.follow_up_count && pitch.follow_up_count > 0 && (
+                                            <Badge variant="outline" className="text-xs">
+                                                <Clock className="w-3 h-3 mr-1" />
+                                                {pitch.follow_up_count} follow-up{pitch.follow_up_count > 1 ? 's' : ''}
+                                            </Badge>
+                                        )}
+                                    </div>
                                     <p className="text-xs text-gray-500">Campaign: {pitch.campaign_name || 'N/A'} (Client: {pitch.client_name || 'N/A'})</p>
                                     <div className="mt-1">
                                         <RecipientEmailEditor
@@ -592,13 +503,7 @@ function ReadyToSendTab({
                                     <p className="text-xs text-gray-600 mt-1 italic line-clamp-2">
                                         Preview: {(pitch.final_text || pitch.draft_text || "No content").substring(0,100) + "..."}
                                     </p>
-                                    {pitch.pitch_state === 'replied' || pitch.pitch_state === 'replied_interested' ? (
-                                        <PitchEmailThread 
-                                            pitchId={pitch.pitch_id} 
-                                            podcastName={pitch.media_name}
-                                            compact={true}
-                                        />
-                                    ) : null}
+                                    {/* Email thread component removed - not needed for initial implementation */}
                                      {pitch.media_website && (
                                         <a href={pitch.media_website} target="_blank" rel="noopener noreferrer" className="text-xs text-primary hover:underline inline-flex items-center mt-1">
                                             <ExternalLink className="h-3 w-3 mr-1"/> Visit Podcast
@@ -617,11 +522,20 @@ function ReadyToSendTab({
                                     <Button
                                         size="sm"
                                         className="bg-blue-600 hover:bg-blue-700 text-white"
-                                        onClick={() => onSend(pitch.pitch_gen_id)}
+                                        onClick={() => {
+                                            if (pitch.pitch_type === 'initial' && pitch.follow_up_count && pitch.follow_up_count > 0) {
+                                                // Show confirmation for sequences
+                                                if (confirm(`This will send the initial pitch and schedule ${pitch.follow_up_count} automatic follow-up${pitch.follow_up_count > 1 ? 's' : ''}. Continue?`)) {
+                                                    onSend(pitch.pitch_gen_id);
+                                                }
+                                            } else {
+                                                onSend(pitch.pitch_gen_id);
+                                            }
+                                        }}
                                         disabled={isLoadingBulkSend || isLoadingSendForPitchId === pitch.pitch_gen_id}
                                     >
                                         {isLoadingSendForPitchId === pitch.pitch_gen_id ? <RefreshCw className="h-4 w-4 animate-spin mr-1"/> : <Send className="h-4 w-4 mr-1.5"/>}
-                                        Send
+                                        {pitch.pitch_type === 'initial' && pitch.follow_up_count && pitch.follow_up_count > 0 ? 'Send & Schedule' : 'Send'}
                                     </Button>
                                 </div>
                             </div>
@@ -710,8 +624,10 @@ export default function PitchOutreach() {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [previewPitch, setPreviewPitch] = useState<PitchReadyToSend | null>(null);
   const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
-  const [manualPitchMatch, setManualPitchMatch] = useState<ApprovedMatchForPitching | null>(null);
-  const [isManualEditorOpen, setIsManualEditorOpen] = useState(false);
+  // ManualPitchEditor state removed - using PitchSequenceEditor for all pitch creation
+  const [sequencePitchMatch, setSequencePitchMatch] = useState<{ match_id: number; media_name?: string; campaign_name?: string; } | null>(null);
+  const [isSequenceEditorOpen, setIsSequenceEditorOpen] = useState(false);
+  const [createdInitialPitchGenId, setCreatedInitialPitchGenId] = useState<number | null>(null);
   const [editingRecipientEmail, setEditingRecipientEmail] = useState(false);
   const [tempRecipientEmail, setTempRecipientEmail] = useState("");
   const [editingSubject, setEditingSubject] = useState(false);
@@ -734,6 +650,18 @@ export default function PitchOutreach() {
   const [selectedCampaignFilter, setSelectedCampaignFilter] = useState<string | null>(initialCampaignIdFilter);
   const userRole = user?.role?.toLowerCase();
   const isClient = userRole === 'client';
+
+  // Fetch campaigns for both campaign selector and Smart Send settings
+  const { data: campaignsData = [], isLoading: isLoadingCampaigns } = useQuery({
+    queryKey: ['/campaigns', isClient ? 'client' : 'all'],
+    queryFn: async () => {
+      const url = '/campaigns';
+      const response = await apiRequest('GET', url);
+      if (!response.ok) throw new Error('Failed to fetch campaigns');
+      return response.json();
+    },
+    enabled: !!user, // Only fetch when user is loaded
+  });
 
   // Fetch pitch templates for the dropdown (only for non-clients)
   const { data: pitchTemplates = [], isLoading: isLoadingTemplates, error: templatesError } = useQuery<PitchTemplate[]>({
@@ -1004,24 +932,16 @@ export default function PitchOutreach() {
 
 
   const handleGeneratePitch = (matchId: number, templateId: string) => {
-    // Find the match for this ID
+    // This function is now deprecated - we use PitchSequenceEditor for all pitch creation
     const match = approvedMatches.find(m => m.match_id === matchId);
-    
-    // If it's manual creation or user doesn't have AI access, open manual editor
-    if (templateId === "manual" || !canUseAI) {
-      if (match) {
-        setManualPitchMatch(match);
-        setIsManualEditorOpen(true);
-      }
-      return;
+    if (match) {
+      setSequencePitchMatch({
+        match_id: match.match_id,
+        media_name: match.media_name || undefined,
+        campaign_name: match.campaign_name || undefined
+      });
+      setIsSequenceEditorOpen(true);
     }
-    
-    // Otherwise, use AI generation (for paid users)
-    if (!templateId) { 
-      toast({ title: "Template Required", description: "Please select a pitch template.", variant: "destructive"}); 
-      return; 
-    }
-    generatePitchDraftMutation.mutate({ matchId, pitch_template_id: templateId });
   };
   const handleGenerateBatchPitches = (items: { match_id: number; pitch_template_id: string }[]) => {
     if (!canUseAI) {
@@ -1089,7 +1009,7 @@ export default function PitchOutreach() {
       {/* Show upgrade prompt for free users */}
       {isFreePlan && (
         <UpgradePrompt 
-          message={capabilities?.upgrade_message}
+          message={capabilities?.upgrade_message || undefined}
           features={[
             'AI-powered pitch generation',
             'Access to all pitch templates',
@@ -1100,21 +1020,30 @@ export default function PitchOutreach() {
         />
       )}
 
-      {/* Campaign filter for clients */}
-      {isClient && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">Filter by Campaign</CardTitle>
-            <CardDescription>Select a campaign to view its pitches</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <CampaignSelector 
-              selectedCampaignId={selectedCampaignFilter}
-              onCampaignChange={setSelectedCampaignFilter}
-              isClient={true}
-            />
-          </CardContent>
-        </Card>
+      {/* Campaign filter */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">Campaign Selection</CardTitle>
+          <CardDescription>Select a campaign to manage its pitches and settings</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <CampaignSelector 
+            selectedCampaignId={selectedCampaignFilter}
+            onCampaignChange={setSelectedCampaignFilter}
+            campaigns={campaignsData}
+            isLoading={isLoadingCampaigns}
+          />
+        </CardContent>
+      </Card>
+
+      {/* Smart Send Settings - Only show for paid users with a selected campaign */}
+      {!isFreePlan && selectedCampaignFilter && (
+        <SmartSendSettings 
+          campaignId={selectedCampaignFilter}
+          campaignName={
+            campaignsData?.find((c: any) => c.campaign_id === selectedCampaignFilter)?.campaign_name
+          }
+        />
       )}
 
       <Tabs defaultValue={activeTab} onValueChange={setActiveTab} className="w-full">
@@ -1128,14 +1057,15 @@ export default function PitchOutreach() {
         <TabsContent value="readyForDraft" className="mt-6">
           <ReadyForDraftTab
             approvedMatches={approvedMatches}
-            onGenerate={handleGeneratePitch}
-            onGenerateBatch={handleGenerateBatchPitches}
-            isLoadingGenerateForMatchId={isLoadingGenerateForMatchId}
-            isLoadingBatchGenerate={isLoadingBatchGenerate}
-            templates={isFreePlan ? [] : pitchTemplates}
-            isLoadingMatches={isLoadingApprovedMatches || isLoadingTemplates}
-            canUseAI={canUseAI}
-            isFreePlan={isFreePlan}
+            isLoadingMatches={isLoadingApprovedMatches}
+            onCreateSequence={(match) => {
+              setSequencePitchMatch({
+                match_id: match.match_id,
+                media_name: match.media_name || undefined,
+                campaign_name: match.campaign_name || undefined
+              });
+              setIsSequenceEditorOpen(true);
+            }}
           />
           {approvedMatchesError && <p className="text-red-500 mt-2">Error loading approved matches: {(approvedMatchesError as Error).message}</p>}
           {templatesError && <p className="text-red-500 mt-2">Error loading pitch templates: {(templatesError as Error).message}</p>}
@@ -1450,18 +1380,29 @@ export default function PitchOutreach() {
         </DialogContent>
       </Dialog>
 
-      {/* Manual Pitch Editor Modal */}
-      <ManualPitchEditor
-        isOpen={isManualEditorOpen}
+      {/* Pitch Sequence Editor Modal - Used for all pitch creation */}
+      <PitchSequenceEditor
+        isOpen={isSequenceEditorOpen}
         onClose={() => {
-          setIsManualEditorOpen(false);
-          setManualPitchMatch(null);
+          setIsSequenceEditorOpen(false);
+          setSequencePitchMatch(null);
         }}
-        match={manualPitchMatch || { match_id: 0 }}
-        onSuccess={() => {
-          // Refresh all pitch data for better UX
+        match={sequencePitchMatch ? {
+          match_id: sequencePitchMatch.match_id,
+          media_name: sequencePitchMatch.media_name || undefined,
+          campaign_name: sequencePitchMatch.campaign_name || undefined
+        } : { match_id: 0 }}
+        onSuccess={(initialPitchGenId) => {
+          // Store the initial pitch ID and refresh data
+          setCreatedInitialPitchGenId(initialPitchGenId);
           refreshAllPitchData();
-          setActiveTab("draftsReview");
+          setActiveTab("readyToSend");
+          
+          // Show a notification about the sequence
+          toast({
+            title: "Sequence Ready",
+            description: "Your pitch sequence has been created. Send the initial pitch to activate automatic follow-ups.",
+          });
         }}
       />
     </div>
