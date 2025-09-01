@@ -91,9 +91,15 @@ export function AIGeneratePitchButton({
         description: `AI pitch created for ${mediaName || "this podcast"}`,
       });
 
-      // Refresh pitch data
+      // Refresh pitch data - more comprehensive refresh
       queryClient.invalidateQueries({ queryKey: ["/pitches"] });
       queryClient.invalidateQueries({ queryKey: ["/review-tasks"] });
+      queryClient.invalidateQueries({ queryKey: ["approvedMatchesForPitching"] });
+      queryClient.invalidateQueries({ queryKey: ["pitchDraftsForReview"] });
+      queryClient.invalidateQueries({ queryKey: ["pitchesReadyToSend"] });
+      
+      // Also force immediate refetch for instant updates
+      queryClient.refetchQueries({ queryKey: ["pitchDraftsForReview"] });
 
       if (onSuccess) {
         onSuccess(result);

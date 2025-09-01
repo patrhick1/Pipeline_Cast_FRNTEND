@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
+import { useQueryClient } from '@tanstack/react-query';
 import { Loader2, Plus, Trash2, Clock, Send, Save } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -30,6 +31,7 @@ interface PitchSequenceEditorProps {
 }
 
 export function PitchSequenceEditor({ isOpen, onClose, match, onSuccess }: PitchSequenceEditorProps) {
+  const queryClient = useQueryClient();
   const [pitchDrafts, setPitchDrafts] = useState<PitchDraft[]>([
     {
       subject: '',
@@ -206,6 +208,11 @@ Best,
           ? `Successfully created ${pitchDrafts.length} pitches (${pitchDrafts.length - 1} follow-up${pitchDrafts.length - 1 !== 1 ? 's' : ''}). Send the initial pitch to activate the sequence.`
           : 'Your pitch has been created successfully and is ready to send.',
       });
+
+      // Refresh all pitch-related queries for immediate updates
+      queryClient.invalidateQueries({ queryKey: ["approvedMatchesForPitching"] });
+      queryClient.invalidateQueries({ queryKey: ["pitchesReadyToSend"] });
+      queryClient.refetchQueries({ queryKey: ["pitchesReadyToSend"] });
 
       // Reset form
       setPitchDrafts([{

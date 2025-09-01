@@ -133,8 +133,14 @@ export function BatchAIGenerateButton({
       });
     }
 
-    // Refresh data
+    // Refresh data - more comprehensive refresh
     queryClient.invalidateQueries({ queryKey: ["/pitches"] });
+    queryClient.invalidateQueries({ queryKey: ["approvedMatchesForPitching"] });
+    queryClient.invalidateQueries({ queryKey: ["pitchDraftsForReview"] });
+    queryClient.invalidateQueries({ queryKey: ["pitchesReadyToSend"] });
+    
+    // Also force immediate refetch for instant updates
+    queryClient.refetchQueries({ queryKey: ["pitchDraftsForReview"] });
 
     if (onComplete) {
       onComplete(results);

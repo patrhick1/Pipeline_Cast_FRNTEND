@@ -15,7 +15,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import { Send, Edit3, Check, X, ListChecks, MailCheck, MailOpen, RefreshCw, ExternalLink, Eye, MessageSquare, Filter, Search, Lightbulb, Info, Save, LinkIcon, SendHorizontal, CheckSquare, Clock } from "lucide-react";
+import { Send, Edit3, Check, X, ListChecks, MailCheck, MailOpen, RefreshCw, ExternalLink, Eye, MessageSquare, Filter, Search, Lightbulb, Info, Save, LinkIcon, SendHorizontal, CheckSquare, Clock, CheckCircle } from "lucide-react";
 import { PodcastDetailsModal } from "@/components/modals/PodcastDetailsModal";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Link, useLocation } from "wouter";
@@ -67,6 +67,7 @@ interface PitchDraftForReview { // From GET /review-tasks/?task_type=pitch_revie
   pitch_gen_id: number;
   campaign_id: string;
   media_id: number;
+  match_id?: number | null; // Match ID for generating follow-ups
   draft_text: string;
   subject_line?: string | null; // From associated pitches record
   media_name?: string | null;
@@ -82,6 +83,7 @@ interface PitchReadyToSend { // From GET /pitches/?pitch_state=ready_to_send (en
   pitch_gen_id: number;
   campaign_id: string;
   media_id: number;
+  match_id?: number | null; // Match ID for generating follow-ups
   final_text?: string | null; // From pitch_generations
   draft_text?: string | null; // Fallback from pitch_generations
   subject_line?: string | null; // From pitches table

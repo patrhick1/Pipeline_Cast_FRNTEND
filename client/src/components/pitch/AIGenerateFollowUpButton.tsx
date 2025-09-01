@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { 
   Dialog, 
@@ -34,7 +34,7 @@ import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 
 interface AIGenerateFollowUpButtonProps {
-  matchId: number;
+  matchId?: number | null;
   mediaName?: string;
   onSuccess?: (followUpData: any) => void;
   size?: "sm" | "default" | "lg";
@@ -55,6 +55,7 @@ export function AIGenerateFollowUpButton({
   const [templateId, setTemplateId] = useState("follow_up_gentle");
   const [customSubject, setCustomSubject] = useState("");
   const [customBody, setCustomBody] = useState("");
+  const [followUpNumber, setFollowUpNumber] = useState(1);
   
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -63,31 +64,106 @@ export function AIGenerateFollowUpButton({
   const followUpTemplates = [
     { 
       value: "follow_up_gentle", 
-      label: "Gentle Reminder",
+      label: "Gentle Reminder (7 days)",
       description: "Friendly follow-up to check if they saw your email",
-      icon: MessageSquare
+      icon: MessageSquare,
+      recommendedDays: 7
     },
     { 
       value: "follow_up_value", 
-      label: "Value Reinforcement",
+      label: "Value Reinforcement (14 days)",
       description: "Emphasize the value you can bring to their audience",
-      icon: Zap
+      icon: Zap,
+      recommendedDays: 14
     },
     { 
       value: "follow_up_urgent", 
-      label: "Time Sensitive",
+      label: "Time Sensitive (21 days)",
       description: "Create urgency with a time-limited opportunity",
-      icon: Clock
+      icon: Clock,
+      recommendedDays: 21
+    },
+    {
+      value: "follow_up_breakup",
+      label: "Final Follow-up (28+ days)",
+      description: "Final outreach using reverse psychology",
+      icon: AlertCircle,
+      recommendedDays: 28
     },
     { 
       value: "follow_up_custom", 
       label: "Custom Follow-up",
       description: "Create your own custom follow-up message",
-      icon: RefreshCw
+      icon: RefreshCw,
+      recommendedDays: null
     }
   ];
+  
+  // Function to auto-select template based on existing follow-ups
+  const selectTemplateBasedOnSequence = async () => {
+    if (!matchId) return "follow_up_gentle";
+    
+    try {
+      // Get existing pitches for this match
+      const response = await apiRequest("GET", `/pitches/match/${matchId}/pitches`);
+      if (response.ok) {
+        const pitches = await response.json();
+        
+        // Count follow-ups already sent
+        const followUpCount = pitches.filter((p: any) => 
+          p.pitch_type && p.pitch_type.includes('follow_up')
+        ).length;
+        
+        // Select template based on sequence
+        switch(followUpCount) {
+          case 0:
+            return 'follow_up_gentle';
+          case 1:
+            return 'follow_up_value';
+          case 2:
+            return 'follow_up_urgent';
+          default:
+            return 'follow_up_breakup';
+        }
+      }
+    } catch (error) {
+      console.error('Error selecting template:', error);
+    }
+    
+    return 'follow_up_gentle'; // Default fallback
+  };
+  
+  // Auto-select template when dialog opens and get follow-up number
+  useEffect(() => {
+    if (showFollowUpDialog && matchId) {
+      selectTemplateBasedOnSequence().then(template => {
+        setTemplateId(template);
+      });
+      
+      // Get follow-up number
+      apiRequest("GET", `/pitches/match/${matchId}/pitches`)
+        .then(response => response.json())
+        .then(pitches => {
+          const followUpCount = pitches.filter((p: any) => 
+            p.pitch_type && p.pitch_type.includes('follow_up')
+          ).length;
+          setFollowUpNumber(followUpCount + 1);
+        })
+        .catch(() => setFollowUpNumber(1));
+    }
+  }, [showFollowUpDialog, matchId]);
 
   const handleGenerateFollowUp = async () => {
+    // Validate match_id first
+    if (!matchId || matchId === undefined || matchId === null) {
+      toast({
+        title: "Match Required",
+        description: "Please select a match before generating a follow-up.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     if (!canUseAI) {
       toast({
         title: "Upgrade Required",
@@ -115,7 +191,21 @@ export function AIGenerateFollowUpButton({
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ detail: "Failed to generate follow-up" }));
-        throw new Error(errorData.detail);
+        
+        // Handle specific error cases
+        let errorMessage = errorData.detail || "Failed to generate follow-up";
+        
+        if (errorMessage.includes('not found')) {
+          errorMessage = 'Match not found. Please refresh and try again.';
+        } else if (errorMessage.includes('parsing')) {
+          errorMessage = `Invalid match ID: ${matchId}. Please select a valid match.`;
+        } else if (errorMessage.includes('No initial pitch')) {
+          errorMessage = 'Please generate an initial pitch before creating follow-ups.';
+        } else if (errorMessage.includes('already exists')) {
+          errorMessage = 'A follow-up of this type already exists for this match.';
+        }
+        
+        throw new Error(errorMessage);
       }
 
       const result = await response.json();
@@ -188,8 +278,19 @@ export function AIGenerateFollowUpButton({
         size={size}
         variant={variant}
         className={className}
-        onClick={() => setShowFollowUpDialog(true)}
-        disabled={isGenerating}
+        onClick={() => {
+          if (!matchId) {
+            toast({
+              title: "Match Required",
+              description: "Please select a match before generating a follow-up.",
+              variant: "destructive",
+            });
+            return;
+          }
+          setShowFollowUpDialog(true);
+        }}
+        disabled={isGenerating || !matchId}
+        title={!matchId ? "Match ID required to generate follow-ups" : undefined}
       >
         {isGenerating ? (
           <>
@@ -210,10 +311,15 @@ export function AIGenerateFollowUpButton({
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <RefreshCw className="h-5 w-5 text-blue-600" />
-              Generate Follow-up
+              Generate Follow-up #{followUpNumber}
             </DialogTitle>
             <DialogDescription>
               Create an AI-powered follow-up message for {mediaName || "this podcast"}.
+              {followUpNumber > 1 && (
+                <span className="block mt-1 text-xs text-amber-600">
+                  This will be follow-up #{followUpNumber} in the sequence.
+                </span>
+              )}
             </DialogDescription>
           </DialogHeader>
 
