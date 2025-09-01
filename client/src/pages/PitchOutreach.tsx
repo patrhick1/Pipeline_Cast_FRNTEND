@@ -1,5 +1,5 @@
 // client/src/pages/PitchOutreach.tsx
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient as useTanstackQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -198,8 +198,10 @@ function ReadyForDraftTab({
                                 media_name: m.media_name 
                             }))}
                             onComplete={() => {
-                                queryClient.invalidateQueries({ queryKey: ["/pitches"] });
-                                queryClient.invalidateQueries({ queryKey: ["/match-suggestions"] });
+                                // Refresh all pitch-related data immediately
+                                refreshAllPitchData();
+                                // Auto-switch to review drafts tab
+                                setActiveTab("draftsReview");
                             }}
                             size="sm"
                         />
@@ -246,9 +248,10 @@ function ReadyForDraftTab({
                                         mediaName={match.media_name}
                                         campaignName={match.campaign_name}
                                         onSuccess={() => {
-                                            // Refresh the pitches data
-                                            queryClient.invalidateQueries({ queryKey: ["/pitches"] });
-                                            queryClient.invalidateQueries({ queryKey: ["/match-suggestions"] });
+                                            // Refresh all pitch-related data immediately
+                                            refreshAllPitchData();
+                                            // Auto-switch to review drafts tab
+                                            setActiveTab("draftsReview");
                                         }}
                                         size="sm"
                                     />
@@ -378,6 +381,8 @@ function DraftsReviewTab({
     totalPages: number;
     onPageChange: (page: number) => void;
 }) {
+    const { canUseAI } = usePitchCapabilities();
+    const [followUpStates, setFollowUpStates] = useState<Record<number, { count: number; generated: boolean }>>({});
     if (isLoadingDrafts && !drafts.length) { // Show skeleton only on initial load
         return (
             <div className="space-y-3">
@@ -400,6 +405,12 @@ function DraftsReviewTab({
                                 <p className="text-xs text-gray-500">Campaign: {draft.campaign_name || 'N/A'} (Client: {draft.client_name || 'N/A'})</p>
                                 <p className="text-xs text-gray-600 mt-1 italic">Subject: {draft.subject_line || "Not set"}</p>
                                 <p className="text-xs text-gray-600 mt-1 italic line-clamp-2">Preview: {draft.draft_text?.substring(0, 100) || "No preview."}...</p>
+                                {followUpStates[draft.pitch_gen_id]?.generated && (
+                                    <Badge variant="secondary" className="mt-2 text-xs bg-blue-100 text-blue-700">
+                                        <CheckCircle className="h-3 w-3 mr-1" />
+                                        {followUpStates[draft.pitch_gen_id]?.count || 0} Follow-up{(followUpStates[draft.pitch_gen_id]?.count || 0) > 1 ? 's' : ''} Planned
+                                    </Badge>
+                                )}
                                 {draft.media_website && (
                                     <a href={draft.media_website} target="_blank" rel="noopener noreferrer" className="text-xs text-primary hover:underline inline-flex items-center mt-1">
                                         <ExternalLink className="h-3 w-3 mr-1"/> Visit Podcast
@@ -408,6 +419,28 @@ function DraftsReviewTab({
                             </div>
                             <div className="flex flex-col sm:flex-row sm:items-center space-y-2 sm:space-y-0 sm:space-x-2 flex-shrink-0 mt-2 sm:mt-0">
                                 <Button size="sm" variant="outline" onClick={() => onEdit(draft)}><Edit3 className="h-3 w-3 mr-1.5"/> Review/Edit</Button>
+                                
+                                {/* Plan Follow-ups Button for Premium Users */}
+                                {canUseAI && (
+                                    <AIGenerateFollowUpButton
+                                        matchId={draft.match_id}
+                                        mediaName={draft.media_name}
+                                        onSuccess={() => {
+                                            // Update state to show follow-ups were generated
+                                            setFollowUpStates(prev => ({
+                                                ...prev,
+                                                [draft.pitch_gen_id]: {
+                                                    count: (prev[draft.pitch_gen_id]?.count || 0) + 1,
+                                                    generated: true
+                                                }
+                                            }));
+                                        }}
+                                        size="sm"
+                                        variant="outline"
+                                        className="border-blue-200 hover:bg-blue-50"
+                                    />
+                                )}
+                                
                                 <Button
                                     size="sm"
                                     className="bg-green-600 hover:bg-green-700 text-white"
@@ -415,7 +448,7 @@ function DraftsReviewTab({
                                     disabled={isLoadingApproveForPitchGenId === draft.pitch_gen_id}
                                 >
                                     {isLoadingApproveForPitchGenId === draft.pitch_gen_id ? <RefreshCw className="h-4 w-4 animate-spin mr-1"/> : <Check className="h-4 w-4 mr-1.5"/>}
-                                    Approve Pitch
+                                    Approve {followUpStates[draft.pitch_gen_id]?.generated ? 'Sequence' : 'Pitch'}
                                 </Button>
                             </div>
                         </div>
@@ -447,6 +480,7 @@ function ReadyToSendTab({
     const [selectedPitchGenIds, setSelectedPitchGenIds] = useState<number[]>([]);
     const [selectAll, setSelectAll] = useState(false);
     const [pitchEmails, setPitchEmails] = useState<Record<number, string>>({});
+    const [expandedSequences, setExpandedSequences] = useState<Set<number>>(new Set());
 
     const handleSelectAll = (checked: boolean) => {
         setSelectAll(checked);
@@ -527,9 +561,26 @@ function ReadyToSendTab({
                                     <div className="flex items-center gap-2 mb-1">
                                         <h4 className="font-semibold text-gray-800">{pitch.media_name || `Media ID: ${pitch.media_id}`}</h4>
                                         {pitch.pitch_type === 'initial' && pitch.follow_up_count && pitch.follow_up_count > 0 && (
+                                            <Badge 
+                                                variant="secondary" 
+                                                className="text-xs bg-blue-100 text-blue-700 cursor-pointer hover:bg-blue-200"
+                                                onClick={() => {
+                                                    const newExpanded = new Set(expandedSequences);
+                                                    if (newExpanded.has(pitch.pitch_gen_id)) {
+                                                        newExpanded.delete(pitch.pitch_gen_id);
+                                                    } else {
+                                                        newExpanded.add(pitch.pitch_gen_id);
+                                                    }
+                                                    setExpandedSequences(newExpanded);
+                                                }}
+                                            >
+                                                <MessageSquare className="w-3 h-3 mr-1" />
+                                                {pitch.follow_up_count} follow-up{pitch.follow_up_count > 1 ? 's' : ''} planned
+                                            </Badge>
+                                        )}
+                                        {pitch.pitch_type && pitch.pitch_type !== 'initial' && (
                                             <Badge variant="outline" className="text-xs">
-                                                <Clock className="w-3 h-3 mr-1" />
-                                                {pitch.follow_up_count} follow-up{pitch.follow_up_count > 1 ? 's' : ''}
+                                                Follow-up #{pitch.pitch_type.replace('follow_up_', '')}
                                             </Badge>
                                         )}
                                     </div>
@@ -549,6 +600,39 @@ function ReadyToSendTab({
                                     <p className="text-xs text-gray-600 mt-1 italic line-clamp-2">
                                         Preview: {(pitch.final_text || pitch.draft_text || "No content").substring(0,100) + "..."}
                                     </p>
+                                    
+                                    {/* Show follow-up sequence details when expanded */}
+                                    {expandedSequences.has(pitch.pitch_gen_id) && pitch.follow_up_count && pitch.follow_up_count > 0 && (
+                                        <div className="mt-3 p-3 bg-blue-50 rounded-md border border-blue-200">
+                                            <h5 className="text-xs font-semibold text-blue-800 mb-2">📧 Follow-up Sequence:</h5>
+                                            <div className="space-y-1">
+                                                <div className="flex items-center gap-2 text-xs text-blue-700">
+                                                    <Badge variant="outline" className="text-xs">Day 1</Badge>
+                                                    <span>Initial pitch (this message)</span>
+                                                </div>
+                                                <div className="flex items-center gap-2 text-xs text-blue-700">
+                                                    <Badge variant="outline" className="text-xs">Day 7</Badge>
+                                                    <span>Follow-up 1 - Gentle reminder</span>
+                                                </div>
+                                                {pitch.follow_up_count >= 2 && (
+                                                    <div className="flex items-center gap-2 text-xs text-blue-700">
+                                                        <Badge variant="outline" className="text-xs">Day 14</Badge>
+                                                        <span>Follow-up 2 - Value reinforcement</span>
+                                                    </div>
+                                                )}
+                                                {pitch.follow_up_count >= 3 && (
+                                                    <div className="flex items-center gap-2 text-xs text-blue-700">
+                                                        <Badge variant="outline" className="text-xs">Day 21</Badge>
+                                                        <span>Follow-up 3 - Different angle</span>
+                                                    </div>
+                                                )}
+                                            </div>
+                                            <p className="text-xs text-blue-600 mt-2 italic">
+                                                ℹ️ Follow-ups will be sent automatically if no reply is received
+                                            </p>
+                                        </div>
+                                    )}
+                                    
                                     {/* Email thread component removed - not needed for initial implementation */}
                                      {pitch.media_website && (
                                         <a href={pitch.media_website} target="_blank" rel="noopener noreferrer" className="text-xs text-primary hover:underline inline-flex items-center mt-1">
@@ -634,17 +718,6 @@ function SentPitchesTab({ pitches, isLoadingPitches }: { pitches: SentPitchStatu
                             <TableCell className="text-xs text-gray-500">{pitch.reply_ts ? new Date(pitch.reply_ts).toLocaleString() : "-"}</TableCell>
                             <TableCell>
                                 <div className="flex gap-2">
-                                    {/* AI Generate Follow-up Button */}
-                                    {canUseAI && pitch.pitch_state !== 'replied_interested' && (
-                                        <AIGenerateFollowUpButton
-                                            pitchId={pitch.pitch_id}
-                                            pitchGenId={pitch.pitch_id} // Using pitch_id as we don't have pitch_gen_id in this interface
-                                            mediaName={pitch.media_name}
-                                            followUpNumber={1} // You might want to track this in the backend
-                                            size="sm"
-                                            variant="outline"
-                                        />
-                                    )}
                                     
                                     {(pitch.pitch_state === 'replied' || pitch.pitch_state === 'replied_interested') && (
                                         <Button 
@@ -696,6 +769,8 @@ export default function PitchOutreach() {
   const [tempSubject, setTempSubject] = useState("");
   const [editingBody, setEditingBody] = useState(false);
   const [tempBody, setTempBody] = useState("");
+  const [autoRefreshEnabled, setAutoRefreshEnabled] = useState(false);
+  const [lastRefreshTime, setLastRefreshTime] = useState<Date | null>(null);
 
   // Per-item loading states
   const [isLoadingGenerateForMatchId, setIsLoadingGenerateForMatchId] = useState<number | null>(null);
@@ -938,7 +1013,12 @@ export default function PitchOutreach() {
     mutate: (pitchGenId: number) => {
       setIsLoadingSendForPitchId(pitchGenId);
       sendPitchViaNylas(pitchGenId);
-      setTimeout(() => setIsLoadingSendForPitchId(null), 2000);
+      // Refresh data after a short delay to show the update
+      setTimeout(() => {
+        setIsLoadingSendForPitchId(null);
+        refreshAllPitchData();
+        setActiveTab("sentPitches");
+      }, 2000);
     },
     isPending: false
   };
@@ -984,8 +1064,10 @@ export default function PitchOutreach() {
     mutate: (pitchGenIds: number[]) => {
       setIsLoadingBulkSend(true);
       sendBatchViaNylas(pitchGenIds);
+      // Refresh data after a short delay to show the updates
       setTimeout(() => {
         setIsLoadingBulkSend(false);
+        refreshAllPitchData();
         setActiveTab("sentPitches");
       }, 3000);
     },
@@ -1018,12 +1100,19 @@ export default function PitchOutreach() {
   const handleOpenEditModal = (draft: PitchDraftForReview) => { setEditingDraft(draft); setIsEditModalOpen(true); };
 
   // Helper function to refresh all pitch-related data for better UX
-  const refreshAllPitchData = () => {
+  const refreshAllPitchData = useCallback(() => {
+    // Invalidate all pitch-related queries to force immediate refresh
     tanstackQueryClient.invalidateQueries({ queryKey: ["approvedMatchesForPitching"] });
     tanstackQueryClient.invalidateQueries({ queryKey: ["pitchDraftsForReview"] });
     tanstackQueryClient.invalidateQueries({ queryKey: ["pitchesReadyToSend"] });
     tanstackQueryClient.invalidateQueries({ queryKey: ["sentPitchesStatus"] });
-  };
+    // Also refetch immediately for instant updates
+    tanstackQueryClient.refetchQueries({ queryKey: ["approvedMatchesForPitching"] });
+    tanstackQueryClient.refetchQueries({ queryKey: ["pitchDraftsForReview"] });
+    tanstackQueryClient.refetchQueries({ queryKey: ["pitchesReadyToSend"] });
+    tanstackQueryClient.refetchQueries({ queryKey: ["sentPitchesStatus"] });
+    setLastRefreshTime(new Date());
+  }, [tanstackQueryClient]);
   const handleSaveEditedDraft = (pitchGenId: number, data: EditDraftFormData) => { updatePitchDraftMutation.mutate({ pitchGenId, data }); };
   const handlePreviewPitch = (pitch: PitchReadyToSend) => { setPreviewPitch(pitch); setIsPreviewModalOpen(true); };
 
@@ -1032,6 +1121,17 @@ export default function PitchOutreach() {
         setReviewDraftsPage(newPage);
     }
   };
+
+  // Auto-refresh effect
+  useEffect(() => {
+    if (!autoRefreshEnabled) return;
+    
+    const interval = setInterval(() => {
+      refreshAllPitchData();
+    }, 30000); // Refresh every 30 seconds
+    
+    return () => clearInterval(interval);
+  }, [autoRefreshEnabled, refreshAllPitchData]);
 
   // Show loading state while capabilities are being fetched
   if (isLoadingCapabilities) {
@@ -1058,6 +1158,20 @@ export default function PitchOutreach() {
             </p>
         </div>
         <div className="flex items-center gap-3">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => refreshAllPitchData()}
+            className="text-xs"
+          >
+            <RefreshCw className="h-3 w-3 mr-1" />
+            Refresh
+          </Button>
+          {lastRefreshTime && (
+            <span className="text-xs text-gray-500">
+              Last updated: {lastRefreshTime.toLocaleTimeString()}
+            </span>
+          )}
           {capabilities && (
             <Badge variant={isFreePlan ? "secondary" : "default"} className="text-sm">
               {capabilities.plan_type === 'admin' ? 'Admin' : 

@@ -34,11 +34,8 @@ import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 
 interface AIGenerateFollowUpButtonProps {
-  pitchId: number;
-  pitchGenId: number;
+  matchId: number;
   mediaName?: string;
-  followUpNumber?: number;
-  lastResponseType?: "no_response" | "positive" | "negative" | "neutral";
   onSuccess?: (followUpData: any) => void;
   size?: "sm" | "default" | "lg";
   variant?: "default" | "outline" | "ghost";
@@ -46,11 +43,8 @@ interface AIGenerateFollowUpButtonProps {
 }
 
 export function AIGenerateFollowUpButton({
-  pitchId,
-  pitchGenId,
+  matchId,
   mediaName,
-  followUpNumber = 1,
-  lastResponseType = "no_response",
   onSuccess,
   size = "sm",
   variant = "outline",
@@ -58,37 +52,37 @@ export function AIGenerateFollowUpButton({
 }: AIGenerateFollowUpButtonProps) {
   const [isGenerating, setIsGenerating] = useState(false);
   const [showFollowUpDialog, setShowFollowUpDialog] = useState(false);
-  const [followUpType, setFollowUpType] = useState("gentle_reminder");
-  const [customContext, setCustomContext] = useState("");
-  const [daysSinceLastContact, setDaysSinceLastContact] = useState("7");
+  const [templateId, setTemplateId] = useState("follow_up_gentle");
+  const [customSubject, setCustomSubject] = useState("");
+  const [customBody, setCustomBody] = useState("");
   
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { canUseAI, isFreePlan } = usePitchCapabilities();
 
-  const followUpTypes = [
+  const followUpTemplates = [
     { 
-      value: "gentle_reminder", 
+      value: "follow_up_gentle", 
       label: "Gentle Reminder",
       description: "Friendly follow-up to check if they saw your email",
       icon: MessageSquare
     },
     { 
-      value: "value_reinforcement", 
+      value: "follow_up_value", 
       label: "Value Reinforcement",
       description: "Emphasize the value you can bring to their audience",
       icon: Zap
     },
     { 
-      value: "time_sensitive", 
+      value: "follow_up_urgent", 
       label: "Time Sensitive",
       description: "Create urgency with a time-limited opportunity",
       icon: Clock
     },
     { 
-      value: "different_angle", 
-      label: "Different Angle",
-      description: "Approach from a new perspective",
+      value: "follow_up_custom", 
+      label: "Custom Follow-up",
+      description: "Create your own custom follow-up message",
       icon: RefreshCw
     }
   ];
@@ -105,14 +99,19 @@ export function AIGenerateFollowUpButton({
 
     setIsGenerating(true);
     try {
-      const response = await apiRequest("POST", "/pitches/generate-follow-up", {
-        parent_pitch_gen_id: pitchGenId,
-        follow_up_type: followUpType,
-        follow_up_number: followUpNumber,
-        days_since_last_contact: parseInt(daysSinceLastContact),
-        last_response_type: lastResponseType,
-        custom_context: customContext || undefined
-      });
+      const payload: any = {
+        template_id: templateId
+      };
+      
+      // Only add custom fields if they have values
+      if (customSubject) {
+        payload.custom_subject = customSubject;
+      }
+      if (customBody) {
+        payload.custom_body = customBody;
+      }
+
+      const response = await apiRequest("POST", `/pitches/match/${matchId}/generate-followup`, payload);
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ detail: "Failed to generate follow-up" }));
@@ -123,19 +122,27 @@ export function AIGenerateFollowUpButton({
       
       toast({
         title: "Follow-up Generated!",
-        description: `Follow-up #${followUpNumber} created for ${mediaName || "this podcast"}`,
+        description: `Follow-up created for ${mediaName || "this podcast"}`,
       });
 
       // Refresh pitch data
+      // Refresh pitch data - more comprehensive refresh
       queryClient.invalidateQueries({ queryKey: ["/pitches"] });
-      queryClient.invalidateQueries({ queryKey: [`/pitches/${pitchId}`] });
+      queryClient.invalidateQueries({ queryKey: [`/pitches/match/${matchId}`] });
+      queryClient.invalidateQueries({ queryKey: ["approvedMatchesForPitching"] });
+      queryClient.invalidateQueries({ queryKey: ["pitchDraftsForReview"] });
+      queryClient.invalidateQueries({ queryKey: ["pitchesReadyToSend"] });
+      
+      // Also force immediate refetch for instant updates
+      queryClient.refetchQueries({ queryKey: ["pitchDraftsForReview"] });
 
       if (onSuccess) {
         onSuccess(result);
       }
       
       setShowFollowUpDialog(false);
-      setCustomContext(""); // Reset form
+      setCustomSubject(""); // Reset form
+      setCustomBody(""); // Reset form
     } catch (error: any) {
       toast({
         title: "Generation Failed",
@@ -192,7 +199,7 @@ export function AIGenerateFollowUpButton({
         ) : (
           <>
             <RefreshCw className="h-4 w-4 mr-2" />
-            Generate Follow-up
+            Plan Follow-ups
           </>
         )}
       </Button>
@@ -203,7 +210,7 @@ export function AIGenerateFollowUpButton({
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <RefreshCw className="h-5 w-5 text-blue-600" />
-              Generate Follow-up #{followUpNumber}
+              Generate Follow-up
             </DialogTitle>
             <DialogDescription>
               Create an AI-powered follow-up message for {mediaName || "this podcast"}.
@@ -211,24 +218,24 @@ export function AIGenerateFollowUpButton({
           </DialogHeader>
 
           <div className="space-y-4 py-4">
-            {/* Follow-up Type Selection */}
+            {/* Template Selection */}
             <div className="space-y-2">
-              <Label>Follow-up Strategy</Label>
-              <Select value={followUpType} onValueChange={setFollowUpType}>
+              <Label>Follow-up Template</Label>
+              <Select value={templateId} onValueChange={setTemplateId}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Select follow-up type" />
+                  <SelectValue placeholder="Select follow-up template" />
                 </SelectTrigger>
                 <SelectContent>
-                  {followUpTypes.map((type) => {
-                    const Icon = type.icon;
+                  {followUpTemplates.map((template) => {
+                    const Icon = template.icon;
                     return (
-                      <SelectItem key={type.value} value={type.value}>
+                      <SelectItem key={template.value} value={template.value}>
                         <div className="flex flex-col gap-1">
                           <div className="flex items-center gap-2">
                             <Icon className="h-4 w-4" />
-                            <span className="font-medium">{type.label}</span>
+                            <span className="font-medium">{template.label}</span>
                           </div>
-                          <span className="text-xs text-gray-500">{type.description}</span>
+                          <span className="text-xs text-gray-500">{template.description}</span>
                         </div>
                       </SelectItem>
                     );
@@ -237,35 +244,33 @@ export function AIGenerateFollowUpButton({
               </Select>
             </div>
 
-            {/* Days Since Last Contact */}
+            {/* Custom Subject (Optional) */}
             <div className="space-y-2">
-              <Label>Days Since Last Contact</Label>
-              <Select value={daysSinceLastContact} onValueChange={setDaysSinceLastContact}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="3">3 days</SelectItem>
-                  <SelectItem value="7">1 week</SelectItem>
-                  <SelectItem value="14">2 weeks</SelectItem>
-                  <SelectItem value="21">3 weeks</SelectItem>
-                  <SelectItem value="30">1 month</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Custom Context (Optional) */}
-            <div className="space-y-2">
-              <Label>Additional Context (Optional)</Label>
+              <Label>Custom Subject Line (Optional)</Label>
               <Textarea
-                placeholder="Add any specific points you want the AI to include..."
-                value={customContext}
-                onChange={(e) => setCustomContext(e.target.value)}
-                rows={3}
+                placeholder="Leave blank to use template default..."
+                value={customSubject}
+                onChange={(e) => setCustomSubject(e.target.value)}
+                rows={2}
                 className="resize-none"
               />
               <p className="text-xs text-gray-500">
-                Help the AI personalize the follow-up with relevant context or recent developments.
+                Override the template's default subject line if needed.
+              </p>
+            </div>
+
+            {/* Custom Body (Optional) */}
+            <div className="space-y-2">
+              <Label>Custom Body Text (Optional)</Label>
+              <Textarea
+                placeholder="Add any specific points or customize the message..."
+                value={customBody}
+                onChange={(e) => setCustomBody(e.target.value)}
+                rows={4}
+                className="resize-none"
+              />
+              <p className="text-xs text-gray-500">
+                Customize the follow-up message or add specific talking points.
               </p>
             </div>
 
@@ -273,15 +278,9 @@ export function AIGenerateFollowUpButton({
             <Alert className="border-blue-200 bg-blue-50">
               <AlertCircle className="h-4 w-4 text-blue-600" />
               <AlertDescription className="text-blue-800 text-sm">
-                The AI will craft a follow-up that maintains conversation continuity while adjusting the approach based on your selected strategy.
+                The AI will generate a follow-up based on your previous pitch and the selected template. The system automatically tracks which follow-up number this is.
               </AlertDescription>
             </Alert>
-
-            {/* Follow-up Number Badge */}
-            <div className="flex items-center justify-between bg-gray-50 rounded-lg p-3">
-              <span className="text-sm text-gray-600">Follow-up Number</span>
-              <Badge variant="secondary">#{followUpNumber}</Badge>
-            </div>
           </div>
 
           <DialogFooter>
