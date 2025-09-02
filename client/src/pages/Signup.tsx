@@ -1,11 +1,12 @@
 // client/src/pages/Signup.tsx
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { UserPlus, Eye, EyeOff, Mail } from "lucide-react";
+import { UserPlus, Eye, EyeOff, Mail, Check, X, Circle } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
 import { useLocation, Link } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
@@ -25,6 +26,37 @@ const signupSchema = z.object({
 });
 
 type SignupFormData = z.infer<typeof signupSchema>;
+
+// Password strength calculation
+function calculatePasswordStrength(password: string): {
+  score: number;
+  label: string;
+  color: string;
+} {
+  let score = 0;
+  
+  // Length check
+  if (password.length >= 8) score += 20;
+  if (password.length >= 12) score += 10;
+  if (password.length >= 16) score += 10;
+  
+  // Character variety checks
+  if (/[a-z]/.test(password)) score += 15; // lowercase
+  if (/[A-Z]/.test(password)) score += 15; // uppercase
+  if (/[0-9]/.test(password)) score += 15; // numbers
+  if (/[^A-Za-z0-9]/.test(password)) score += 15; // special characters
+  
+  // Common patterns (deduct points)
+  if (/^[0-9]+$/.test(password)) score -= 10; // only numbers
+  if (/^[a-zA-Z]+$/.test(password)) score -= 10; // only letters
+  
+  // Determine label and color
+  if (score < 30) return { score, label: "Weak", color: "bg-red-500" };
+  if (score < 50) return { score, label: "Fair", color: "bg-orange-500" };
+  if (score < 70) return { score, label: "Good", color: "bg-yellow-500" };
+  if (score < 90) return { score, label: "Strong", color: "bg-green-500" };
+  return { score: Math.min(score, 100), label: "Very Strong", color: "bg-green-600" };
+}
 
 export default function SignupPage() {
   const [isLoading, setIsLoading] = useState(false);
@@ -49,6 +81,22 @@ export default function SignupPage() {
       confirmPassword: "",
     },
   });
+
+  // Watch password field for strength calculation
+  const password = form.watch("password");
+  const passwordStrength = useMemo(() => calculatePasswordStrength(password || ""), [password]);
+  
+  // Password requirements check
+  const passwordRequirements = useMemo(() => {
+    const pwd = password || "";
+    return {
+      minLength: pwd.length >= 8,
+      hasLowerCase: /[a-z]/.test(pwd),
+      hasUpperCase: /[A-Z]/.test(pwd),
+      hasNumber: /[0-9]/.test(pwd),
+      hasSpecial: /[^A-Za-z0-9]/.test(pwd),
+    };
+  }, [password]);
 
   const handleSignup = async (data: SignupFormData) => {
     setIsLoading(true);
@@ -234,7 +282,77 @@ export default function SignupPage() {
                       )}
                     </button>
                   </div>
-                   {form.formState.errors.password && <p className="text-sm text-red-500 mt-1">{form.formState.errors.password.message}</p>}
+                  
+                  {/* Password Strength Indicator */}
+                  {password && (
+                    <div className="mt-2 space-y-2">
+                      <div className="flex items-center gap-2">
+                        <Progress value={passwordStrength.score} className="h-2 flex-1" />
+                        <span className={`text-xs font-medium px-2 py-1 rounded ${passwordStrength.color} text-white`}>
+                          {passwordStrength.label}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* Password Requirements */}
+                  <div className="mt-3 space-y-1">
+                    <p className="text-xs font-medium text-gray-600 mb-1">Password must contain:</p>
+                    <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+                      <div className="flex items-center gap-1">
+                        {passwordRequirements.minLength ? (
+                          <Check className="h-3 w-3 text-green-600" />
+                        ) : (
+                          <X className="h-3 w-3 text-gray-400" />
+                        )}
+                        <span className={`text-xs ${passwordRequirements.minLength ? 'text-green-600' : 'text-gray-500'}`}>
+                          At least 8 characters
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        {passwordRequirements.hasUpperCase ? (
+                          <Check className="h-3 w-3 text-green-600" />
+                        ) : (
+                          <X className="h-3 w-3 text-gray-400" />
+                        )}
+                        <span className={`text-xs ${passwordRequirements.hasUpperCase ? 'text-green-600' : 'text-gray-500'}`}>
+                          One uppercase letter
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        {passwordRequirements.hasLowerCase ? (
+                          <Check className="h-3 w-3 text-green-600" />
+                        ) : (
+                          <X className="h-3 w-3 text-gray-400" />
+                        )}
+                        <span className={`text-xs ${passwordRequirements.hasLowerCase ? 'text-green-600' : 'text-gray-500'}`}>
+                          One lowercase letter
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        {passwordRequirements.hasNumber ? (
+                          <Check className="h-3 w-3 text-green-600" />
+                        ) : (
+                          <X className="h-3 w-3 text-gray-400" />
+                        )}
+                        <span className={`text-xs ${passwordRequirements.hasNumber ? 'text-green-600' : 'text-gray-500'}`}>
+                          One number
+                        </span>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1 mt-1">
+                      {passwordRequirements.hasSpecial ? (
+                        <Check className="h-3 w-3 text-green-600" />
+                      ) : (
+                        <Circle className="h-3 w-3 text-gray-400" />
+                      )}
+                      <span className={`text-xs ${passwordRequirements.hasSpecial ? 'text-green-600' : 'text-gray-500'} italic`}>
+                        Special character (recommended)
+                      </span>
+                    </div>
+                  </div>
+                  
+                  {form.formState.errors.password && <p className="text-sm text-red-500 mt-1">{form.formState.errors.password.message}</p>}
                 </div>
                  <div>
                   <Label htmlFor="confirmPassword">Confirm Password</Label>

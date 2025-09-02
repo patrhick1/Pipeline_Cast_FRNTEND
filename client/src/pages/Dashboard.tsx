@@ -14,7 +14,10 @@ import {
   ArrowUp,
   ArrowRight,
   CalendarPlus,
-  Settings // Added Settings icon
+  Settings, // Added Settings icon
+  CheckCircle2,
+  Circle,
+  Send
 } from "lucide-react";
 import { Link } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
@@ -233,9 +236,92 @@ export default function Dashboard() {
         />
       )}
       
-      {/* Onboarding Prompt */}
+      {/* Onboarding Prompt and Checklist */}
       {user?.show_onboarding_button && (
-        <OnboardingPrompt />
+        <>
+          <OnboardingPrompt />
+          
+          {/* New User Onboarding Checklist */}
+          <Card className="border-blue-200 bg-blue-50/50">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <CheckCircle2 className="h-5 w-5 text-blue-600" />
+                Getting Started Checklist
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                <div className="flex items-center gap-3">
+                  <div className="flex-shrink-0">
+                    {user?.has_completed_onboarding ? (
+                      <CheckCircle2 className="h-5 w-5 text-green-600" />
+                    ) : (
+                      <Circle className="h-5 w-5 text-gray-400" />
+                    )}
+                  </div>
+                  <div className="flex-1">
+                    <p className="font-medium text-gray-900">1. Complete Your Profile</p>
+                    <p className="text-sm text-gray-600">Fill out your questionnaire to help us find the perfect podcast matches</p>
+                  </div>
+                  {!user?.has_completed_onboarding && (
+                    <Link href="/onboarding">
+                      <Button size="sm" variant="outline" className="text-blue-600 border-blue-200 hover:bg-blue-50">
+                        Start
+                      </Button>
+                    </Link>
+                  )}
+                </div>
+                
+                <div className="flex items-center gap-3">
+                  <div className="flex-shrink-0">
+                    {stats && stats.pending_reviews > 0 ? (
+                      <Circle className="h-5 w-5 text-yellow-500" />
+                    ) : stats && stats.approved_placements > 0 ? (
+                      <CheckCircle2 className="h-5 w-5 text-green-600" />
+                    ) : (
+                      <Circle className="h-5 w-5 text-gray-400" />
+                    )}
+                  </div>
+                  <div className="flex-1">
+                    <p className="font-medium text-gray-900">2. Approve Podcast Matches</p>
+                    <p className="text-sm text-gray-600">Review and approve AI-suggested podcasts that fit your expertise</p>
+                  </div>
+                  <Link href="/approvals">
+                    <Button size="sm" variant="outline" className="text-blue-600 border-blue-200 hover:bg-blue-50">
+                      Review
+                    </Button>
+                  </Link>
+                </div>
+                
+                <div className="flex items-center gap-3">
+                  <div className="flex-shrink-0">
+                    {stats && stats.total_pitches_sent > 0 ? (
+                      <CheckCircle2 className="h-5 w-5 text-green-600" />
+                    ) : (
+                      <Circle className="h-5 w-5 text-gray-400" />
+                    )}
+                  </div>
+                  <div className="flex-1">
+                    <p className="font-medium text-gray-900">3. Send Your First Pitches</p>
+                    <p className="text-sm text-gray-600">Start reaching out to podcast hosts with personalized pitches</p>
+                  </div>
+                  <Link href="/pitch-outreach">
+                    <Button size="sm" variant="outline" className="text-blue-600 border-blue-200 hover:bg-blue-50">
+                      <Send className="h-3 w-3 mr-1" />
+                      Send
+                    </Button>
+                  </Link>
+                </div>
+              </div>
+              
+              <div className="mt-4 pt-4 border-t border-blue-200">
+                <p className="text-sm text-gray-600">
+                  Need help? <Link href="#" onClick={handleBookDemo} className="text-blue-600 hover:text-blue-700 font-medium">Book a demo call</Link> with our team
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        </>
       )}
       
       {/* Stats Cards */}
