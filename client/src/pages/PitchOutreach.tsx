@@ -788,6 +788,8 @@ function ReadyToSendTab({
 
 function SentPitchesTab({ pitches, isLoadingPitches }: { pitches: SentPitchStatus[]; isLoadingPitches: boolean; }) {
     const { canUseAI } = usePitchCapabilities();
+    const [selectedThreadPitch, setSelectedThreadPitch] = useState<SentPitchStatus | null>(null);
+    const [isThreadModalOpen, setIsThreadModalOpen] = useState(false);
     
     if (isLoadingPitches) {
         return <div className="border rounded-lg"><Skeleton className="h-48 w-full" /></div>;
@@ -796,6 +798,7 @@ function SentPitchesTab({ pitches, isLoadingPitches }: { pitches: SentPitchStatu
         return <div className="text-center py-8 text-gray-500"><Info className="mx-auto h-10 w-10 mb-2"/>No pitches have been sent yet.</div>;
     }
     return (
+        <>
         <div className="border rounded-lg overflow-x-auto">
             <Table>
                 <TableHeader className="bg-gray-50">
@@ -833,10 +836,8 @@ function SentPitchesTab({ pitches, isLoadingPitches }: { pitches: SentPitchStatu
                                             variant="ghost" 
                                             size="sm"
                                             onClick={() => {
-                                                // Open in a modal or navigate to detail view
-                                                const dialog = document.createElement('div');
-                                                dialog.innerHTML = `<div id="pitch-thread-modal-${pitch.pitch_id}"></div>`;
-                                                document.body.appendChild(dialog);
+                                                setSelectedThreadPitch(pitch);
+                                                setIsThreadModalOpen(true);
                                             }}
                                         >
                                             <MessageSquare className="w-3 h-3 mr-1" />
@@ -850,6 +851,25 @@ function SentPitchesTab({ pitches, isLoadingPitches }: { pitches: SentPitchStatu
                 </TableBody>
             </Table>
         </div>
+
+        {/* Thread View Modal */}
+        <Dialog open={isThreadModalOpen} onOpenChange={setIsThreadModalOpen}>
+            <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+                <DialogHeader>
+                    <DialogTitle>Email Thread</DialogTitle>
+                    <DialogDescription>
+                        {selectedThreadPitch?.media_name} - {selectedThreadPitch?.campaign_name}
+                    </DialogDescription>
+                </DialogHeader>
+                {selectedThreadPitch && (
+                    <PitchEmailThread 
+                        pitchId={selectedThreadPitch.pitch_id}
+                        podcastName={selectedThreadPitch.media_name || ''}
+                    />
+                )}
+            </DialogContent>
+        </Dialog>
+    </>
     );
 }
 

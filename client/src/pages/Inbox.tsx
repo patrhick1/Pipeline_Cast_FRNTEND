@@ -38,7 +38,11 @@ import NylasConnect from '@/components/inbox/NylasConnect';
 import { useToast } from '@/hooks/use-toast';
 
 export default function Inbox() {
-  const [selectedThread, setSelectedThread] = useState<string | null>(null);
+  // Check URL params for thread ID
+  const urlParams = new URLSearchParams(window.location.search);
+  const threadFromUrl = urlParams.get('thread');
+  
+  const [selectedThread, setSelectedThread] = useState<string | null>(threadFromUrl);
   const [isComposeOpen, setIsComposeOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFolder, setActiveFolder] = useState('inbox');
@@ -142,12 +146,23 @@ export default function Inbox() {
   // Auto-mark as read when thread is selected
   useEffect(() => {
     if (selectedThread && threads.length > 0) {
-      const thread = threads.find(t => t.id === selectedThread);
+      const thread = threads.find(t => (t.thread_id || t.id) === selectedThread);
       if (thread && thread.unread_count > 0) {
         markAsReadMutation.mutate(selectedThread);
       }
     }
   }, [selectedThread, threads]);
+  
+  // Update URL when selected thread changes
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    if (selectedThread) {
+      url.searchParams.set('thread', selectedThread);
+    } else {
+      url.searchParams.delete('thread');
+    }
+    window.history.replaceState({}, '', url.toString());
+  }, [selectedThread]);
 
   const handleFolderChange = (folder: string) => {
     setActiveFolder(folder);

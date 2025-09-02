@@ -73,7 +73,14 @@ export function useEmailThreads() {
           throw new Error('Failed to fetch pitch thread');
         }
         const data = await res.json();
-        // Return first thread if multiple (should be only one per pitch)
+        
+        // Handle paginated response format
+        if (data && data.threads && Array.isArray(data.threads)) {
+          // Return first thread from paginated response
+          return data.threads.length > 0 ? data.threads[0] : null;
+        }
+        
+        // Fallback for direct array response
         return Array.isArray(data) && data.length > 0 ? data[0] : null;
       },
       enabled: pitchId > 0,

@@ -25,6 +25,9 @@ interface PitchEmailThreadProps {
   pitchId: number;
   podcastName?: string;
   compact?: boolean;
+  pitchGenId?: number; // Optional for backwards compatibility
+  mediaName?: string; // Alternative name prop
+  initialSubject?: string; // Optional subject
 }
 
 export default function PitchEmailThread({ pitchId, podcastName, compact = false }: PitchEmailThreadProps) {
@@ -63,8 +66,10 @@ export default function PitchEmailThread({ pitchId, podcastName, compact = false
   };
 
   const handleOpenInInbox = () => {
-    if (thread?.id) {
-      setLocation(`/inbox?thread=${thread.id}`);
+    // Use thread_id for the Nylas thread ID, or internal_thread_id as fallback
+    const threadId = thread?.thread_id || thread?.id || thread?.internal_thread_id;
+    if (threadId) {
+      setLocation(`/inbox?thread=${threadId}`);
     }
   };
 
@@ -91,6 +96,9 @@ export default function PitchEmailThread({ pitchId, podcastName, compact = false
       </Card>
     );
   }
+  
+  // Check if we have the simplified thread structure (from threads list)
+  const isSimpleThread = !thread.messages && thread.message_count !== undefined;
 
   if (compact) {
     // Compact view for embedding in other components
@@ -131,6 +139,124 @@ export default function PitchEmailThread({ pitchId, podcastName, compact = false
   }
 
   // Full view
+  // If we only have simplified thread data, show the thread with available content
+  if (isSimpleThread) {
+    return (
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <Mail className="w-5 h-5" />
+                Email Thread
+              </CardTitle>
+              <CardDescription>
+                {thread.subject || 'Email Conversation'}
+              </CardDescription>
+            </div>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => refetch()}
+              >
+                <RefreshCw className="w-4 h-4" />
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleOpenInInbox}
+              >
+                Open in Inbox
+                <ExternalLink className="w-4 h-4 ml-2" />
+              </Button>
+            </div>
+          </div>
+          
+          {/* Thread Stats */}
+          <div className="flex items-center gap-4 mt-4 text-sm text-gray-600">
+            <div className="flex items-center gap-1">
+              <MessageSquare className="w-4 h-4" />
+              <span>{thread.message_count || 0} messages</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <User className="w-4 h-4" />
+              <span>From: {thread.from_name || thread.from_email}</span>
+            </div>
+            {thread.date && (
+              <div className="flex items-center gap-1">
+                <Clock className="w-4 h-4" />
+                <span>{format(new Date(thread.date), 'MMM d, h:mm a')}</span>
+              </div>
+            )}
+            {thread.classification && (
+              <Badge variant="secondary" className="ml-2">
+                {thread.classification.replace(/_/g, ' ')}
+              </Badge>
+            )}
+          </div>
+        </CardHeader>
+        
+        <CardContent>
+          <ScrollArea className="h-[500px]">
+            <div className="space-y-4">
+              {/* Display the email content */}
+              {(thread.body_text || thread.body_html) && (
+                <Card className="overflow-hidden">
+                  <div className="p-4 bg-gray-50 border-b">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <Avatar className="h-8 w-8">
+                          <AvatarFallback className="text-xs">
+                            {getInitials(thread.from_name || '', thread.from_email || '')}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div>
+                          <p className="text-sm font-medium">{thread.from_name || thread.from_email}</p>
+                          <p className="text-xs text-gray-500">{thread.from_email}</p>
+                        </div>
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        {thread.date && format(new Date(thread.date), 'MMM d, yyyy h:mm a')}
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="p-4">
+                    {/* Render HTML content if available, otherwise text */}
+                    {thread.body_text ? (
+                      <div 
+                        className="prose prose-sm max-w-none text-gray-800"
+                        dangerouslySetInnerHTML={{ __html: thread.body_text }}
+                      />
+                    ) : thread.body_html ? (
+                      <div 
+                        className="prose prose-sm max-w-none text-gray-800"
+                        dangerouslySetInnerHTML={{ __html: thread.body_html }}
+                      />
+                    ) : (
+                      <div className="text-sm text-gray-700 italic">
+                        {thread.snippet || 'No content available'}
+                      </div>
+                    )}
+                  </div>
+                </Card>
+              )}
+              
+              {/* If no body content, show snippet */}
+              {!thread.body_text && !thread.body_html && thread.snippet && (
+                <div className="bg-gray-50 rounded-lg p-4">
+                  <p className="text-sm text-gray-700 italic">"{thread.snippet}"</p>
+                </div>
+              )}
+            </div>
+          </ScrollArea>
+        </CardContent>
+      </Card>
+    );
+  }
+  
+  // Original full view with messages
   return (
     <Card>
       <CardHeader>
@@ -141,7 +267,7 @@ export default function PitchEmailThread({ pitchId, podcastName, compact = false
               Email Conversation
             </CardTitle>
             <CardDescription>
-              {podcastName ? `Conversation with ${podcastName}` : thread.thread.subject}
+              {podcastName ? `Conversation with ${podcastName}` : (thread.subject || thread.thread?.subject || 'Email Thread')}
             </CardDescription>
           </div>
           <div className="flex gap-2">
@@ -167,16 +293,16 @@ export default function PitchEmailThread({ pitchId, podcastName, compact = false
         <div className="flex items-center gap-4 mt-4 text-sm text-gray-600">
           <div className="flex items-center gap-1">
             <MessageSquare className="w-4 h-4" />
-            <span>{thread.messages.length} messages</span>
+            <span>{thread.messages?.length || 0} messages</span>
           </div>
           <div className="flex items-center gap-1">
             <User className="w-4 h-4" />
             <span>{thread.participants?.length || 1} participants</span>
           </div>
-          {thread.thread.last_reply_at && (
+          {(thread.last_reply_at || thread.thread?.last_reply_at) && (
             <Badge variant="secondary" className="text-xs">
               <Clock className="w-3 h-3 mr-1" />
-              Last reply: {format(new Date(thread.thread.last_reply_at), 'MMM d, h:mm a')}
+              Last reply: {format(new Date(thread.last_reply_at || thread.thread.last_reply_at), 'MMM d, h:mm a')}
             </Badge>
           )}
         </div>
@@ -185,7 +311,8 @@ export default function PitchEmailThread({ pitchId, podcastName, compact = false
       <CardContent>
         <ScrollArea className="h-[500px]">
           <div className="space-y-3">
-            {thread.messages.map((message, index) => {
+            {thread.messages && thread.messages.length > 0 ? (
+              thread.messages.map((message, index) => {
               const isExpanded = expandedMessages.has(message.message_id);
               const isLastMessage = index === thread.messages.length - 1;
               
@@ -283,7 +410,13 @@ export default function PitchEmailThread({ pitchId, podcastName, compact = false
                   )}
                 </Card>
               );
-            })}
+            })
+            ) : (
+              <div className="flex flex-col items-center justify-center h-64 text-gray-500">
+                <Mail className="w-8 h-8 mb-2 text-gray-300" />
+                <p className="text-sm">No messages in this thread yet</p>
+              </div>
+            )}
           </div>
         </ScrollArea>
 
