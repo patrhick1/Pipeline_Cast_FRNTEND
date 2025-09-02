@@ -41,7 +41,6 @@ import ResetPasswordPage from "@/pages/ResetPassword"; // Added for password res
 import Onboarding from "@/pages/Onboarding"; // Added for onboarding flow
 import EmailVerification from "@/pages/EmailVerification"; // Added for email verification
 import Inbox from "@/pages/Inbox"; // Added for Nylas inbox integration
-import Analytics from "@/pages/Analytics"; // Added for analytics dashboards
 import PrivacyPolicy from "@/pages/PrivacyPolicy"; // Privacy policy page
 import TermsOfService from "@/pages/TermsOfService"; // Terms of service page
 import Contact from "@/pages/Contact"; // Contact page
@@ -90,7 +89,7 @@ function Router() {
             {/* Common Routes for all authenticated users */}
             <Route path="/" component={Dashboard} />
             <Route path="/inbox" component={Inbox} /> {/* Nylas inbox integration */}
-            <Route path="/analytics" component={Analytics} /> {/* Analytics dashboards */}
+            {/* Analytics is now consolidated into PlacementTracking page */}
             <Route path="/settings" component={Settings} />
             <Route path="/placement-tracking" component={PlacementTracking} />
             <Route path="/approvals" component={Approvals} /> 

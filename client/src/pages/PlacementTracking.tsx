@@ -18,7 +18,7 @@ import { apiRequest, queryClient as appQueryClient } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/useAuth";
 import { 
   TrendingUp, Calendar, Users, PlayCircle, BarChart3, Download, ExternalLink, Podcast as PodcastIcon, 
-  Eye, Share2, MessageSquare, Search, Filter, Plus, Edit, CheckCircle, Clock, AlertCircle, Check, X, Trash2, AlertTriangle, ChevronLeft, ChevronRight, History, Timeline, LayoutGrid, List
+  Eye, Share2, MessageSquare, Search, Filter, Plus, Edit, CheckCircle, Clock, AlertCircle, Check, X, Trash2, AlertTriangle, ChevronLeft, ChevronRight, History, Timeline, LayoutGrid, List, Target, Award
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -42,6 +42,9 @@ import { PlacementEditDialog } from "@/components/placements/PlacementEditDialog
 import { PlacementTimeline } from "@/components/placements/PlacementTimeline";
 import { ClientPlacementCard } from "@/components/placements/ClientPlacementCard";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import PlacementAnalyticsDashboard from "@/components/analytics/PlacementAnalyticsDashboard";
+import PitchAnalyticsDashboard from "@/components/analytics/PitchAnalyticsDashboard";
 
 // --- Interfaces (align with backend schemas) ---
 interface Placement { // Matches PlacementInDB from backend
@@ -407,23 +410,87 @@ function StatusChangeDialog({
   );
 }
 
-// --- Placement Table ---
+// --- Placement Table with Inline Editing ---
 function PlacementTable({ 
   placements, 
   onEdit, 
   onDelete, 
   onStatusChange,
-  userRole 
+  userRole,
+  onBatchUpdate
 }: { 
   placements: Placement[]; 
   onEdit: (placement: Placement) => void;
   onDelete: (placementId: number) => void;
   onStatusChange: (placement: Placement) => void;
   userRole?: string | null;
+  onBatchUpdate?: (updates: Map<number, Partial<Placement>>) => void;
 }) {
+  const [editedPlacements, setEditedPlacements] = useState<Map<number, Partial<Placement>>>(new Map());
+  const [hasChanges, setHasChanges] = useState(false);
+
+  const handleFieldChange = (placementId: number, field: keyof Placement, value: any) => {
+    const newEdits = new Map(editedPlacements);
+    const currentEdits = newEdits.get(placementId) || {};
+    newEdits.set(placementId, { ...currentEdits, [field]: value });
+    setEditedPlacements(newEdits);
+    setHasChanges(newEdits.size > 0);
+  };
+
+  const handleSaveChanges = () => {
+    if (onBatchUpdate && editedPlacements.size > 0) {
+      onBatchUpdate(editedPlacements);
+      setEditedPlacements(new Map());
+      setHasChanges(false);
+    }
+  };
+
+  const handleCancelChanges = () => {
+    setEditedPlacements(new Map());
+    setHasChanges(false);
+  };
+
+  const getFieldValue = (placement: Placement, field: keyof Placement) => {
+    const edits = editedPlacements.get(placement.placement_id);
+    if (edits && field in edits) {
+      return edits[field];
+    }
+    // For date fields, ensure we return just the date part (YYYY-MM-DD)
+    if ((field === 'meeting_date' || field === 'recording_date' || field === 'go_live_date') && placement[field]) {
+      const dateValue = placement[field] as string;
+      return dateValue.split('T')[0];
+    }
+    return placement[field];
+  };
   return (
-    <div className="border rounded-lg overflow-x-auto">
-      <Table>
+    <div className="space-y-4">
+      {hasChanges && (
+        <div className="flex items-center justify-between p-3 bg-blue-50 border border-blue-200 rounded-lg">
+          <div className="flex items-center gap-2 text-sm text-blue-700">
+            <AlertCircle className="w-4 h-4" />
+            <span>You have unsaved changes</span>
+          </div>
+          <div className="flex gap-2">
+            <Button 
+              size="sm" 
+              variant="outline" 
+              onClick={handleCancelChanges}
+            >
+              Cancel
+            </Button>
+            <Button 
+              size="sm" 
+              onClick={handleSaveChanges}
+              className="bg-blue-600 text-white hover:bg-blue-700"
+            >
+              <Check className="w-4 h-4 mr-1" />
+              Save Changes
+            </Button>
+          </div>
+        </div>
+      )}
+      <div className="border rounded-lg overflow-x-auto">
+        <Table>
         <TableHeader className="bg-gray-50">
           <TableRow>
             <TableHead>Podcast</TableHead>
@@ -472,61 +539,63 @@ function PlacementTable({
                   </div>
                 </TableCell>
                 <TableCell>
-                  {userRole === 'client' ? (
-                    <Badge className={`${config.color} font-medium text-xs`}>
-                      <StatusIcon className="w-3 h-3 mr-1.5" />
-                      {config.label}
-                    </Badge>
-                  ) : (
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="sm" className="h-auto p-0">
-                          <Badge className={`${config.color} font-medium text-xs cursor-pointer hover:opacity-80`}>
-                            <StatusIcon className="w-3 h-3 mr-1.5" />
-                            {config.label}
-                            <ChevronRight className="w-3 h-3 ml-1" />
-                          </Badge>
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="start">
-                        <DropdownMenuLabel>Change Status</DropdownMenuLabel>
-                        <DropdownMenuSeparator />
+                  <Select 
+                    value={getFieldValue(placement, 'current_status') as string || 'pending'}
+                    onValueChange={(value) => handleFieldChange(placement.placement_id, 'current_status', value)}
+                  >
+                      <SelectTrigger className="w-[140px] h-8 text-xs">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
                         {Object.entries(statusConfig)
-                          .filter(([key]) => key !== 'default' && key !== currentStatusKey)
+                          .filter(([key]) => key !== 'default')
                           .map(([key, conf]) => (
-                            <DropdownMenuItem
-                              key={key}
-                              onClick={() => {
-                                const updatedPlacement = { ...placement, current_status: key };
-                                onStatusChange(updatedPlacement);
-                              }}
-                            >
-                              <conf.icon className="w-4 h-4 mr-2" />
-                              {conf.label}
-                            </DropdownMenuItem>
+                            <SelectItem key={key} value={key}>
+                              <div className="flex items-center">
+                                <conf.icon className="w-3 h-3 mr-1.5" />
+                                {conf.label}
+                              </div>
+                            </SelectItem>
                           ))}
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  )}
+                      </SelectContent>
+                  </Select>
                 </TableCell>
-                <TableCell>{placement.meeting_date ? new Date(placement.meeting_date + 'T00:00:00').toLocaleDateString() : "-"}</TableCell>
-                <TableCell>{placement.recording_date ? new Date(placement.recording_date + 'T00:00:00').toLocaleDateString() : "-"}</TableCell>
-                <TableCell>{placement.go_live_date ? new Date(placement.go_live_date + 'T00:00:00').toLocaleDateString() : "-"}</TableCell>
                 <TableCell>
-                  {placement.episode_link ? (
-                    <a 
-                      href={placement.episode_link} 
-                      target="_blank" 
-                      rel="noopener noreferrer" 
-                      className="text-primary hover:underline text-sm"
-                    >
-                      <PlayCircle className="inline h-4 w-4 mr-1"/> Listen
-                    </a>
-                  ) : "-"}
+                  <Input
+                    type="date"
+                    className="w-[120px] h-8 text-xs"
+                    value={getFieldValue(placement, 'meeting_date') as string || ''}
+                    onChange={(e) => handleFieldChange(placement.placement_id, 'meeting_date', e.target.value || null)}
+                  />
+                </TableCell>
+                <TableCell>
+                  <Input
+                    type="date"
+                    className="w-[120px] h-8 text-xs"
+                    value={getFieldValue(placement, 'recording_date') as string || ''}
+                    onChange={(e) => handleFieldChange(placement.placement_id, 'recording_date', e.target.value || null)}
+                  />
+                </TableCell>
+                <TableCell>
+                  <Input
+                    type="date"
+                    className="w-[120px] h-8 text-xs"
+                    value={getFieldValue(placement, 'go_live_date') as string || ''}
+                    onChange={(e) => handleFieldChange(placement.placement_id, 'go_live_date', e.target.value || null)}
+                  />
+                </TableCell>
+                <TableCell>
+                  <Input
+                    type="url"
+                    placeholder="Episode URL"
+                    className="w-[140px] h-8 text-xs"
+                    value={getFieldValue(placement, 'episode_link') as string || ''}
+                    onChange={(e) => handleFieldChange(placement.placement_id, 'episode_link', e.target.value || null)}
+                  />
                 </TableCell>
                 <TableCell className="text-right">
                   <div className="flex items-center justify-end space-x-1">
-                    {/* Allow clients to edit their own placements */}
+                    {/* Edit button for detailed editing */}
                     <Button 
                       size="sm" 
                       variant="outline" 
@@ -535,7 +604,7 @@ function PlacementTable({
                     >
                       <Edit className="h-3 w-3" />
                     </Button>
-                    {userRole === 'admin' && (
+                    {userRole?.toLowerCase() === 'admin' && (
                       <Button 
                         size="sm" 
                         variant="destructive" 
@@ -564,6 +633,7 @@ function PlacementTable({
           })}
         </TableBody>
       </Table>
+      </div>
     </div>
   );
 }
@@ -580,6 +650,7 @@ export default function PlacementTracking() {
   const [placementForStatusChange, setPlacementForStatusChange] = useState<Placement | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [viewMode, setViewMode] = useState<"table" | "cards">("table");
+  const [selectedDays, setSelectedDays] = useState<number>(30);
   const pageSize = 20;
 
   const { toast } = useToast();
@@ -677,6 +748,44 @@ export default function PlacementTracking() {
     setStatusChangeDialogOpen(true);
   };
 
+  // Batch update mutation for inline editing
+  const batchUpdateMutation = useMutation({
+    mutationFn: async (updates: Map<number, Partial<Placement>>) => {
+      const updatePromises = Array.from(updates.entries()).map(([placementId, changes]) => {
+        // Clean up date fields to ensure proper format
+        const payload = {
+          ...changes,
+          meeting_date: changes.meeting_date === '' ? null : changes.meeting_date,
+          call_date: changes.call_date === '' ? null : changes.call_date,
+          recording_date: changes.recording_date === '' ? null : changes.recording_date,
+          go_live_date: changes.go_live_date === '' ? null : changes.go_live_date,
+          episode_link: changes.episode_link === '' ? null : changes.episode_link,
+        };
+        return apiRequest("PATCH", `/placements/${placementId}`, payload);
+      });
+      
+      return Promise.all(updatePromises);
+    },
+    onSuccess: () => {
+      toast({ 
+        title: "Success", 
+        description: "All placement changes have been saved successfully." 
+      });
+      tanstackQueryClient.invalidateQueries({ queryKey: placementsQueryKey });
+    },
+    onError: (error: any) => {
+      toast({ 
+        title: "Error", 
+        description: error.message || "Failed to save some placement changes.", 
+        variant: "destructive" 
+      });
+    }
+  });
+
+  const handleBatchUpdate = (updates: Map<number, Partial<Placement>>) => {
+    batchUpdateMutation.mutate(updates);
+  };
+
   // Reset page when filters change
   useEffect(() => {
     setCurrentPage(1);
@@ -700,6 +809,17 @@ export default function PlacementTracking() {
     scheduled: placements.filter((p: Placement) => ['scheduled', 'recording_booked'].includes(p.current_status || '')).length
   };
 
+  // Fetch analytics summary
+  const { data: analyticsSummary, isLoading: summaryLoading } = useQuery<{
+    active_campaigns: number;
+    total_pitches_sent: number;
+    placements_secured: number;
+    upcoming_recordings: number;
+    pending_reviews: number;
+  }>({
+    queryKey: ['/analytics/summary'],
+  });
+
   if (authLoading) {
       return <div className="p-6 text-center">Authenticating...</div>;
   }
@@ -708,25 +828,67 @@ export default function PlacementTracking() {
     <div className="max-w-7xl mx-auto space-y-6 p-4 md:p-6">
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div>
-            <h1 className="text-2xl font-bold text-gray-900">Placement Tracking</h1>
-            <p className="text-gray-600">Monitor the status and performance of your podcast placements.</p>
+            <h1 className="text-2xl font-bold text-gray-900">Placements & Analytics</h1>
+            <p className="text-gray-600">Track your podcast placements and analyze performance metrics.</p>
         </div>
-        {user?.role !== 'client' && (
+        <div className="flex items-center gap-4">
+          {/* Date Range Selector */}
+          <Select value={selectedDays.toString()} onValueChange={(value) => setSelectedDays(Number(value))}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Select time range" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="7">Last 7 days</SelectItem>
+              <SelectItem value="14">Last 14 days</SelectItem>
+              <SelectItem value="30">Last 30 days</SelectItem>
+              <SelectItem value="60">Last 60 days</SelectItem>
+              <SelectItem value="90">Last 90 days</SelectItem>
+              <SelectItem value="365">Last year</SelectItem>
+            </SelectContent>
+          </Select>
+          
+          {user?.role !== 'client' && (
             <Button onClick={handleCreateNew} className="bg-primary text-primary-foreground hover:bg-primary/90">
-                <Plus className="mr-2 h-4 w-4" /> Add New Placement
+              <Plus className="mr-2 h-4 w-4" /> Add Placement
             </Button>
-        )}
+          )}
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* Quick Stats Summary Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs text-gray-500">Total Placements</p>
-                <p className="text-xl font-bold">{isLoadingPlacements ? <Skeleton className="h-6 w-12"/> : stats.total}</p>
+                <p className="text-xs text-gray-500">Active Campaigns</p>
+                <div className="text-xl font-bold">{campaignsForFilter?.length || 0}</div>
               </div>
-              <PodcastIcon className="h-6 w-6 text-gray-400" />
+              <BarChart3 className="h-5 w-5 text-blue-600" />
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs text-gray-500">Total Pitches</p>
+                <div className="text-xl font-bold">
+                  {summaryLoading ? <Skeleton className="h-6 w-12"/> : (analyticsSummary?.total_pitches_sent || 0)}
+                </div>
+              </div>
+              <Target className="h-5 w-5 text-green-600" />
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs text-gray-500">Placements</p>
+                <div className="text-xl font-bold">{isLoadingPlacements ? <Skeleton className="h-6 w-12"/> : stats.total}</div>
+              </div>
+              <PodcastIcon className="h-5 w-5 text-purple-600" />
             </div>
           </CardContent>
         </Card>
@@ -735,9 +897,9 @@ export default function PlacementTracking() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-xs text-gray-500">Live Episodes</p>
-                <p className="text-xl font-bold text-green-600">{isLoadingPlacements ? <Skeleton className="h-6 w-12"/> : stats.live}</p>
+                <div className="text-xl font-bold text-green-600">{isLoadingPlacements ? <Skeleton className="h-6 w-12"/> : stats.live}</div>
               </div>
-              <PlayCircle className="h-6 w-6 text-green-400" />
+              <PlayCircle className="h-5 w-5 text-green-600" />
             </div>
           </CardContent>
         </Card>
@@ -745,28 +907,29 @@ export default function PlacementTracking() {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs text-gray-500">Scheduled</p>
-                <p className="text-xl font-bold text-blue-600">{isLoadingPlacements ? <Skeleton className="h-6 w-12"/> : stats.scheduled}</p>
+                <p className="text-xs text-gray-500">Upcoming</p>
+                <div className="text-xl font-bold">
+                  {summaryLoading ? <Skeleton className="h-6 w-12"/> : (analyticsSummary?.upcoming_recordings || 0)}
+                </div>
               </div>
-              <Calendar className="h-6 w-6 text-blue-400" />
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs text-gray-500">Paid/Completed</p>
-                <p className="text-xl font-bold text-emerald-600">{isLoadingPlacements ? <Skeleton className="h-6 w-12"/> : stats.paid}</p>
-              </div>
-              <CheckCircle className="h-6 w-6 text-emerald-400" />
+              <Calendar className="h-5 w-5 text-orange-600" />
             </div>
           </CardContent>
         </Card>
       </div>
 
-      <Card>
-        <CardContent className="p-4 md:p-6">
+      {/* Main Tabbed Interface */}
+      <Tabs defaultValue="placements" className="space-y-6">
+        <TabsList className="grid w-full max-w-lg grid-cols-3">
+          <TabsTrigger value="placements">Placements</TabsTrigger>
+          <TabsTrigger value="analytics">Analytics</TabsTrigger>
+          <TabsTrigger value="insights">Insights</TabsTrigger>
+        </TabsList>
+
+        {/* Placements Tab - Existing placement tracking functionality */}
+        <TabsContent value="placements" className="space-y-4">
+          <Card>
+            <CardContent className="p-4 md:p-6">
           <div className="flex flex-col md:flex-row gap-3 items-center justify-between">
             <div className="flex flex-col sm:flex-row gap-3 flex-1 w-full md:w-auto">
               <div className="relative flex-1 min-w-[180px] sm:min-w-[240px]">
@@ -792,19 +955,17 @@ export default function PlacementTracking() {
                 </SelectContent>
               </Select>
 
-              {user?.role !== 'client' && (
-                <Select value={campaignFilter} onValueChange={setCampaignFilter} disabled={isLoadingCampaignsForFilter}>
-                    <SelectTrigger className="w-full sm:w-[200px] text-sm">
-                    <SelectValue placeholder="Filter by campaign" />
-                    </SelectTrigger>
-                    <SelectContent>
-                    <SelectItem value="all">All Campaigns</SelectItem>
-                    {campaignsForFilter.map(c => (
-                        <SelectItem key={c.campaign_id} value={c.campaign_id}>{c.campaign_name}</SelectItem>
-                    ))}
-                    </SelectContent>
-                </Select>
-              )}
+              <Select value={campaignFilter} onValueChange={setCampaignFilter} disabled={isLoadingCampaignsForFilter}>
+                <SelectTrigger className="w-full sm:w-[200px] text-sm">
+                  <SelectValue placeholder="Filter by campaign" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Campaigns</SelectItem>
+                  {campaignsForFilter.map(c => (
+                    <SelectItem key={c.campaign_id} value={c.campaign_id}>{c.campaign_name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="flex items-center gap-2 mt-2 md:mt-0">
@@ -831,7 +992,7 @@ export default function PlacementTracking() {
         </CardContent>
       </Card>
 
-      {isLoadingPlacements ? (
+          {isLoadingPlacements ? (
         <div className="text-center py-12">
           <Skeleton className="h-10 w-1/2 mx-auto mb-4" />
           <Skeleton className="h-40 w-full" />
@@ -874,6 +1035,7 @@ export default function PlacementTracking() {
               onDelete={handleDelete}
               onStatusChange={handleStatusChange}
               userRole={user?.role}
+              onBatchUpdate={handleBatchUpdate}
             />
           )}
           {totalPages > 1 && (
@@ -952,6 +1114,24 @@ export default function PlacementTracking() {
           )}
         </div>
       )}
+        </TabsContent>
+
+        {/* Analytics Tab - Placement analytics dashboard */}
+        <TabsContent value="analytics" className="space-y-6">
+          <PlacementAnalyticsDashboard 
+            campaignId={campaignFilter === 'all' ? undefined : campaignFilter}
+            days={selectedDays}
+          />
+        </TabsContent>
+
+        {/* Insights Tab - Pitch analytics dashboard */}
+        <TabsContent value="insights" className="space-y-6">
+          <PitchAnalyticsDashboard 
+            campaignId={campaignFilter === 'all' ? undefined : campaignFilter}
+            days={selectedDays}
+          />
+        </TabsContent>
+      </Tabs>
 
       {/* Show PlacementEditDialog for clients, PlacementFormDialog for staff/admin */}
       {isFormOpen && isClient && editingPlacement && (

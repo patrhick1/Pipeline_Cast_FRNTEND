@@ -45,20 +45,18 @@ const clientNavigationItems: NavigationItem[] = [
   { name: "Approve Matches", href: "/approvals", icon: CheckCircle, roles: ['client'] }, // Approvals page will filter for clients
   { name: "Pitch Outreach", href: "/pitch-outreach", icon: Send, roles: ['client'] }, // New pitch outreach for clients
   { name: "Inbox", href: "/inbox", icon: InboxIcon, roles: ['client'] }, // Nylas inbox
-  { name: "Track Placements", href: "/placement-tracking", icon: TrendingUp, roles: ['client'] },
-  { name: "Analytics", href: "/analytics", icon: TrendingUp, roles: ['client'] } // Analytics dashboards
+  { name: "Placements & Analytics", href: "/placement-tracking", icon: TrendingUp, roles: ['client'] }
 ];
 
 // --- INTERNAL STAFF/ADMIN NAVIGATION ---
 const internalNavigationItems: NavigationItem[] = [
   { name: "Team Dashboard", href: "/", icon: LayoutGrid, roles: ['staff', 'admin'] },
   { name: "Inbox", href: "/inbox", icon: InboxIcon, roles: ['staff', 'admin'] }, // Nylas inbox
-  { name: "Analytics", href: "/analytics", icon: BarChart3, roles: ['staff', 'admin'] }, // Analytics dashboards
   { name: "Client & Campaigns", href: "/campaign-management", icon: ClientsIcon, roles: ['staff', 'admin'] },
   { name: "Podcast Discovery", href: "/discover", icon: Search, roles: ['staff', 'admin'] },
   { name: "Pitch Outreach Hub", href: "/pitch-outreach", icon: Send, roles: ['staff', 'admin'] },
   { name: "Approval Queue", href: "/approvals", icon: CheckCircle, roles: ['staff', 'admin'] }, // Staff sees all relevant approvals
-  { name: "Placement Management", href: "/placement-tracking", icon: TrendingUp, roles: ['staff', 'admin'] },
+  { name: "Placements & Analytics", href: "/placement-tracking", icon: TrendingUp, roles: ['staff', 'admin'] },
   // { name: "Reporting", href: "/reports", icon: BarChart3, roles: ['staff', 'admin'] }, // Future
   { name: "Pitch Templates", href: "/pitch-templates", icon: PitchTemplateIcon, roles: ['staff', 'admin'] }, 
   { name: "Admin Panel", href: "/admin", icon: Shield, roles: ['admin'] },
