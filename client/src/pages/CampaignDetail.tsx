@@ -94,6 +94,7 @@ interface PlacementForCampaign { // Simplified from PlacementInDB
 // --- Define the props for CampaignDetail ---
 interface CampaignDetailProps {
   campaignIdParam: string; // Expect this prop
+  embedded?: boolean; // Optional flag to indicate if component is embedded
 }
 
 
@@ -602,7 +603,7 @@ function PlacementsTab({ campaignId, userRole }: { campaignId: string; userRole:
 
 
 // --- Main CampaignDetail Component ---
-export default function CampaignDetail({ campaignIdParam }: CampaignDetailProps) { // Use the prop
+export default function CampaignDetail({ campaignIdParam, embedded = false }: CampaignDetailProps) { // Use the prop
   const campaignId = campaignIdParam; // Use the passed prop
   const { user, isLoading: authLoading } = useAuth();
   const tanstackQueryClient = useTanstackQueryClient();
@@ -769,12 +770,14 @@ export default function CampaignDetail({ campaignIdParam }: CampaignDetailProps)
   const backLink = user?.role === 'client' ? "/my-campaigns" : "/campaign-management";
 
   return (
-    <div className="space-y-6 p-4 md:p-6">
-      <Link href={backLink}>
-        <Button variant="outline" className="mb-4 text-sm">
-          <ArrowLeft className="mr-2 h-4 w-4" /> Back to Campaigns List
-        </Button>
-      </Link>
+    <div className={embedded ? "space-y-6" : "space-y-6 p-4 md:p-6"}>
+      {!embedded && (
+        <Link href={backLink}>
+          <Button variant="outline" className="mb-4 text-sm">
+            <ArrowLeft className="mr-2 h-4 w-4" /> Back to Campaigns List
+          </Button>
+        </Link>
+      )}
 
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div>

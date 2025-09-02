@@ -10,6 +10,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { apiRequest } from "@/lib/queryClient";
 import { Badge } from "@/components/ui/badge";
 import EditCampaignDialogClient from "@/components/dialogs/EditCampaignDialogClient";
+import CampaignDetail from "./CampaignDetail";
 
 // Interface for the campaign data expected from the backend
 // This should align with your backend's CampaignInDB schema,
@@ -54,7 +55,8 @@ export default function ClientCampaigns() {
     staleTime: 1000 * 60 * 5, // Cache for 5 minutes
   });
 
-  if (authLoading || (campaignsLoading && !campaigns.length && !error)) { // Show detailed loading if campaigns are loading for the first time and no error
+  // Show loading state while campaigns are loading
+  if (authLoading || (campaignsLoading && !campaigns.length && !error)) {
     return (
       <div className="space-y-6 p-4 md:p-6 animate-pulse">
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
@@ -94,6 +96,7 @@ export default function ClientCampaigns() {
         </div>
     );
   }
+
 
   const handleEditCampaign = (campaign: ClientCampaignSummary) => {
     setSelectedCampaign(campaign);
@@ -137,7 +140,11 @@ export default function ClientCampaigns() {
             </p>
           </CardContent>
         </Card>
+      ) : campaigns.length === 1 ? (
+        // Single campaign - embed the full campaign details directly
+        <CampaignDetail campaignIdParam={campaigns[0].campaign_id} embedded={true} />
       ) : (
+        // Multiple campaigns - show grid view
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {campaigns.map((campaign) => (
             <Card key={campaign.campaign_id} className="flex flex-col hover:shadow-lg transition-shadow duration-200">

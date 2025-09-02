@@ -8,14 +8,17 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import { Clock, Calendar, Settings, Info, Save, Check } from "lucide-react";
+import { Clock, Calendar, Settings, Info, Save, Check, Zap } from "lucide-react";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 
 interface SmartSendSettingsProps {
-  campaignId: string;
+  campaignId: string | null;
   campaignName?: string;
+  campaigns?: any[]; // List of available campaigns
+  onCampaignChange?: (campaignId: string) => void; // Callback when campaign is changed
 }
 
 interface SmartSendConfig {
@@ -44,7 +47,7 @@ const DAYS_OF_WEEK = [
   { value: 0, label: "Sun", fullLabel: "Sunday" },
 ];
 
-export function SmartSendSettings({ campaignId, campaignName }: SmartSendSettingsProps) {
+export function SmartSendSettings({ campaignId, campaignName, campaigns, onCampaignChange }: SmartSendSettingsProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   
@@ -224,17 +227,87 @@ export function SmartSendSettings({ campaignId, campaignName }: SmartSendSetting
     );
   }
 
+  // If no campaign is selected and multiple campaigns exist, show campaign selector
+  if (!campaignId && campaigns && campaigns.length > 1) {
+    return (
+      <Card className="w-full">
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <Zap className="h-5 w-5 text-yellow-500" />
+                Smart Send - Automated Pitch Delivery
+              </CardTitle>
+              <CardDescription className="mt-1">
+                Schedule your pitches to be sent automatically at optimal times
+              </CardDescription>
+            </div>
+            <Badge variant="outline">Premium Feature</Badge>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            <Alert>
+              <Info className="h-4 w-4" />
+              <AlertDescription>
+                Select a campaign to configure Smart Send settings
+              </AlertDescription>
+            </Alert>
+            <div className="space-y-2">
+              <Label htmlFor="campaign-select">Select Campaign</Label>
+              <Select onValueChange={onCampaignChange} value={campaignId || undefined}>
+                <SelectTrigger id="campaign-select">
+                  <SelectValue placeholder="Choose a campaign" />
+                </SelectTrigger>
+                <SelectContent>
+                  {campaigns.map((campaign) => (
+                    <SelectItem key={campaign.campaign_id} value={campaign.campaign_id}>
+                      {campaign.campaign_name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // If no campaign is available at all
+  if (!campaignId) {
+    return null;
+  }
+
   return (
     <Card className="w-full">
       <CardHeader>
         <div className="flex items-center justify-between">
           <div>
             <CardTitle className="flex items-center gap-2">
-              <Settings className="h-5 w-5" />
+              <Zap className="h-5 w-5 text-yellow-500" />
               Smart Send Configuration
             </CardTitle>
             <CardDescription className="mt-1">
-              Automate pitch sending for {campaignName || "this campaign"}
+              {campaigns && campaigns.length > 1 ? (
+                <div className="flex items-center gap-2 mt-1">
+                  <span>Campaign:</span>
+                  <Select onValueChange={onCampaignChange} value={campaignId}>
+                    <SelectTrigger className="w-[200px] h-7 text-xs">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {campaigns.map((campaign) => (
+                        <SelectItem key={campaign.campaign_id} value={campaign.campaign_id}>
+                          {campaign.campaign_name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              ) : (
+                `Automate pitch sending for ${campaignName || "this campaign"}`
+              )}
             </CardDescription>
           </div>
           <Badge variant={settings.enabled ? "default" : "secondary"}>

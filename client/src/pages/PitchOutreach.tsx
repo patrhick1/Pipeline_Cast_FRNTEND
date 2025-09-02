@@ -1341,13 +1341,26 @@ export default function PitchOutreach() {
         </CardContent>
       </Card>
 
-      {/* Smart Send Settings - Only show for paid users with a selected campaign */}
-      {!isFreePlan && selectedCampaignFilter && (
+      {/* Smart Send Settings - Always show for paid users */}
+      {!isFreePlan && (
         <SmartSendSettings 
-          campaignId={selectedCampaignFilter}
-          campaignName={
-            campaignsData?.find((c: any) => c.campaign_id === selectedCampaignFilter)?.campaign_name
+          campaignId={
+            // If a campaign is selected, use it
+            selectedCampaignFilter || 
+            // If user has only one campaign, auto-select it
+            (campaignsData?.length === 1 ? campaignsData[0].campaign_id : null) ||
+            // Otherwise require selection
+            null
           }
+          campaignName={
+            selectedCampaignFilter 
+              ? campaignsData?.find((c: any) => c.campaign_id === selectedCampaignFilter)?.campaign_name
+              : campaignsData?.length === 1 
+                ? campaignsData[0].campaign_name
+                : undefined
+          }
+          campaigns={campaignsData} // Pass all campaigns for selection
+          onCampaignChange={setSelectedCampaignFilter} // Allow changing campaign from Smart Send
         />
       )}
 
