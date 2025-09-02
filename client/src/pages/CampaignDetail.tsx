@@ -8,14 +8,16 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   ArrowLeft, Edit, ExternalLink, Lightbulb, Search, CheckCircle, Send, TrendingUp,
-  ClipboardList, AlertTriangle, Info, Users, FileText, MessageSquare, PlayCircle, ThumbsUp, ThumbsDown, RefreshCw
+  ClipboardList, AlertTriangle, Info, Users, FileText, MessageSquare, PlayCircle, ThumbsUp, ThumbsDown, RefreshCw, Eye
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Separator } from "@/components/ui/separator"; // Added Separator
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { CampaignFunnel } from "@/components/CampaignFunnel";
 import CampaignThreads from "@/components/campaigns/CampaignThreads";
 
@@ -25,8 +27,8 @@ interface CampaignDetailData {
   person_id: number;
   campaign_name: string;
   campaign_type?: string | null;
-  campaign_bio?: string | null; // GDoc Link
-  campaign_angles?: string | null; // GDoc Link
+  campaign_bio?: string | null; // Raw text content
+  campaign_angles?: string | null; // Raw text content
   campaign_keywords?: string[] | null;
   embedding_status?: string | null; // Added
   mock_interview_trancript?: string | null; // Text or GDoc Link
@@ -42,6 +44,16 @@ interface CampaignStats {
     pitched: number;
     responses: number;
     bookings: number;
+}
+
+interface CampaignAnalyticsSummary {
+    active_campaigns: number;
+    total_pitches_sent: number;
+    placements_secured: number;
+    upcoming_recordings: number;
+    pending_reviews: number;
+    approved_placements?: number;
+    success_rate_placements?: number;
 }
 
 interface MatchSuggestionForCampaign {
@@ -191,6 +203,8 @@ function ProfileContentTab({ campaign, userRole }: { campaign: CampaignDetailDat
   const { toast } = useToast();
   const tanstackQueryClient = useTanstackQueryClient();
   const [, navigate] = useLocation();
+  const [bioModalOpen, setBioModalOpen] = useState(false);
+  const [anglesModalOpen, setAnglesModalOpen] = useState(false);
 
   const triggerAnglesBioMutation = useMutation({
     mutationFn: async (campaignId: string) => {
@@ -222,6 +236,7 @@ function ProfileContentTab({ campaign, userRole }: { campaign: CampaignDetailDat
   const questionnaireLink = userRole === 'client' ? `/profile-setup?campaignId=${campaign.campaign_id}&tab=questionnaire` : `/admin?tab=campaigns&action=editQuestionnaire&campaignId=${campaign.campaign_id}`;
 
   return (
+    <>
     <Card>
       <CardHeader>
         <CardTitle>Client Profile & AI-Generated Content</CardTitle>
@@ -247,17 +262,25 @@ function ProfileContentTab({ campaign, userRole }: { campaign: CampaignDetailDat
         <div>
           <h4 className="font-semibold mb-1">AI-Generated Client Bio</h4>
           {campaign.campaign_bio ? (
-            <a href={campaign.campaign_bio} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline flex items-center text-sm">
-              <ExternalLink className="h-4 w-4 mr-1"/> View Bio Document
-            </a>
+            <Button
+              variant="link"
+              onClick={() => setBioModalOpen(true)}
+              className="p-0 h-auto text-sm justify-start"
+            >
+              <Eye className="h-4 w-4 mr-1"/> View Bio Content
+            </Button>
           ) : <p className="text-sm text-gray-500">Not generated yet. Complete questionnaire and click below.</p>}
         </div>
          <div>
           <h4 className="font-semibold mb-1">AI-Generated Pitch Angles</h4>
           {campaign.campaign_angles ? (
-            <a href={campaign.campaign_angles} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline flex items-center text-sm">
-              <ExternalLink className="h-4 w-4 mr-1"/> View Angles Document
-            </a>
+            <Button
+              variant="link"
+              onClick={() => setAnglesModalOpen(true)}
+              className="p-0 h-auto text-sm justify-start"
+            >
+              <Eye className="h-4 w-4 mr-1"/> View Angles Content
+            </Button>
           ) : <p className="text-sm text-gray-500">Not generated yet. Complete questionnaire and click below.</p>}
         </div>
 
@@ -274,6 +297,41 @@ function ProfileContentTab({ campaign, userRole }: { campaign: CampaignDetailDat
         )}
       </CardContent>
     </Card>
+
+    {/* Bio Content Modal */}
+    <Dialog open={bioModalOpen} onOpenChange={setBioModalOpen}>
+      <DialogContent className="max-w-3xl max-h-[80vh]">
+        <DialogHeader>
+          <DialogTitle>AI-Generated Client Bio</DialogTitle>
+          <DialogDescription>
+            This bio has been generated based on the questionnaire responses
+          </DialogDescription>
+        </DialogHeader>
+        <ScrollArea className="mt-4 h-[60vh] pr-4">
+          <div className="whitespace-pre-wrap text-sm leading-relaxed">
+            {campaign.campaign_bio}
+          </div>
+        </ScrollArea>
+      </DialogContent>
+    </Dialog>
+
+    {/* Angles Content Modal */}
+    <Dialog open={anglesModalOpen} onOpenChange={setAnglesModalOpen}>
+      <DialogContent className="max-w-3xl max-h-[80vh]">
+        <DialogHeader>
+          <DialogTitle>AI-Generated Pitch Angles</DialogTitle>
+          <DialogDescription>
+            Strategic angles for pitching to podcasts based on your expertise
+          </DialogDescription>
+        </DialogHeader>
+        <ScrollArea className="mt-4 h-[60vh] pr-4">
+          <div className="whitespace-pre-wrap text-sm leading-relaxed">
+            {campaign.campaign_angles}
+          </div>
+        </ScrollArea>
+      </DialogContent>
+    </Dialog>
+    </>
   );
 }
 
@@ -580,19 +638,62 @@ export default function CampaignDetail({ campaignIdParam }: CampaignDetailProps)
     enabled: !!campaignId && !authLoading && !!user,
   });
 
-  const { data: campaignStats, isLoading: isLoadingStats } = useQuery<CampaignStats>({
-      queryKey: ["dashboardStats", campaignId],
-      queryFn: async () => {
-          if (!campaignId) return null;
-          const response = await apiRequest("GET", `/analytics/summary?campaign_id=${campaignId}`);
-          if (!response.ok) {
-              console.warn("Failed to fetch campaign-specific stats.");
-              return null;
-          }
-          return response.json();
-      },
-      enabled: !!campaignId,
+  // Fetch match suggestions for campaign stats
+  const { data: matchSuggestions } = useQuery<MatchSuggestionForCampaign[]>({
+    queryKey: ["matchSuggestions", campaignId],
+    queryFn: async () => {
+      if (!campaignId) return [];
+      const response = await apiRequest("GET", `/match-suggestions/?campaign_id=${campaignId}`);
+      if (!response.ok) return [];
+      return response.json();
+    },
+    enabled: !!campaignId,
   });
+
+  // Fetch pitches for campaign stats
+  const { data: pitches } = useQuery<PitchForCampaign[]>({
+    queryKey: ["pitches", campaignId],
+    queryFn: async () => {
+      if (!campaignId) return [];
+      const response = await apiRequest("GET", `/pitches/?campaign_id=${campaignId}`);
+      if (!response.ok) return [];
+      return response.json();
+    },
+    enabled: !!campaignId,
+  });
+
+  // Fetch placements for campaign stats
+  const { data: placements } = useQuery<PlacementForCampaign[]>({
+    queryKey: ["placementsForStats", campaignId],
+    queryFn: async () => {
+      if (!campaignId) return [];
+      const response = await apiRequest("GET", `/placements/?campaign_id=${campaignId}`);
+      if (!response.ok) return [];
+      const data = await response.json();
+      return data.items || [];
+    },
+    enabled: !!campaignId,
+  });
+
+  // Calculate campaign stats from actual data
+  const campaignStats: CampaignStats | null = useMemo(() => {
+    if (!matchSuggestions || !pitches || !placements) return null;
+    
+    const discovered = matchSuggestions.length;
+    const vetted = matchSuggestions.filter(m => m.status === 'approved').length;
+    const pitched = pitches.filter(p => p.pitch_state === 'sent').length;
+    const responses = pitches.filter(p => p.reply_ts).length;
+    const bookings = placements.filter(p => 
+      p.current_status === 'confirmed' || 
+      p.current_status === 'scheduled' || 
+      p.current_status === 'recorded' || 
+      p.current_status === 'live'
+    ).length;
+    
+    return { discovered, vetted, pitched, responses, bookings };
+  }, [matchSuggestions, pitches, placements]);
+
+  const isLoadingStats = !campaignStats;
 
   const reprocessCampaignMutation = useMutation({
     mutationFn: async () => {
