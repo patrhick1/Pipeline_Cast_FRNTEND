@@ -1,5 +1,5 @@
 // client/src/pages/PitchOutreach.tsx
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient as useTanstackQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -15,7 +15,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import { Send, Edit3, Check, X, ListChecks, MailCheck, MailOpen, RefreshCw, ExternalLink, Eye, MessageSquare, Filter, Search, Lightbulb, Info, Save, LinkIcon, SendHorizontal, CheckSquare, Clock, CheckCircle } from "lucide-react";
+import { Send, Edit3, Check, X, ListChecks, MailCheck, MailOpen, RefreshCw, ExternalLink, Eye, MessageSquare, Filter, Search, Lightbulb, Info, Save, LinkIcon, SendHorizontal, CheckSquare, Clock, CheckCircle, ChevronDown, ChevronRight } from "lucide-react";
 import { PodcastDetailsModal } from "@/components/modals/PodcastDetailsModal";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Link, useLocation } from "wouter";
@@ -68,6 +68,7 @@ interface PitchDraftForReview { // From GET /review-tasks/?task_type=pitch_revie
   campaign_id: string;
   media_id: number;
   match_id?: number | null; // Match ID for generating follow-ups
+  parent_pitch_gen_id?: number | null; // Parent pitch for follow-ups
   draft_text: string;
   subject_line?: string | null; // From associated pitches record
   media_name?: string | null;
@@ -385,6 +386,45 @@ function DraftsReviewTab({
 }) {
     const { canUseAI } = usePitchCapabilities();
     const [followUpStates, setFollowUpStates] = useState<Record<number, { count: number; generated: boolean }>>({});
+    const [expandedThreads, setExpandedThreads] = useState<Set<number>>(new Set());
+    
+    // Group drafts by parent/follow-up relationship
+    const groupedDrafts = useMemo(() => {
+        const groups: Map<number, { parent: PitchDraftForReview; followUps: PitchDraftForReview[] }> = new Map();
+        
+        // First pass: identify all parent pitches
+        drafts.forEach(draft => {
+            if (!draft.parent_pitch_gen_id) {
+                groups.set(draft.pitch_gen_id, { parent: draft, followUps: [] });
+            }
+        });
+        
+        // Second pass: attach follow-ups to their parents
+        drafts.forEach(draft => {
+            if (draft.parent_pitch_gen_id) {
+                const parentGroup = groups.get(draft.parent_pitch_gen_id);
+                if (parentGroup) {
+                    parentGroup.followUps.push(draft);
+                } else {
+                    // If parent not found in current page, show as standalone
+                    groups.set(draft.pitch_gen_id, { parent: draft, followUps: [] });
+                }
+            }
+        });
+        
+        return Array.from(groups.values());
+    }, [drafts]);
+    
+    const toggleThread = (pitchGenId: number) => {
+        const newExpanded = new Set(expandedThreads);
+        if (newExpanded.has(pitchGenId)) {
+            newExpanded.delete(pitchGenId);
+        } else {
+            newExpanded.add(pitchGenId);
+        }
+        setExpandedThreads(newExpanded);
+    };
+    
     if (isLoadingDrafts && !drafts.length) { // Show skeleton only on initial load
         return (
             <div className="space-y-3">
@@ -399,63 +439,130 @@ function DraftsReviewTab({
     return (
         <div className="space-y-4">
             <div className="space-y-3 max-h-[60vh] overflow-y-auto pr-2">
-                {drafts.map((draft) => (
-                    <Card key={draft.review_task_id} className="p-4 hover:shadow-md transition-shadow">
-                        <div className="flex flex-col sm:flex-row justify-between sm:items-start">
-                            <div className="flex-1 mb-3 sm:mb-0">
-                                <h4 className="font-semibold text-gray-800">{draft.media_name || `Media ID: ${draft.media_id}`}</h4>
-                                <p className="text-xs text-gray-500">Campaign: {draft.campaign_name || 'N/A'} (Client: {draft.client_name || 'N/A'})</p>
-                                <p className="text-xs text-gray-600 mt-1 italic">Subject: {draft.subject_line || "Not set"}</p>
-                                <p className="text-xs text-gray-600 mt-1 italic line-clamp-2">Preview: {draft.draft_text?.substring(0, 100) || "No preview."}...</p>
-                                {followUpStates[draft.pitch_gen_id]?.generated && (
-                                    <Badge variant="secondary" className="mt-2 text-xs bg-blue-100 text-blue-700">
-                                        <CheckCircle className="h-3 w-3 mr-1" />
-                                        {followUpStates[draft.pitch_gen_id]?.count || 0} Follow-up{(followUpStates[draft.pitch_gen_id]?.count || 0) > 1 ? 's' : ''} Planned
-                                    </Badge>
-                                )}
-                                {draft.media_website && (
-                                    <a href={draft.media_website} target="_blank" rel="noopener noreferrer" className="text-xs text-primary hover:underline inline-flex items-center mt-1">
-                                        <ExternalLink className="h-3 w-3 mr-1"/> Visit Podcast
-                                    </a>
-                                )}
-                            </div>
-                            <div className="flex flex-col sm:flex-row sm:items-center space-y-2 sm:space-y-0 sm:space-x-2 flex-shrink-0 mt-2 sm:mt-0">
-                                <Button size="sm" variant="outline" onClick={() => onEdit(draft)}><Edit3 className="h-3 w-3 mr-1.5"/> Review/Edit</Button>
-                                
-                                {/* Plan Follow-ups Button for Premium Users */}
-                                {canUseAI && (
-                                    <AIGenerateFollowUpButton
-                                        matchId={draft.match_id}
-                                        mediaName={draft.media_name}
-                                        onSuccess={() => {
-                                            // Update state to show follow-ups were generated
-                                            setFollowUpStates(prev => ({
-                                                ...prev,
-                                                [draft.pitch_gen_id]: {
-                                                    count: (prev[draft.pitch_gen_id]?.count || 0) + 1,
-                                                    generated: true
-                                                }
-                                            }));
-                                        }}
-                                        size="sm"
-                                        variant="outline"
-                                        className="border-blue-200 hover:bg-blue-50"
-                                    />
-                                )}
-                                
-                                <Button
-                                    size="sm"
-                                    className="bg-green-600 hover:bg-green-700 text-white"
-                                    onClick={() => onApprove(draft.pitch_gen_id)}
-                                    disabled={isLoadingApproveForPitchGenId === draft.pitch_gen_id}
-                                >
-                                    {isLoadingApproveForPitchGenId === draft.pitch_gen_id ? <RefreshCw className="h-4 w-4 animate-spin mr-1"/> : <Check className="h-4 w-4 mr-1.5"/>}
-                                    Approve {followUpStates[draft.pitch_gen_id]?.generated ? 'Sequence' : 'Pitch'}
-                                </Button>
-                            </div>
+                {groupedDrafts.map(({ parent, followUps }) => {
+                    const isExpanded = expandedThreads.has(parent.pitch_gen_id);
+                    const hasFollowUps = followUps.length > 0;
+                    
+                    return (
+                        <div key={parent.pitch_gen_id} className="space-y-2">
+                            {/* Parent Pitch */}
+                            <Card className="p-4 hover:shadow-md transition-shadow">
+                                <div className="flex flex-col sm:flex-row justify-between sm:items-start">
+                                    <div className="flex-1 mb-3 sm:mb-0">
+                                        <div className="flex items-center gap-2">
+                                            {hasFollowUps && (
+                                                <button
+                                                    onClick={() => toggleThread(parent.pitch_gen_id)}
+                                                    className="p-0.5 hover:bg-gray-100 rounded transition-colors"
+                                                >
+                                                    {isExpanded ? (
+                                                        <ChevronDown className="h-4 w-4 text-gray-600" />
+                                                    ) : (
+                                                        <ChevronRight className="h-4 w-4 text-gray-600" />
+                                                    )}
+                                                </button>
+                                            )}
+                                            <h4 className="font-semibold text-gray-800">
+                                                {parent.media_name || `Media ID: ${parent.media_id}`}
+                                                {hasFollowUps && (
+                                                    <Badge variant="secondary" className="ml-2 text-xs">
+                                                        {followUps.length} follow-up{followUps.length > 1 ? 's' : ''}
+                                                    </Badge>
+                                                )}
+                                            </h4>
+                                        </div>
+                                        <p className="text-xs text-gray-500 mt-1">Campaign: {parent.campaign_name || 'N/A'} (Client: {parent.client_name || 'N/A'})</p>
+                                        <p className="text-xs text-gray-600 mt-1 italic">Subject: {parent.subject_line || "Not set"}</p>
+                                        <p className="text-xs text-gray-600 mt-1 italic line-clamp-2">Preview: {parent.draft_text?.substring(0, 100) || "No preview."}...</p>
+                                        {parent.media_website && (
+                                            <a href={parent.media_website} target="_blank" rel="noopener noreferrer" className="text-xs text-primary hover:underline inline-flex items-center mt-1">
+                                                <ExternalLink className="h-3 w-3 mr-1"/> Visit Podcast
+                                            </a>
+                                        )}
+                                    </div>
+                                    <div className="flex flex-col sm:flex-row sm:items-center space-y-2 sm:space-y-0 sm:space-x-2 flex-shrink-0 mt-2 sm:mt-0">
+                                        <Button size="sm" variant="outline" onClick={() => onEdit(parent)}><Edit3 className="h-3 w-3 mr-1.5"/> Review/Edit</Button>
+                                        
+                                        {/* Plan Follow-ups Button - only for parent pitches */}
+                                        {canUseAI && !parent.parent_pitch_gen_id && (
+                                            <AIGenerateFollowUpButton
+                                                matchId={parent.match_id}
+                                                mediaName={parent.media_name}
+                                                onSuccess={() => {
+                                                    // Refresh the data to show new follow-ups
+                                                    window.location.reload(); // Temporary - should refresh via React Query
+                                                }}
+                                                size="sm"
+                                                variant="outline"
+                                                className="border-blue-200 hover:bg-blue-50"
+                                            />
+                                        )}
+                                        
+                                        <Button
+                                            size="sm"
+                                            className="bg-green-600 hover:bg-green-700 text-white"
+                                            onClick={() => onApprove(parent.pitch_gen_id)}
+                                            disabled={isLoadingApproveForPitchGenId === parent.pitch_gen_id}
+                                        >
+                                            {isLoadingApproveForPitchGenId === parent.pitch_gen_id ? <RefreshCw className="h-4 w-4 animate-spin mr-1"/> : <Check className="h-4 w-4 mr-1.5"/>}
+                                            Approve {hasFollowUps ? 'Sequence' : 'Pitch'}
+                                        </Button>
+                                    </div>
+                                </div>
+                            </Card>
+                            
+                            {/* Follow-up Pitches - shown when expanded */}
+                            {isExpanded && hasFollowUps && (
+                                <div className="ml-8 space-y-2">
+                                    {followUps.map((followUp, index) => (
+                                        <Card key={followUp.review_task_id} className="p-3 border-l-4 border-blue-300 bg-blue-50/30">
+                                            <div className="flex flex-col sm:flex-row justify-between sm:items-start">
+                                                <div className="flex-1 mb-2 sm:mb-0">
+                                                    <div className="flex items-center gap-2 mb-1">
+                                                        <Badge variant="outline" className="text-xs">
+                                                            Follow-up #{index + 1}
+                                                        </Badge>
+                                                        <span className="text-xs text-gray-500">
+                                                            {followUp.subject_line || "No subject"}
+                                                        </span>
+                                                    </div>
+                                                    <p className="text-xs text-gray-600 italic line-clamp-2">
+                                                        {followUp.draft_text?.substring(0, 150) || "No preview."}...
+                                                    </p>
+                                                </div>
+                                                <div className="flex gap-2 flex-shrink-0">
+                                                    <Button 
+                                                        size="sm" 
+                                                        variant="outline" 
+                                                        onClick={() => onEdit(followUp)}
+                                                    >
+                                                        <Edit3 className="h-3 w-3 mr-1"/> Edit
+                                                    </Button>
+                                                </div>
+                                            </div>
+                                        </Card>
+                                    ))}
+                                    
+                                    {/* Add more follow-ups button */}
+                                    {canUseAI && (
+                                        <div className="ml-4">
+                                            <AIGenerateFollowUpButton
+                                                matchId={parent.match_id}
+                                                mediaName={parent.media_name}
+                                                onSuccess={() => {
+                                                    window.location.reload(); // Temporary
+                                                }}
+                                                size="sm"
+                                                variant="ghost"
+                                                className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                                            />
+                                        </div>
+                                    )}
+                                </div>
+                            )}
                         </div>
-                    </Card>
-                ))}
+                    );
+                })}
             </div>
             {totalPages > 1 && (
                 <div className="mt-4 flex justify-center items-center space-x-2">
