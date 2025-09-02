@@ -45,6 +45,7 @@ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import PlacementAnalyticsDashboard from "@/components/analytics/PlacementAnalyticsDashboard";
 import PitchAnalyticsDashboard from "@/components/analytics/PitchAnalyticsDashboard";
+import PlacementStatusAnalytics from "@/components/analytics/PlacementStatusAnalytics";
 
 // --- Interfaces (align with backend schemas) ---
 interface Placement { // Matches PlacementInDB from backend
@@ -920,10 +921,11 @@ export default function PlacementTracking() {
 
       {/* Main Tabbed Interface */}
       <Tabs defaultValue="placements" className="space-y-6">
-        <TabsList className="grid w-full max-w-lg grid-cols-3">
+        <TabsList className="grid w-full max-w-xl grid-cols-4">
           <TabsTrigger value="placements">Placements</TabsTrigger>
-          <TabsTrigger value="analytics">Analytics</TabsTrigger>
-          <TabsTrigger value="insights">Insights</TabsTrigger>
+          <TabsTrigger value="status-analytics">Status Flow</TabsTrigger>
+          <TabsTrigger value="analytics">Metrics</TabsTrigger>
+          <TabsTrigger value="insights">Pitch Insights</TabsTrigger>
         </TabsList>
 
         {/* Placements Tab - Existing placement tracking functionality */}
@@ -1116,7 +1118,15 @@ export default function PlacementTracking() {
       )}
         </TabsContent>
 
-        {/* Analytics Tab - Placement analytics dashboard */}
+        {/* Status Analytics Tab - Placement status flow analytics */}
+        <TabsContent value="status-analytics" className="space-y-6">
+          <PlacementStatusAnalytics 
+            campaignId={campaignFilter === 'all' ? undefined : campaignFilter}
+            days={selectedDays}
+          />
+        </TabsContent>
+
+        {/* Metrics Tab - Placement metrics dashboard */}
         <TabsContent value="analytics" className="space-y-6">
           <PlacementAnalyticsDashboard 
             campaignId={campaignFilter === 'all' ? undefined : campaignFilter}
