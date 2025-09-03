@@ -131,9 +131,9 @@ export function AIGeneratePitchButton({
             action: (
               <Button 
                 size="sm" 
-                onClick={() => window.location.href = '/settings/subscription'}
+                onClick={() => window.open('https://calendly.com/gentoftech/catch-up-call3', '_blank')}
               >
-                Upgrade Now
+                Book Demo
               </Button>
             )
           });

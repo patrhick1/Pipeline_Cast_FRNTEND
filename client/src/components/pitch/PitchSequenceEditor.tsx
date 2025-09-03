@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,16 +7,36 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
-import { useQueryClient } from '@tanstack/react-query';
-import { Loader2, Plus, Trash2, Clock, Send, Save } from 'lucide-react';
+import { useQueryClient, useQuery } from '@tanstack/react-query';
+import { Loader2, Plus, Trash2, Clock, Send, Save, FileText, Edit3 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { usePitchCapabilities } from '@/hooks/usePitchCapabilities';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Skeleton } from '@/components/ui/skeleton';
 
 interface PitchDraft {
   subject: string;
   body: string;
   pitch_type: string;
   delay_days: number;
+}
+
+interface PitchTemplate {
+  template_id: string;
+  display_name: string;
+  description: string;
+  use_case: string;
+  tone: string;
+  preview?: string;
+  sort_order: number;
+}
+
+interface PitchTemplatePreview {
+  subject: string;
+  body: string;
+  template_used: string;
 }
 
 interface PitchSequenceEditorProps {
@@ -32,6 +52,9 @@ interface PitchSequenceEditorProps {
 
 export function PitchSequenceEditor({ isOpen, onClose, match, onSuccess }: PitchSequenceEditorProps) {
   const queryClient = useQueryClient();
+  const { isFreePlan } = usePitchCapabilities();
+  const [creationMode, setCreationMode] = useState<'template' | 'manual'>('template');
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
   const [pitchDrafts, setPitchDrafts] = useState<PitchDraft[]>([
     {
       subject: '',
@@ -43,7 +66,43 @@ export function PitchSequenceEditor({ isOpen, onClose, match, onSuccess }: Pitch
   const [recipientEmail, setRecipientEmail] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [currentTab, setCurrentTab] = useState('0');
+  const [isLoadingPreview, setIsLoadingPreview] = useState(false);
   const { toast } = useToast();
+
+  // Fetch templates for free users
+  const { data: templates = [], isLoading: isLoadingTemplates } = useQuery<PitchTemplate[]>({
+    queryKey: ['/pitches/templates'],
+    queryFn: async () => {
+      const response = await apiRequest('GET', '/pitches/templates');
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ detail: 'Failed to fetch templates' }));
+        throw new Error(errorData.detail);
+      }
+      return response.json();
+    },
+    enabled: isOpen && isFreePlan,
+    staleTime: 1000 * 60 * 5,
+  });
+
+  // Auto-select first template when loaded
+  useEffect(() => {
+    if (templates.length > 0 && !selectedTemplateId && isFreePlan) {
+      setSelectedTemplateId(templates[0].template_id);
+    }
+  }, [templates, selectedTemplateId, isFreePlan]);
+
+  // Reset to template mode for free users when dialog opens
+  useEffect(() => {
+    if (isOpen && isFreePlan) {
+      setCreationMode('template');
+      setPitchDrafts([{
+        subject: '',
+        body: '',
+        pitch_type: 'initial',
+        delay_days: 0
+      }]);
+    }
+  }, [isOpen, isFreePlan]);
 
   // Templates for initial pitch
   const initialPitchTemplates = {
@@ -165,6 +224,57 @@ Best,
   };
 
   const handleCreateSequence = async () => {
+    // For template mode with free users
+    if (isFreePlan && creationMode === 'template') {
+      if (!selectedTemplateId) {
+        toast({
+          title: 'Template Required',
+          description: 'Please select a template to continue.',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      setIsSubmitting(true);
+      try {
+        const response = await apiRequest('POST', '/pitches/create-manual', {
+          match_id: match.match_id,
+          template_id: selectedTemplateId,
+          pitch_type: 'initial',
+          recipient_email: recipientEmail || undefined
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({ detail: 'Failed to create pitch' }));
+          throw new Error(errorData.detail);
+        }
+
+        const responseData = await response.json();
+        
+        toast({
+          title: 'Pitch Created Successfully',
+          description: 'Your pitch has been created using the selected template and is ready to send.',
+        });
+
+        // Refresh queries and notify parent
+        queryClient.invalidateQueries({ queryKey: ["approvedMatchesForPitching"] });
+        queryClient.invalidateQueries({ queryKey: ["pitchesReadyToSend"] });
+        
+        onSuccess(responseData.pitch_gen_id);
+        onClose();
+      } catch (error: any) {
+        toast({
+          title: 'Creation Failed',
+          description: error.message || 'Failed to create pitch.',
+          variant: 'destructive',
+        });
+      } finally {
+        setIsSubmitting(false);
+      }
+      return;
+    }
+
+    // For manual creation (paid users or when writing from scratch)
     if (!validateSequence()) return;
 
     setIsSubmitting(true);
@@ -295,6 +405,46 @@ Best,
     updateDraft(index, 'body', template.body);
   };
 
+  // Load template preview for free users
+  const loadTemplatePreview = async () => {
+    if (!selectedTemplateId || !match.match_id) return;
+    
+    setIsLoadingPreview(true);
+    try {
+      const response = await apiRequest('POST', '/pitches/templates/preview', {
+        match_id: match.match_id,
+        template_id: selectedTemplateId
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ detail: 'Failed to preview template' }));
+        throw new Error(errorData.detail);
+      }
+      
+      const data: PitchTemplatePreview = await response.json();
+      // Update the first draft with the preview data
+      setPitchDrafts([{
+        subject: data.subject,
+        body: data.body,
+        pitch_type: 'initial',
+        delay_days: 0
+      }]);
+      
+      toast({
+        title: 'Template Loaded',
+        description: 'Preview loaded with your personalized data.',
+      });
+    } catch (error: any) {
+      toast({
+        title: 'Preview Failed',
+        description: error.message || 'Failed to load template preview',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoadingPreview(false);
+    }
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
@@ -309,6 +459,136 @@ Best,
         </DialogHeader>
 
         <div className="space-y-6 py-4">
+          {/* Mode Selection for Free Users */}
+          {isFreePlan && (
+            <Card className="bg-blue-50 border-blue-200">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm">Choose Creation Method</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <RadioGroup value={creationMode} onValueChange={(v) => setCreationMode(v as 'template' | 'manual')}>
+                  <div className="space-y-3">
+                    <div className="flex items-start space-x-2">
+                      <RadioGroupItem value="template" id="template-mode" />
+                      <div className="flex-1">
+                        <Label htmlFor="template-mode" className="font-medium cursor-pointer">
+                          <FileText className="inline-block w-4 h-4 mr-1" />
+                          Use Email Template (Recommended)
+                        </Label>
+                        <p className="text-xs text-gray-600 mt-1">
+                          Select from professionally crafted templates with smart mail merge
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-start space-x-2">
+                      <RadioGroupItem value="manual" id="manual-mode" />
+                      <div className="flex-1">
+                        <Label htmlFor="manual-mode" className="font-medium cursor-pointer">
+                          <Edit3 className="inline-block w-4 h-4 mr-1" />
+                          Write from Scratch
+                        </Label>
+                        <p className="text-xs text-gray-600 mt-1">
+                          Create a completely custom pitch manually
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </RadioGroup>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Template Selection for Free Users */}
+          {isFreePlan && creationMode === 'template' && (
+            <div className="space-y-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-sm">Select Email Template</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {isLoadingTemplates ? (
+                    <div className="space-y-3">
+                      <Skeleton className="h-20 w-full" />
+                      <Skeleton className="h-20 w-full" />
+                    </div>
+                  ) : templates.length === 0 ? (
+                    <Alert>
+                      <AlertDescription>
+                        No templates available. Please contact support.
+                      </AlertDescription>
+                    </Alert>
+                  ) : (
+                    <RadioGroup value={selectedTemplateId || ''} onValueChange={setSelectedTemplateId}>
+                      <div className="space-y-3">
+                        {templates.map((template) => (
+                          <div key={template.template_id} className="border rounded-lg p-3 hover:bg-gray-50">
+                            <div className="flex items-start space-x-3">
+                              <RadioGroupItem value={template.template_id} id={`tpl-${template.template_id}`} />
+                              <div className="flex-1">
+                                <Label htmlFor={`tpl-${template.template_id}`} className="cursor-pointer">
+                                  <div className="font-medium">{template.display_name}</div>
+                                  <div className="text-xs text-gray-600 mt-1">{template.description}</div>
+                                  <div className="flex items-center gap-2 mt-2">
+                                    <Badge variant="secondary" className="text-xs">{template.tone}</Badge>
+                                    <span className="text-xs text-gray-500">• {template.use_case}</span>
+                                  </div>
+                                </Label>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </RadioGroup>
+                  )}
+                  {selectedTemplateId && (
+                    <Button
+                      type="button"
+                      onClick={loadTemplatePreview}
+                      disabled={isLoadingPreview}
+                      className="mt-4 w-full"
+                      variant="outline"
+                    >
+                      {isLoadingPreview ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Loading Preview...
+                        </>
+                      ) : (
+                        <>Load Template Preview</>
+                      )}
+                    </Button>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Preview Section */}
+              {pitchDrafts[0].subject && pitchDrafts[0].body && (
+                <Card className="bg-gray-50">
+                  <CardHeader>
+                    <CardTitle className="text-sm">Template Preview</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <div>
+                      <Label className="text-xs font-semibold">Subject:</Label>
+                      <p className="text-sm mt-1">{pitchDrafts[0].subject}</p>
+                    </div>
+                    <div>
+                      <Label className="text-xs font-semibold">Message:</Label>
+                      <div className="text-sm mt-1 whitespace-pre-wrap bg-white p-3 rounded border">
+                        {pitchDrafts[0].body}
+                      </div>
+                    </div>
+                    <Alert className="bg-amber-50 border-amber-200">
+                      <AlertDescription className="text-sm text-amber-800">
+                        <strong>✏️ Please Review:</strong> While templates provide a great starting point, they may contain placeholder text like "[Host Name]" or "[topic]" that needs your personal touch. You'll have the opportunity to edit and perfect your pitch before sending.
+                      </AlertDescription>
+                    </Alert>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+          )}
+
           {/* Recipient Email (Global) */}
           <div className="space-y-2">
             <Label htmlFor="recipient">Recipient Email (Optional)</Label>
@@ -323,7 +603,8 @@ Best,
             <p className="text-xs text-gray-500">This email will be used for all pitches in the sequence</p>
           </div>
 
-          {/* Pitch Tabs */}
+          {/* Pitch Tabs - Show only for manual mode or paid users */}
+          {(!isFreePlan || creationMode === 'manual') && (
           <Tabs value={currentTab} onValueChange={setCurrentTab} className="w-full">
             <div className="flex items-center justify-between mb-6 p-3 bg-gray-50 rounded-lg border">
               <TabsList className="flex gap-2 bg-white shadow-sm p-1">
@@ -499,9 +780,10 @@ Best,
               </TabsContent>
             ))}
           </Tabs>
+          )}
 
-          {/* Sequence Summary - Only show if there are follow-ups */}
-          {pitchDrafts.length > 1 && (
+          {/* Sequence Summary - Only show if there are follow-ups and in manual mode */}
+          {(!isFreePlan || creationMode === 'manual') && pitchDrafts.length > 1 && (
             <Card className="bg-blue-50 border-blue-200">
               <CardHeader className="pb-3">
                 <CardTitle className="text-sm flex items-center">
@@ -545,7 +827,7 @@ Best,
           <Button
             type="button"
             onClick={handleCreateSequence}
-            disabled={isSubmitting || pitchDrafts.some(d => !d.subject.trim() || !d.body.trim())}
+            disabled={isSubmitting || (isFreePlan && creationMode === 'template' ? !selectedTemplateId : pitchDrafts.some(d => !d.subject.trim() || !d.body.trim()))}
           >
             {isSubmitting ? (
               <>
@@ -555,7 +837,11 @@ Best,
             ) : (
               <>
                 <Save className="mr-2 h-4 w-4" />
-                {pitchDrafts.length === 1 ? 'Save Pitch' : `Save Pitch Sequence (${pitchDrafts.length} Pitches)`}
+                {isFreePlan && creationMode === 'template' 
+                  ? 'Create Pitch from Template' 
+                  : pitchDrafts.length === 1 
+                    ? 'Save Pitch' 
+                    : `Save Pitch Sequence (${pitchDrafts.length} Pitches)`}
               </>
             )}
           </Button>

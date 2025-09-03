@@ -23,7 +23,7 @@ export function UpgradePrompt({
     if (onUpgrade) {
       onUpgrade();
     } else {
-      setLocation('/settings/subscription');
+      window.open('https://calendly.com/gentoftech/catch-up-call3', '_blank');
     }
   };
 
@@ -53,7 +53,7 @@ export function UpgradePrompt({
             onClick={handleUpgrade}
             className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white"
           >
-            Upgrade Now
+            Book Demo
             <ArrowRight className="ml-2 h-4 w-4" />
           </Button>
         </div>

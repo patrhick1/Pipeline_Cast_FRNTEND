@@ -113,10 +113,10 @@ export function PostApprovalActions({
                     size="sm"
                     variant="default"
                     className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white"
-                    onClick={() => window.location.href = '/settings/subscription'}
+                    onClick={() => window.open('https://calendly.com/gentoftech/catch-up-call3', '_blank')}
                   >
                     <Sparkles className="h-4 w-4 mr-2" />
-                    Upgrade for AI
+                    Book Demo
                   </Button>
                 </div>
               )}

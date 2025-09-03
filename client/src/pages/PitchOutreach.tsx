@@ -1,5 +1,5 @@
 // client/src/pages/PitchOutreach.tsx
-import { useState, useEffect, useCallback, useMemo } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient as useTanstackQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -20,6 +20,7 @@ import { PodcastDetailsModal } from "@/components/modals/PodcastDetailsModal";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Link, useLocation } from "wouter";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { FreeUserUpgradeCard } from "@/components/pitch/FreeUserUpgradeCard";
 import { PitchTemplate } from "@/pages/PitchTemplates.tsx"; // Added .tsx extension
 import { Checkbox } from "@/components/ui/checkbox";
 import { usePitchSending } from "@/hooks/usePitchSending";
@@ -27,7 +28,6 @@ import { EmailStatusBadge } from "@/components/pitch/EmailStatusBadge";
 import { SendPitchButton } from "@/components/pitch/SendPitchButton";
 import { BatchSendButton } from "@/components/pitch/BatchSendButton";
 import { usePitchCapabilities } from "@/hooks/usePitchCapabilities";
-import { UpgradePrompt } from "@/components/pitch/UpgradePrompt";
 // ManualPitchEditor removed - using PitchSequenceEditor for all pitch creation
 import { PitchSequenceEditor } from "@/components/pitch/PitchSequenceEditor";
 import { RecipientEmailEditor } from "@/components/pitch/RecipientEmailEditor";
@@ -158,6 +158,9 @@ function CampaignSelector({ selectedCampaignId, onCampaignChange, campaigns, isL
 }
 
 // --- Tab Components ---
+// Global functions (will be set by main component)
+let globalRefreshAllPitchData: () => void = () => {};
+let globalSetActiveTab: (tab: string) => void = () => {};
 
 function ReadyForDraftTab({
     approvedMatches, isLoadingMatches, onCreateSequence
@@ -168,7 +171,7 @@ function ReadyForDraftTab({
 }) {
     const [selectedMediaId, setSelectedMediaId] = useState<number | null>(null);
     const [showPodcastDetails, setShowPodcastDetails] = useState(false);
-    const { canUseAI } = usePitchCapabilities();
+    const { canUseAI, isFreePlan } = usePitchCapabilities();
     const queryClient = useTanstackQueryClient();
 
     if (isLoadingMatches) {
@@ -202,9 +205,9 @@ function ReadyForDraftTab({
                             }))}
                             onComplete={() => {
                                 // Refresh all pitch-related data immediately
-                                refreshAllPitchData();
+                                globalRefreshAllPitchData();
                                 // Auto-switch to review drafts tab
-                                setActiveTab("draftsReview");
+                                globalSetActiveTab("draftsReview");
                             }}
                             size="sm"
                         />
@@ -252,9 +255,9 @@ function ReadyForDraftTab({
                                         campaignName={match.campaign_name}
                                         onSuccess={() => {
                                             // Refresh all pitch-related data immediately
-                                            refreshAllPitchData();
+                                            globalRefreshAllPitchData();
                                             // Auto-switch to review drafts tab
-                                            setActiveTab("draftsReview");
+                                            globalSetActiveTab("draftsReview");
                                         }}
                                         size="sm"
                                     />
@@ -265,7 +268,7 @@ function ReadyForDraftTab({
                                         className="bg-primary text-primary-foreground hover:bg-primary/90"
                                     >
                                         <Send className="h-4 w-4 mr-1"/>
-                                        Create Manual Pitch
+                                        {isFreePlan ? 'Create Pitch' : 'Create Manual Pitch'}
                                     </Button>
                                 )}
                             </div>
@@ -590,6 +593,7 @@ function ReadyToSendTab({
     const [selectAll, setSelectAll] = useState(false);
     const [pitchEmails, setPitchEmails] = useState<Record<number, string>>({});
     const [expandedSequences, setExpandedSequences] = useState<Set<number>>(new Set());
+    const { isFreePlan } = usePitchCapabilities();
 
     const handleSelectAll = (checked: boolean) => {
         setSelectAll(checked);
@@ -709,6 +713,15 @@ function ReadyToSendTab({
                                     <p className="text-xs text-gray-600 mt-1 italic line-clamp-2">
                                         Preview: {(pitch.final_text || pitch.draft_text || "No content").substring(0,100) + "..."}
                                     </p>
+                                    
+                                    {/* Reminder for free users about editing */}
+                                    {isFreePlan && (
+                                        <div className="mt-2 p-2 bg-amber-50 border border-amber-200 rounded text-xs">
+                                            <span className="text-amber-700">
+                                                <strong>💡 Tip:</strong> Review and personalize any placeholder text before sending for best results.
+                                            </span>
+                                        </div>
+                                    )}
                                     
                                     {/* Show follow-up sequence details when expanded */}
                                     {expandedSequences.has(pitch.pitch_gen_id) && pitch.follow_up_count && pitch.follow_up_count > 0 && (
@@ -883,7 +896,7 @@ export default function PitchOutreach() {
   const { user } = useAuth();
   const { capabilities, isLoading: isLoadingCapabilities, canUseAI, isFreePlan, isAdmin } = usePitchCapabilities();
 
-  const [activeTab, setActiveTab] = useState<string>("readyForDraft");
+  const [activeTabState, setActiveTabState] = useState<string>("readyForDraft");
   const [editingDraft, setEditingDraft] = useState<PitchDraftForReview | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [previewPitch, setPreviewPitch] = useState<PitchReadyToSend | null>(null);
@@ -1044,7 +1057,7 @@ export default function PitchOutreach() {
     onSuccess: (data) => {
       toast({ title: "Pitch Draft Generated", description: data.message || "Draft created and is ready for review." });
       refreshAllPitchData();
-      setActiveTab("draftsReview");
+      setActiveTabState("draftsReview");
     },
     onError: (error: any) => { toast({ title: "Generation Failed", description: error.message, variant: "destructive" }); },
     onSettled: () => { setIsLoadingGenerateForMatchId(null); }
@@ -1067,7 +1080,7 @@ export default function PitchOutreach() {
         description: `Successfully generated ${count} pitch draft${count !== 1 ? 's' : ''}. Ready for review.` 
       });
       refreshAllPitchData();
-      setActiveTab("draftsReview");
+      setActiveTabState("draftsReview");
     },
     onError: (error: any) => { 
       toast({ title: "Batch Generation Failed", description: error.message, variant: "destructive" }); 
@@ -1085,7 +1098,7 @@ export default function PitchOutreach() {
     onSuccess: () => {
       toast({ title: "Pitch Approved", description: "Pitch draft approved and moved to 'Ready to Send'." });
       refreshAllPitchData();
-      setActiveTab("readyToSend");
+      setActiveTabState("readyToSend");
     },
     onError: (error: any) => { toast({ title: "Approval Failed", description: error.message, variant: "destructive" }); },
     onSettled: () => { setIsLoadingApproveForPitchGenId(null); }
@@ -1146,7 +1159,7 @@ export default function PitchOutreach() {
       setTimeout(() => {
         setIsLoadingSendForPitchId(null);
         refreshAllPitchData();
-        setActiveTab("sentPitches");
+        setActiveTabState("sentPitches");
       }, 2000);
     },
     isPending: false
@@ -1179,7 +1192,7 @@ export default function PitchOutreach() {
         });
         
         refreshAllPitchData();
-        setActiveTab("sentPitches");
+        setActiveTabState("sentPitches");
     },
     onError: (error: any) => { 
         toast({ title: "Bulk Send Failed", description: error.message, variant: "destructive" }); 
@@ -1197,12 +1210,33 @@ export default function PitchOutreach() {
       setTimeout(() => {
         setIsLoadingBulkSend(false);
         refreshAllPitchData();
-        setActiveTab("sentPitches");
+        setActiveTabState("sentPitches");
       }, 3000);
     },
     isPending: false
   };
 
+
+  // Helper function to refresh all pitch-related data for better UX
+  const refreshAllPitchData = useCallback(() => {
+    // Invalidate all pitch-related queries to force immediate refresh
+    tanstackQueryClient.invalidateQueries({ queryKey: ["approvedMatchesForPitching"] });
+    tanstackQueryClient.invalidateQueries({ queryKey: ["pitchDraftsForReview"] });
+    tanstackQueryClient.invalidateQueries({ queryKey: ["pitchesReadyToSend"] });
+    tanstackQueryClient.invalidateQueries({ queryKey: ["sentPitchesStatus"] });
+    // Also refetch immediately for instant updates
+    tanstackQueryClient.refetchQueries({ queryKey: ["approvedMatchesForPitching"] });
+    tanstackQueryClient.refetchQueries({ queryKey: ["pitchDraftsForReview"] });
+    tanstackQueryClient.refetchQueries({ queryKey: ["pitchesReadyToSend"] });
+    tanstackQueryClient.refetchQueries({ queryKey: ["sentPitchesStatus"] });
+    setLastRefreshTime(new Date());
+  }, [tanstackQueryClient]);
+
+  // Set global functions for use in child components
+  React.useEffect(() => {
+    globalRefreshAllPitchData = refreshAllPitchData;
+    globalSetActiveTab = setActiveTabState;
+  }, [refreshAllPitchData, setActiveTabState]);
 
   const handleGeneratePitch = (matchId: number, templateId: string) => {
     // This function is now deprecated - we use PitchSequenceEditor for all pitch creation
@@ -1227,21 +1261,6 @@ export default function PitchOutreach() {
   const handleSendPitch = (pitchGenId: number) => { sendPitchMutation.mutate(pitchGenId); };
   const handleBulkSendPitches = (pitchGenIds: number[]) => { bulkSendPitchesMutation.mutate(pitchGenIds); };
   const handleOpenEditModal = (draft: PitchDraftForReview) => { setEditingDraft(draft); setIsEditModalOpen(true); };
-
-  // Helper function to refresh all pitch-related data for better UX
-  const refreshAllPitchData = useCallback(() => {
-    // Invalidate all pitch-related queries to force immediate refresh
-    tanstackQueryClient.invalidateQueries({ queryKey: ["approvedMatchesForPitching"] });
-    tanstackQueryClient.invalidateQueries({ queryKey: ["pitchDraftsForReview"] });
-    tanstackQueryClient.invalidateQueries({ queryKey: ["pitchesReadyToSend"] });
-    tanstackQueryClient.invalidateQueries({ queryKey: ["sentPitchesStatus"] });
-    // Also refetch immediately for instant updates
-    tanstackQueryClient.refetchQueries({ queryKey: ["approvedMatchesForPitching"] });
-    tanstackQueryClient.refetchQueries({ queryKey: ["pitchDraftsForReview"] });
-    tanstackQueryClient.refetchQueries({ queryKey: ["pitchesReadyToSend"] });
-    tanstackQueryClient.refetchQueries({ queryKey: ["sentPitchesStatus"] });
-    setLastRefreshTime(new Date());
-  }, [tanstackQueryClient]);
   const handleSaveEditedDraft = (pitchGenId: number, data: EditDraftFormData) => { updatePitchDraftMutation.mutate({ pitchGenId, data }); };
   const handlePreviewPitch = (pitch: PitchReadyToSend) => { setPreviewPitch(pitch); setIsPreviewModalOpen(true); };
 
@@ -1311,18 +1330,9 @@ export default function PitchOutreach() {
         </div>
       </div>
 
-      {/* Show upgrade prompt for free users */}
+      {/* Show upgrade prompt for free users - single card only */}
       {isFreePlan && (
-        <UpgradePrompt 
-          message={capabilities?.upgrade_message || undefined}
-          features={[
-            'AI-powered pitch generation',
-            'Access to all pitch templates',
-            'Unlimited pitches per month',
-            'Advanced analytics and tracking'
-          ]}
-          variant="banner"
-        />
+        <FreeUserUpgradeCard variant="compact" context="banner" />
       )}
 
       {/* Campaign filter */}
@@ -1364,7 +1374,7 @@ export default function PitchOutreach() {
         />
       )}
 
-      <Tabs defaultValue={activeTab} onValueChange={setActiveTab} className="w-full">
+      <Tabs defaultValue={activeTabState} onValueChange={setActiveTabState} className="w-full">
         <TabsList className="grid w-full grid-cols-2 md:grid-cols-4 gap-1">
           <TabsTrigger value="readyForDraft"><Lightbulb className="mr-1.5 h-4 w-4"/>Ready for Draft ({isLoadingApprovedMatches ? '...' : approvedMatches.length})</TabsTrigger>
           <TabsTrigger value="draftsReview"><Edit3 className="mr-1.5 h-4 w-4"/>Review Drafts ({isLoadingPitchDrafts ? '...' : pitchDraftsForReview.length})</TabsTrigger>
@@ -1714,7 +1724,7 @@ export default function PitchOutreach() {
           // Store the initial pitch ID and refresh data
           setCreatedInitialPitchGenId(initialPitchGenId);
           refreshAllPitchData();
-          setActiveTab("readyToSend");
+          setActiveTabState("readyToSend");
           
           // Show a notification about the sequence
           toast({
