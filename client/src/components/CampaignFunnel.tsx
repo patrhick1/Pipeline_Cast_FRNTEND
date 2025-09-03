@@ -14,7 +14,7 @@ interface CampaignFunnelProps {
 
 const funnelStages = [
   { key: 'discovered', label: 'Podcasts Discovered', icon: Search, color: 'text-blue-500', bgColor: 'bg-blue-50' },
-  { key: 'vetted', label: 'Matches Being Vetted', icon: UserCheck, color: 'text-purple-500', bgColor: 'bg-purple-50' },
+  { key: 'vetted', label: 'Approved Matches', icon: UserCheck, color: 'text-purple-500', bgColor: 'bg-purple-50' },
   { key: 'pitched', label: 'Pitches Sent', icon: Send, color: 'text-orange-500', bgColor: 'bg-orange-50' },
   { key: 'responses', label: 'Replies Received', icon: MessageSquare, color: 'text-yellow-500', bgColor: 'bg-yellow-50' },
   { key: 'bookings', label: 'Placements Secured', icon: Award, color: 'text-green-500', bgColor: 'bg-green-50' },

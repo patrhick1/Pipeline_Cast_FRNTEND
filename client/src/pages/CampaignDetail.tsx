@@ -625,7 +625,7 @@ export default function CampaignDetail({ campaignIdParam, embedded = false }: Ca
     queryKey: ["matchSuggestions", campaignId],
     queryFn: async () => {
       if (!campaignId) return [];
-      const response = await apiRequest("GET", `/match-suggestions/?campaign_id=${campaignId}`);
+      const response = await apiRequest("GET", `/match-suggestions/?campaign_id=${campaignId}&limit=1000`);
       if (!response.ok) return [];
       return response.json();
     },

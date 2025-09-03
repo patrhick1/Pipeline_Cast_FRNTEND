@@ -18,7 +18,7 @@ import { apiRequest, queryClient as appQueryClient } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/useAuth";
 import { 
   TrendingUp, Calendar, Users, PlayCircle, BarChart3, Download, ExternalLink, Podcast as PodcastIcon, 
-  Eye, Share2, MessageSquare, Search, Filter, Plus, Edit, CheckCircle, Clock, AlertCircle, Check, X, Trash2, AlertTriangle, ChevronLeft, ChevronRight, History, Timeline, LayoutGrid, List, Target, Award
+  Eye, Share2, MessageSquare, Search, Filter, Plus, Edit, CheckCircle, Clock, AlertCircle, Check, X, Trash2, AlertTriangle, ChevronLeft, ChevronRight, History, Timeline, LayoutGrid, List, Target, Award, FileText
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -109,29 +109,19 @@ type PlacementFormData = z.infer<typeof placementFormSchema>;
 
 
 const statusConfig: Record<string, { label: string; icon: React.ElementType; color: string; dotColor: string }> = {
-  // Initial stages
-  initial_reply: { label: "Initial Reply", icon: MessageSquare, color: "bg-blue-100 text-blue-800", dotColor: "bg-blue-500" },
-  in_discussion: { label: "In Discussion", icon: MessageSquare, color: "bg-yellow-100 text-yellow-800", dotColor: "bg-yellow-500" },
-  
-  // Interest/Confirmation stages
-  confirmed_interest: { label: "Confirmed Interest", icon: Eye, color: "bg-teal-100 text-teal-800", dotColor: "bg-teal-500" },
-  confirmed: { label: "Confirmed", icon: CheckCircle, color: "bg-cyan-100 text-cyan-800", dotColor: "bg-cyan-500" },
-  
-  // Scheduling stages
+  // Main flow (7 statuses)
+  pending: { label: "Pending", icon: Clock, color: "bg-gray-100 text-gray-800", dotColor: "bg-gray-500" },
+  responded: { label: "Responded", icon: MessageSquare, color: "bg-blue-100 text-blue-800", dotColor: "bg-blue-500" },
+  interested: { label: "Interested", icon: Eye, color: "bg-yellow-100 text-yellow-800", dotColor: "bg-yellow-500" },
   scheduling: { label: "Scheduling", icon: Calendar, color: "bg-purple-100 text-purple-800", dotColor: "bg-purple-500" },
   scheduled: { label: "Scheduled", icon: Calendar, color: "bg-indigo-100 text-indigo-800", dotColor: "bg-indigo-500" },
-  recording_booked: { label: "Recording Booked", icon: Calendar, color: "bg-indigo-100 text-indigo-800", dotColor: "bg-indigo-500" },
-  
-  // Production stages
   recorded: { label: "Recorded", icon: PlayCircle, color: "bg-pink-100 text-pink-800", dotColor: "bg-pink-500" },
-  live: { label: "Live", icon: ExternalLink, color: "bg-green-100 text-green-800", dotColor: "bg-green-500" },
+  published: { label: "Published", icon: ExternalLink, color: "bg-green-100 text-green-800", dotColor: "bg-green-500" },
   paid: { label: "Paid", icon: CheckCircle, color: "bg-emerald-100 text-emerald-800", dotColor: "bg-emerald-500" },
   
-  // Other statuses
-  needs_info: { label: "Needs Info", icon: AlertCircle, color: "bg-orange-100 text-orange-800", dotColor: "bg-orange-500" },
-  declined: { label: "Declined", icon: X, color: "bg-red-100 text-red-800", dotColor: "bg-red-500" },
-  cancelled: { label: "Cancelled", icon: X, color: "bg-gray-100 text-gray-700", dotColor: "bg-gray-500" },
+  // Branch statuses (2 statuses)
   rejected: { label: "Rejected", icon: X, color: "bg-red-100 text-red-800", dotColor: "bg-red-500" },
+  cancelled: { label: "Cancelled", icon: X, color: "bg-gray-100 text-gray-700", dotColor: "bg-gray-500" },
   
   // Default fallback
   default: { label: "Unknown", icon: AlertCircle, color: "bg-gray-100 text-gray-700", dotColor: "bg-gray-400" },
