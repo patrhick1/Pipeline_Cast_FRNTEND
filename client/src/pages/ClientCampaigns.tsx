@@ -22,7 +22,6 @@ interface ClientCampaignSummary {
   campaign_type?: string | null;
   created_at: string; // ISO datetime string
   campaign_keywords?: string[] | null;
-  embedding_status?: string | null;
   active_placements_count?: number;
   pending_approvals_count?: number; // Number of match_suggestions or pitch_reviews pending client approval
   goal_note?: string | null;
@@ -171,25 +170,6 @@ export default function ClientCampaigns() {
               </CardHeader>
               <CardContent className="flex-grow flex flex-col justify-between">
                 <div className="space-y-2 mb-4">
-                  {campaign.embedding_status && (
-                    <div className="text-sm">
-                      <span className="font-medium">Profile Strength: </span>
-                      <Badge 
-                        variant={
-                          campaign.embedding_status === 'completed' ? 'default' :
-                          campaign.embedding_status === 'pending' ? 'outline' :
-                          campaign.embedding_status === 'failed' ? 'destructive' :
-                          campaign.embedding_status === 'not_enough_content' ? 'secondary' :
-                          'secondary'
-                        }
-                        className={`capitalize ${campaign.embedding_status === 'completed' ? 'bg-green-100 text-green-700' : campaign.embedding_status === 'pending' ? 'bg-yellow-100 text-yellow-700' : campaign.embedding_status === 'not_enough_content' ? 'bg-orange-100 text-orange-700' : ''}`}
-                       >
-                         {campaign.embedding_status.replace(/_/g, ' ')}
-                       </Badge>
-                       {campaign.embedding_status === 'not_enough_content' && 
-                         <p className="text-xs text-orange-500 mt-0.5">Complete profile setup for best results.</p> }
-                    </div>
-                  )}
                   {typeof campaign.active_placements_count === 'number' && (
                     <p className="text-sm text-gray-600">
                       <TrendingUp className="inline h-4 w-4 mr-1 text-green-500" /> 

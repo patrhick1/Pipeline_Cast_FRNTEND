@@ -303,8 +303,6 @@ export default function PlacementStatusAnalytics({ campaignId, days = 30 }: Plac
                     data={analytics.current_status_distribution || []}
                     cx="50%"
                     cy="50%"
-                    labelLine={false}
-                    label={({ status, percentage }) => `${statusLabels[status] || status} ${(percentage || 0).toFixed(0)}%`}
                     outerRadius={80}
                     fill="#8884d8"
                     dataKey="count"
@@ -314,6 +312,13 @@ export default function PlacementStatusAnalytics({ campaignId, days = 30 }: Plac
                     ))}
                   </Pie>
                   <Tooltip formatter={(value, name) => [value, statusLabels[name as string] || name]} />
+                  <Legend 
+                    verticalAlign="middle" 
+                    align="right" 
+                    layout="vertical"
+                    formatter={(value) => statusLabels[value] || value}
+                    wrapperStyle={{ paddingLeft: '20px' }}
+                  />
                 </PieChart>
               </ResponsiveContainer>
             </div>

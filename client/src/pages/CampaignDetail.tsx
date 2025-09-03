@@ -19,7 +19,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { CampaignFunnel } from "@/components/CampaignFunnel";
-import CampaignThreads from "@/components/campaigns/CampaignThreads";
 
 // --- Interfaces (Ensure these match your actual backend responses) ---
 interface CampaignDetailData {
@@ -30,7 +29,6 @@ interface CampaignDetailData {
   campaign_bio?: string | null; // Raw text content
   campaign_angles?: string | null; // Raw text content
   campaign_keywords?: string[] | null;
-  embedding_status?: string | null; // Added
   mock_interview_trancript?: string | null; // Text or GDoc Link
   media_kit_url?: string | null;
   questionnaire_responses?: object | null; // To check if questionnaire is filled
@@ -153,23 +151,6 @@ function CampaignOverviewTab({ campaign, onReprocess, stats }: { campaign: Campa
                           <span className="text-gray-500">Not set</span>}
                   </div>
                 )}
-                <div>
-                    <span className="font-semibold">Embedding Status: </span>
-                    {campaign.embedding_status ? (
-                        <Badge 
-                          variant={
-                            campaign.embedding_status === 'completed' ? 'default' :
-                            campaign.embedding_status === 'pending' ? 'outline' :
-                            campaign.embedding_status === 'failed' ? 'destructive' :
-                            campaign.embedding_status === 'not_enough_content' ? 'secondary' :
-                            'secondary'
-                          }
-                          className={`capitalize ${campaign.embedding_status === 'completed' ? 'bg-green-100 text-green-700' : campaign.embedding_status === 'pending' ? 'bg-yellow-100 text-yellow-700' : campaign.embedding_status === 'not_enough_content' ? 'bg-orange-100 text-orange-700' : ''}`}
-                        >
-                            {campaign.embedding_status.replace(/_/g, ' ')}
-                        </Badge>
-                        ) : <Badge variant="secondary">Not Started</Badge>}
-                </div>
                 <div className="md:col-span-2">
                   <p><strong>Media Kit URL:</strong>
                   {campaign.media_kit_url ?
@@ -797,13 +778,12 @@ export default function CampaignDetail({ campaignIdParam, embedded = false }: Ca
       </div>
 
       <Tabs defaultValue={tabFromUrl} className="w-full">
-        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-1">
+        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-1">
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="profileContent">Profile & Content</TabsTrigger>
           <TabsTrigger value="matches">Podcast Matches</TabsTrigger>
           <TabsTrigger value="pitches">Pitches</TabsTrigger>
           <TabsTrigger value="placements">Placements</TabsTrigger>
-          <TabsTrigger value="emails">Email Threads</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="mt-6">
@@ -820,9 +800,6 @@ export default function CampaignDetail({ campaignIdParam, embedded = false }: Ca
         </TabsContent>
         <TabsContent value="placements" className="mt-6">
           <PlacementsTab campaignId={campaign.campaign_id} userRole={user?.role || null} />
-        </TabsContent>
-        <TabsContent value="emails" className="mt-6">
-          <CampaignThreads campaignId={campaign.campaign_id} campaignName={campaign.campaign_name} />
         </TabsContent>
       </Tabs>
     </div>
