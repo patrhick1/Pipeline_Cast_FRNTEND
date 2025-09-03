@@ -63,6 +63,10 @@ export function ChatInterface({ campaignId, onComplete, isOnboarding = false }: 
   const handleComplete = useCallback(async () => {
     if (isCompleted) return; // Prevent multiple calls
     
+    // Pre-open window while we're still in the click handler (avoids popup blocker)
+    const mediaKitUrl = `/my-campaigns/${campaignId}?tab=profileContent`;
+    const newWindow = window.open('', '_blank');
+    
     try {
       // Complete the conversation on the backend
       const result = await completeConversation.mutateAsync();
@@ -70,17 +74,28 @@ export function ChatInterface({ campaignId, onComplete, isOnboarding = false }: 
       // Mark as completed
       setIsCompleted(true);
       
-      // Open media kit in new tab after a short delay to show success message
-      setTimeout(() => {
-        // Navigate to campaign detail page with profile content tab in new tab
-        const mediaKitUrl = `/my-campaigns/${campaignId}?tab=profileContent`;
-        window.open(mediaKitUrl, '_blank');
-        
-        // Notify parent component
-        onComplete({});
-      }, 1500); // 1.5 second delay to show success message
+      // Update the pre-opened window's location
+      if (newWindow) {
+        // Small delay to show success message first
+        setTimeout(() => {
+          newWindow.location.href = mediaKitUrl;
+          // Notify parent component
+          onComplete({});
+        }, 1500);
+      } else {
+        // If popup was blocked, still notify parent and show a message
+        setTimeout(() => {
+          onComplete({});
+          // Show a message about viewing media kit
+          setError('✅ Media kit generated! View it in the Profile Content tab.');
+        }, 1500);
+      }
       
     } catch (err) {
+      // Close the pre-opened window if there was an error
+      if (newWindow) {
+        newWindow.close();
+      }
       setError('Failed to complete conversation. Please try again.');
       console.error('Error completing conversation:', err);
     }
@@ -321,13 +336,20 @@ export function ChatInterface({ campaignId, onComplete, isOnboarding = false }: 
             <CheckCircle className="h-5 w-5" />
             <span className="font-medium">Success! Your Profile is Ready!</span>
           </div>
-          <div className="text-center space-y-1 mt-2">
+          <div className="text-center space-y-2 mt-3">
             <p className="text-sm text-green-600">
-              ✨ Media kit generated and opening in a new tab...
+              ✨ Media kit generated successfully!
             </p>
             <p className="text-sm text-green-600">
               🎯 Finding perfect podcast matches based on your expertise...
             </p>
+            <Button
+              onClick={() => window.open(`/my-campaigns/${campaignId}?tab=profileContent`, '_blank')}
+              className="mt-3 bg-blue-600 hover:bg-blue-700 text-white animate-pulse"
+              size="sm"
+            >
+              View Your Media Kit
+            </Button>
           </div>
         </div>
       ) : !showCompleteButton ? (

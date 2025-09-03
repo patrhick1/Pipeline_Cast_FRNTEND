@@ -28,6 +28,8 @@ export default function OnboardingComplete({ campaignId, onComplete }: Onboardin
   const { toast } = useToast();
   const [, navigate] = useLocation();
   const [copied, setCopied] = useState(false);
+  const [mediaKitWindow, setMediaKitWindow] = useState<Window | null>(null);
+  const [autoOpenAttempted, setAutoOpenAttempted] = useState(false);
 
   // Fetch campaign and media kit data
   const { data: campaign } = useQuery({
@@ -47,6 +49,37 @@ export default function OnboardingComplete({ campaignId, onComplete }: Onboardin
       return response.json();
     },
   });
+
+  // Auto-open media kit in new tab when ready
+  useEffect(() => {
+    if (mediaKit?.public_slug && !autoOpenAttempted) {
+      setAutoOpenAttempted(true);
+      
+      // Open media kit in new tab after a short delay
+      const timer = setTimeout(() => {
+        const url = `${window.location.origin}/media-kit/${mediaKit.public_slug}`;
+        const newWindow = window.open(url, '_blank');
+        
+        if (newWindow) {
+          setMediaKitWindow(newWindow);
+          toast({
+            title: "Media Kit Opened",
+            description: "Your media kit has been opened in a new tab. You can also access it anytime from the View button.",
+            duration: 5000
+          });
+        } else {
+          // If popup was blocked, show a more prominent message
+          toast({
+            title: "Ready to View Your Media Kit!",
+            description: "Click the 'View' button below to see your professional media kit.",
+            duration: 8000
+          });
+        }
+      }, 2000); // Wait 2 seconds for the user to see the completion screen
+      
+      return () => clearTimeout(timer);
+    }
+  }, [mediaKit, autoOpenAttempted, toast]);
 
   // Trigger celebration animation
   useEffect(() => {
@@ -195,10 +228,10 @@ export default function OnboardingComplete({ campaignId, onComplete }: Onboardin
                       variant="outline"
                       size="sm"
                       onClick={() => window.open(`/media-kit/${mediaKit.public_slug}`, '_blank')}
-                      className="flex items-center gap-2"
+                      className="flex items-center gap-2 animate-pulse bg-blue-50 hover:bg-blue-100 border-blue-300"
                     >
                       <ExternalLink className="h-4 w-4" />
-                      View
+                      View Media Kit
                     </Button>
                   </div>
                 </div>
