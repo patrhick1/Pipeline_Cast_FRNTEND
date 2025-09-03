@@ -32,6 +32,8 @@ interface DashboardStatsOverview {
   placements_secured: number;
   upcoming_recordings: number;
   pending_reviews: number;
+  approved_placements?: number;
+  success_rate_placements?: number;
 }
 
 interface RecentPlacementItem {
@@ -253,7 +255,7 @@ export default function Dashboard() {
               <div className="space-y-3">
                 <div className="flex items-center gap-3">
                   <div className="flex-shrink-0">
-                    {user?.has_completed_onboarding ? (
+                    {user?.onboarding_completed ? (
                       <CheckCircle2 className="h-5 w-5 text-green-600" />
                     ) : (
                       <Circle className="h-5 w-5 text-gray-400" />
@@ -263,7 +265,7 @@ export default function Dashboard() {
                     <p className="font-medium text-gray-900">1. Complete Your Profile</p>
                     <p className="text-sm text-gray-600">Fill out your questionnaire to help us find the perfect podcast matches</p>
                   </div>
-                  {!user?.has_completed_onboarding && (
+                  {!user?.onboarding_completed && (
                     <Link href="/onboarding">
                       <Button size="sm" variant="outline" className="text-blue-600 border-blue-200 hover:bg-blue-50">
                         Start
@@ -276,7 +278,7 @@ export default function Dashboard() {
                   <div className="flex-shrink-0">
                     {stats && stats.pending_reviews > 0 ? (
                       <Circle className="h-5 w-5 text-yellow-500" />
-                    ) : stats && stats.approved_placements > 0 ? (
+                    ) : stats && (stats.approved_placements ?? 0) > 0 ? (
                       <CheckCircle2 className="h-5 w-5 text-green-600" />
                     ) : (
                       <Circle className="h-5 w-5 text-gray-400" />
@@ -316,7 +318,7 @@ export default function Dashboard() {
               
               <div className="mt-4 pt-4 border-t border-blue-200">
                 <p className="text-sm text-gray-600">
-                  Need help? <Link href="#" onClick={handleBookDemo} className="text-blue-600 hover:text-blue-700 font-medium">Book a demo call</Link> with our team
+                  Need help? <button onClick={handleBookDemo} className="text-blue-600 hover:text-blue-700 font-medium">Book a demo call</button> with our team
                 </p>
               </div>
             </CardContent>
@@ -333,7 +335,7 @@ export default function Dashboard() {
         ) : (
           <>
             <StatsCard title="Active Campaigns" value={stats?.active_campaigns ?? 0} change={null} icon={PodcastIcon} iconColor="bg-primary/10 text-primary" />
-            <StatsCard title="Approved Placements" value={stats?.approved_placements ?? 0} change={null} icon={CheckCircle} iconColor="bg-green-500/10 text-green-500" />
+            <StatsCard title="Approved Placements" value={stats?.approved_placements ?? stats?.placements_secured ?? 0} change={null} icon={CheckCircle} iconColor="bg-green-500/10 text-green-500" />
             <StatsCard title="Pending Reviews" value={stats?.pending_reviews ?? 0} change={null} icon={Clock} iconColor="bg-yellow-500/10 text-yellow-500" />
             <StatsCard title="Placement Success Rate" value={`${stats?.success_rate_placements ?? 0}%`} change={null} icon={TrendingUp} iconColor="bg-teal-500/10 text-teal-500" />
           </>

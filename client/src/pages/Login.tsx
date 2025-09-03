@@ -152,7 +152,11 @@ export default function Landing() {
           duration: 8000
         });
       } else {
-        toast({ title: "Login Successful", description: "Redirecting to dashboard..." });
+        toast({ 
+          title: "Login Successful", 
+          description: "Redirecting to dashboard...",
+          duration: 3000 // Auto-dismiss after 3 seconds
+        });
       }
       await queryClient.invalidateQueries({ queryKey: ["/auth/me"] }); // Corrected queryKey
       // The useAuth hook will pick up the new auth state, and App.tsx router will redirect.
