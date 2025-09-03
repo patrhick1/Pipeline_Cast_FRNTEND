@@ -57,8 +57,7 @@ export default function Header() {
   };
 
   const handleBookDemo = () => {
-    // In a real implementation, this would open a Calendly widget
-    window.open("https://calendly.com", "_blank");
+    window.open("https://calendly.com/gentoftech/catch-up-call3", "_blank");
   };
 
 

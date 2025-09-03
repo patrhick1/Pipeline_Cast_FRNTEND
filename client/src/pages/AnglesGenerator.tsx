@@ -14,7 +14,8 @@ import {
   AlertTriangle,
   Link as LinkIcon, // Renamed to avoid conflict with wouter Link
   Info,
-  Tags
+  Tags,
+  Eye
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient as appQueryClient } from "@/lib/queryClient";
@@ -22,6 +23,14 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/hooks/useAuth";
 import { Link } from "wouter"; // For navigation links
 import { KeywordEditor } from "@/components/KeywordEditor";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface ClientCampaign {
   campaign_id: string;
@@ -30,6 +39,7 @@ interface ClientCampaign {
   campaign_bio?: string | null;
   campaign_angles?: string | null;
   mock_interview_trancript?: string | null;
+  questionnaire_responses?: any | null;
   campaign_keywords?: string[] | null;
 }
 
@@ -68,6 +78,8 @@ export default function AnglesGenerator({ campaignId, onSuccessfulGeneration, on
   // const [selectedCampaignId, setSelectedCampaignId] = useState<string | null>(null);
   const [generatedContent, setGeneratedContent] = useState<AnglesBioTriggerResponse['details']>(null);
   const [isProcessingCampaignContent, setIsProcessingCampaignContent] = useState(false);
+  const [bioModalOpen, setBioModalOpen] = useState(false);
+  const [anglesModalOpen, setAnglesModalOpen] = useState(false);
   const { toast } = useToast();
   const tanstackQueryClient = useTanstackQueryClient();
   const { user, isLoading: authLoading } = useAuth(); // Keep useAuth for potential user context if needed
@@ -152,8 +164,13 @@ export default function AnglesGenerator({ campaignId, onSuccessfulGeneration, on
       return;
     }
     // const campaign = clientCampaigns.find(c => c.campaign_id === campaignId);
-    // The check for mock_interview_trancript should ideally be done based on campaignDetails or passed by parent
-    if (!campaignDetails || !campaignDetails.mock_interview_trancript || campaignDetails.mock_interview_trancript.trim() === "") {
+    // Check for either questionnaire_responses or mock_interview_transcript
+    const hasQuestionnaire = campaignDetails?.questionnaire_responses && 
+                            Object.keys(campaignDetails.questionnaire_responses).length > 0;
+    const hasTranscript = campaignDetails?.mock_interview_trancript && 
+                         campaignDetails.mock_interview_trancript.trim() !== "";
+    
+    if (!campaignDetails || (!hasQuestionnaire && !hasTranscript)) {
         toast({ title: "Questionnaire Needed", description: "The selected campaign needs a completed questionnaire before generating angles/bio.", variant: "destructive" });
         return;
     }
@@ -177,7 +194,11 @@ export default function AnglesGenerator({ campaignId, onSuccessfulGeneration, on
   }
 
   // Check if questionnaire is complete for the selected campaign (using campaignDetails)
-  const isQuestionnaireCompleteForSelectedCampaign = !!(campaignDetails && campaignDetails.mock_interview_trancript && campaignDetails.mock_interview_trancript.trim() !== "");
+  const hasQuestionnaire = campaignDetails?.questionnaire_responses && 
+                          Object.keys(campaignDetails.questionnaire_responses).length > 0;
+  const hasTranscript = campaignDetails?.mock_interview_trancript && 
+                       campaignDetails.mock_interview_trancript.trim() !== "";
+  const isQuestionnaireCompleteForSelectedCampaign = !!(hasQuestionnaire || hasTranscript);
 
   return (
     <>
@@ -208,14 +229,30 @@ export default function AnglesGenerator({ campaignId, onSuccessfulGeneration, on
                 <p>
                     <strong>Questionnaire Status:</strong> 
                     {isQuestionnaireCompleteForSelectedCampaign ? 
-                        <Badge variant="default" className="bg-green-100 text-green-700 ml-1">Ready for Generation</Badge> :
-                        <Badge variant="destructive" className="ml-1">Questionnaire Incomplete/Not Processed</Badge>
+                        <Badge variant="default" className="bg-green-100 text-green-700 ml-1">Complete</Badge> :
+                        <Badge variant="destructive" className="ml-1">Incomplete</Badge>
                     }
                 </p>
                 {campaignDetails.campaign_bio && 
-                    <p><strong>Current Bio:</strong> <a href={campaignDetails.campaign_bio} target="_blank" rel="noopener noreferrer" className="text-primary underline hover:text-primary/80">View Document</a></p>}
+                    <p><strong>Current Bio:</strong> 
+                        <Button
+                          variant="link"
+                          onClick={() => setBioModalOpen(true)}
+                          className="p-0 h-auto text-sm ml-1"
+                        >
+                          <Eye className="h-3 w-3 mr-1"/> View Bio
+                        </Button>
+                    </p>}
                 {campaignDetails.campaign_angles && 
-                    <p><strong>Current Angles:</strong> <a href={campaignDetails.campaign_angles} target="_blank" rel="noopener noreferrer" className="text-primary underline hover:text-primary/80">View Document</a></p>}
+                    <p><strong>Current Angles:</strong> 
+                        <Button
+                          variant="link"
+                          onClick={() => setAnglesModalOpen(true)}
+                          className="p-0 h-auto text-sm ml-1"
+                        >
+                          <Eye className="h-3 w-3 mr-1"/> View Angles
+                        </Button>
+                    </p>}
             </div>
           )}
 
@@ -238,40 +275,24 @@ export default function AnglesGenerator({ campaignId, onSuccessfulGeneration, on
             )}
           </Button>
 
-      {triggerAnglesBioMutation.isSuccess && generatedContent && campaignDetails && (
+      {triggerAnglesBioMutation.isSuccess && campaignDetails && (
         <Card className="mt-4">
           <CardHeader>
-            <CardTitle>Generated Content for "{campaignDetails?.campaign_name}"</CardTitle>
-            <CardDescription>{triggerAnglesBioMutation.data?.message}</CardDescription>
+            <CardTitle>Content Generated Successfully!</CardTitle>
+            <CardDescription>Your bio and angles have been generated. Refresh the page to view them.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            {generatedContent.bio_doc_link && (
-              <div>
-                <h3 className="font-semibold mb-1 text-gray-700">Generated Client Bio:</h3>
-                <a href={generatedContent.bio_doc_link} target="_blank" rel="noopener noreferrer" className="text-primary underline hover:text-primary/80 flex items-center text-sm">
-                    <LinkIcon className="h-4 w-4 mr-1"/> View Bio Document
-                </a>
-              </div>
-            )}
-            {generatedContent.angles_doc_link && (
-              <div>
-                <h3 className="font-semibold mb-1 text-gray-700">Generated Pitch Angles:</h3>
-                <a href={generatedContent.angles_doc_link} target="_blank" rel="noopener noreferrer" className="text-primary underline hover:text-primary/80 flex items-center text-sm">
-                    <LinkIcon className="h-4 w-4 mr-1"/> View Angles Document
-                </a>
-              </div>
-            )}
-            {generatedContent.keywords && generatedContent.keywords.length > 0 && (
-              <div>
-                <h3 className="font-semibold mb-1 text-gray-700">Generated Keywords:</h3>
-                <div className="flex flex-wrap gap-2">
-                    {generatedContent.keywords.map((kw, idx) => <Badge key={idx} variant="secondary" className="text-xs">{kw}</Badge>)}
-                </div>
-              </div>
-            )}
-            {!generatedContent.bio_doc_link && !generatedContent.angles_doc_link && (!generatedContent.keywords || generatedContent.keywords.length === 0) && (
-                <p className="text-sm text-gray-500">No specific content links or keywords were returned by the generation process, but it may have completed successfully. Check the campaign record for updates.</p>
-            )}
+            <Button
+              onClick={() => {
+                tanstackQueryClient.invalidateQueries({ queryKey: ["campaignDetailsForAnglesGenerator", campaignId] });
+                toast({ title: "Refreshing...", description: "Fetching updated content from the server." });
+              }}
+              variant="outline"
+              className="w-full"
+            >
+              <RefreshCw className="mr-2 h-4 w-4" />
+              Refresh Content
+            </Button>
           </CardContent>
         </Card>
       )}
@@ -311,6 +332,72 @@ export default function AnglesGenerator({ campaignId, onSuccessfulGeneration, on
           </CardContent>
         </Card>
       )}
+
+      {/* Bio Modal */}
+      <Dialog open={bioModalOpen} onOpenChange={setBioModalOpen}>
+        <DialogContent className="max-w-3xl max-h-[80vh]">
+          <DialogHeader>
+            <DialogTitle>AI-Generated Bio</DialogTitle>
+            <DialogDescription>
+              Your professionally crafted bio for podcast outreach
+            </DialogDescription>
+          </DialogHeader>
+          <ScrollArea className="mt-4 h-[60vh] pr-4">
+            <div className="whitespace-pre-wrap text-sm leading-relaxed">
+              {typeof campaignDetails?.campaign_bio === 'string' && 
+                (campaignDetails.campaign_bio.startsWith('http') || campaignDetails.campaign_bio.startsWith('https://docs.google.com')) 
+                ? (
+                  <div className="text-center py-8">
+                    <p className="text-gray-500 mb-4">Bio content is stored as an external document.</p>
+                    <a 
+                      href={campaignDetails.campaign_bio} 
+                      target="_blank" 
+                      rel="noopener noreferrer" 
+                      className="text-primary underline hover:text-primary/80"
+                    >
+                      Open Bio Document
+                    </a>
+                  </div>
+                ) : (
+                  campaignDetails?.campaign_bio || "No bio content available."
+                )}
+            </div>
+          </ScrollArea>
+        </DialogContent>
+      </Dialog>
+
+      {/* Angles Modal */}
+      <Dialog open={anglesModalOpen} onOpenChange={setAnglesModalOpen}>
+        <DialogContent className="max-w-3xl max-h-[80vh]">
+          <DialogHeader>
+            <DialogTitle>AI-Generated Pitch Angles</DialogTitle>
+            <DialogDescription>
+              Compelling angles to pitch yourself to podcast hosts
+            </DialogDescription>
+          </DialogHeader>
+          <ScrollArea className="mt-4 h-[60vh] pr-4">
+            <div className="whitespace-pre-wrap text-sm leading-relaxed">
+              {typeof campaignDetails?.campaign_angles === 'string' && 
+                (campaignDetails.campaign_angles.startsWith('http') || campaignDetails.campaign_angles.startsWith('https://docs.google.com')) 
+                ? (
+                  <div className="text-center py-8">
+                    <p className="text-gray-500 mb-4">Angles content is stored as an external document.</p>
+                    <a 
+                      href={campaignDetails.campaign_angles} 
+                      target="_blank" 
+                      rel="noopener noreferrer" 
+                      className="text-primary underline hover:text-primary/80"
+                    >
+                      Open Angles Document
+                    </a>
+                  </div>
+                ) : (
+                  campaignDetails?.campaign_angles || "No angles content available."
+                )}
+            </div>
+          </ScrollArea>
+        </DialogContent>
+      </Dialog>
     </> // Closing the main fragment
   );
 }

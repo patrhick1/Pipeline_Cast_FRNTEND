@@ -229,7 +229,8 @@ export default function ProfileSetup() {
             <Tabs defaultValue={activeTab} onValueChange={setActiveTab} className="w-full">
               <TabsList className="grid w-full grid-cols-1 sm:grid-cols-3">
                 <TabsTrigger value="questionnaire"><ClipboardList className="mr-2 h-4 w-4"/>Questionnaire</TabsTrigger>
-                <TabsTrigger value="aiBioAngles" disabled={!selectedCampaignData?.questionnaire_responses && !selectedCampaignData?.mock_interview_trancript}>
+                <TabsTrigger value="aiBioAngles" disabled={!selectedCampaignData?.questionnaire_responses && !selectedCampaignData?.mock_interview_trancript && 
+                                                            !selectedCampaignData?.campaign_bio && !selectedCampaignData?.campaign_angles}>
                     <Lightbulb className="mr-2 h-4 w-4"/>AI Bio & Angles
                 </TabsTrigger>
                 <TabsTrigger value="mediaKit"><BookOpen className="mr-2 h-4 w-4"/>Media Kit</TabsTrigger>
@@ -248,7 +249,8 @@ export default function ProfileSetup() {
               </TabsContent>
               
               <TabsContent value="aiBioAngles" className="mt-6">
-                {selectedCampaignData?.questionnaire_responses || selectedCampaignData?.mock_interview_trancript ? (
+                {selectedCampaignData?.questionnaire_responses || selectedCampaignData?.mock_interview_trancript || 
+                 selectedCampaignData?.campaign_bio || selectedCampaignData?.campaign_angles ? (
                     <AnglesGenerator 
                       campaignId={selectedCampaignId} 
                       onSuccessfulGeneration={() => {
@@ -264,7 +266,7 @@ export default function ProfileSetup() {
                     <Card>
                         <CardContent className="p-6 text-center text-gray-500">
                             <AlertTriangle className="mx-auto h-10 w-10 mb-2 text-yellow-500"/>
-                            Please complete the Questionnaire for this campaign before generating Bio & Angles.
+                            Please complete the Questionnaire for this campaign before viewing Bio & Angles.
                         </CardContent>
                     </Card>
                 )}
