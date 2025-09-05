@@ -467,10 +467,10 @@ function ReviewTaskItem({
             <p className="text-gray-700 italic line-clamp-3 text-xs">{relatedData.pitchDraftPreview}</p>
           </div>
         )}
-         {task.recommendations && (
+         {task.recommendation && (
           <div className="bg-blue-50 p-2.5 rounded-md border border-blue-200">
             <h4 className="text-xs font-semibold text-blue-700 mb-1">RECOMMENDATIONS:</h4>
-            <p className="text-blue-800 text-xs">{task.recommendations}</p>
+            <p className="text-blue-800 text-xs">{task.recommendation}</p>
           </div>
         )}
         {task.notes && (
@@ -512,7 +512,7 @@ function ReviewTaskItem({
               Approve
             </Button>
             <Button
-              onClick={handleReject}
+              onClick={() => handleReject()}
               size="sm"
               variant="outline"
               className="flex-1 border-red-300 text-red-600 hover:bg-red-50 hover:text-red-700 text-xs px-2 py-1.5 h-auto"
@@ -901,7 +901,7 @@ export default function Approvals() {
                       size="sm"
                       variant="default"
                       className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white"
-                      onClick={() => window.open('https://calendly.com/gentoftech/catch-up-call3', '_blank')}
+                      onClick={() => window.open('https://calendly.com/alex-podcastguestlaunch/30min', '_blank')}
                     >
                       <Sparkles className="h-4 w-4 mr-2" />
                       Book Demo for AI Pitches

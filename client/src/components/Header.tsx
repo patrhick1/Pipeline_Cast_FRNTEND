@@ -57,7 +57,7 @@ export default function Header() {
   };
 
   const handleBookDemo = () => {
-    window.open("https://calendly.com/gentoftech/catch-up-call3", "_blank");
+    window.open("https://calendly.com/alex-podcastguestlaunch/30min", "_blank");
   };
 
 

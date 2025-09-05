@@ -10,7 +10,7 @@ interface FreeUserUpgradeCardProps {
 
 export function FreeUserUpgradeCard({ variant = 'detailed', context = 'banner' }: FreeUserUpgradeCardProps) {
   const handleUpgrade = () => {
-    window.open('https://calendly.com/gentoftech/catch-up-call3', '_blank');
+    window.open('https://calendly.com/alex-podcastguestlaunch/30min', '_blank');
   };
 
   if (variant === 'compact') {

@@ -73,7 +73,7 @@ export function BatchAIGenerateButton({
     setProcessedMatches([]);
 
     const results = [];
-    const updatedMatches = [...matches].map(m => ({ ...m, status: "pending" as const }));
+    const updatedMatches: BatchMatch[] = [...matches].map(m => ({ ...m, status: "pending" as BatchMatch["status"] }));
     setProcessedMatches(updatedMatches);
 
     for (let i = 0; i < matches.length; i++) {
@@ -81,7 +81,7 @@ export function BatchAIGenerateButton({
       setCurrentlyProcessing(match.media_name || `Match ${match.match_id}`);
       
       // Update status to generating
-      updatedMatches[i].status = "generating";
+      updatedMatches[i].status = "generating" as BatchMatch["status"];
       setProcessedMatches([...updatedMatches]);
 
       try {
@@ -99,11 +99,11 @@ export function BatchAIGenerateButton({
         results.push(result);
         
         // Update status to success
-        updatedMatches[i].status = "success";
+        updatedMatches[i].status = "success" as BatchMatch["status"];
         setProcessedMatches([...updatedMatches]);
       } catch (error: any) {
         // Update status to failed
-        updatedMatches[i].status = "failed";
+        updatedMatches[i].status = "failed" as BatchMatch["status"];
         updatedMatches[i].error = error.message;
         setProcessedMatches([...updatedMatches]);
         results.push({ error: error.message, match_id: match.match_id });

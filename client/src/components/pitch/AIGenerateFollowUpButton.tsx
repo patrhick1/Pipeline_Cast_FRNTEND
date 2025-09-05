@@ -258,7 +258,7 @@ export function AIGenerateFollowUpButton({
             action: (
               <Button 
                 size="sm" 
-                onClick={() => window.open('https://calendly.com/gentoftech/catch-up-call3', '_blank')}
+                onClick={() => window.open('https://calendly.com/alex-podcastguestlaunch/30min', '_blank')}
               >
                 Book Demo
               </Button>
