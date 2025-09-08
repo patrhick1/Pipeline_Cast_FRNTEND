@@ -7,6 +7,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { apiRequest } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/useAuth";
 import { Link } from "wouter";
+import { formatUTCDateOnly } from "@/lib/timezone";
 import {
   CreditCard,
   CheckCircle,
@@ -97,11 +98,7 @@ const STATUS_CONFIG = {
 
 function formatDate(dateString?: string) {
   if (!dateString) return "N/A";
-  return new Date(dateString).toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric'
-  });
+  return formatUTCDateOnly(dateString);
 }
 
 function BillingInfoCard({ subscription }: { subscription: SubscriptionData }) {
@@ -175,7 +172,7 @@ function BillingInfoCard({ subscription }: { subscription: SubscriptionData }) {
 
         <div className="flex flex-col sm:flex-row gap-3">
           <a
-            href={`${import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000'}/billing/portal-session`}
+            href={`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'}/billing/portal-session`}
             target="_blank"
             rel="noopener noreferrer"
             className="flex-1"
