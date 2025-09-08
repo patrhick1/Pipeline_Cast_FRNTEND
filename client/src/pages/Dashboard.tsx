@@ -23,7 +23,8 @@ import { Link } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
 import RecentReplies from "@/components/dashboard/RecentReplies";
 import { EmailVerificationBanner } from "@/components/EmailVerificationBanner";
-import { OnboardingPrompt } from "@/components/OnboardingPrompt"; 
+import { OnboardingPrompt } from "@/components/OnboardingPrompt";
+import { getRelativeTime } from "@/lib/timezone"; 
 
 // --- Interfaces to match backend dashboard_schemas.py ---
 interface DashboardStatsOverview {
@@ -166,13 +167,7 @@ function RecentBookingCard({ booking }: { booking: RecentPlacementItem }) {
   const currentStatusConfig = placementStatusConfig[statusKey] || placementStatusConfig.default;
 
   const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffInHours = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60));
-    
-    if (diffInHours < 1) return "Just now";
-    if (diffInHours < 24) return `${diffInHours} hours ago`;
-    return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+    return getRelativeTime(dateString);
   };
 
   return (

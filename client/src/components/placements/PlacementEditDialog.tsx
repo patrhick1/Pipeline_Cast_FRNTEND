@@ -10,6 +10,7 @@ import { Calendar, Clock, Link, MessageSquare, AlertCircle, Save } from "lucide-
 import { useToast } from "@/hooks/use-toast";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
+import { utcToLocal, localToUTC } from "@/lib/timezone";
 
 interface Placement {
   placement_id: number;
@@ -82,10 +83,10 @@ export const PlacementEditDialog: React.FC<PlacementEditDialogProps> = ({
     if (placement && open) {
       setFormData({
         current_status: placement.current_status || 'pending',
-        meeting_date: placement.meeting_date ? placement.meeting_date.split('T')[0] : '',
-        call_date: placement.call_date ? placement.call_date.split('T')[0] : '',
-        recording_date: placement.recording_date ? placement.recording_date.split('T')[0] : '',
-        go_live_date: placement.go_live_date ? placement.go_live_date.split('T')[0] : '',
+        meeting_date: placement.meeting_date ? utcToLocal(placement.meeting_date)?.toISOString().split('T')[0] || '' : '',
+        call_date: placement.call_date ? utcToLocal(placement.call_date)?.toISOString().split('T')[0] || '' : '',
+        recording_date: placement.recording_date ? utcToLocal(placement.recording_date)?.toISOString().split('T')[0] || '' : '',
+        go_live_date: placement.go_live_date ? utcToLocal(placement.go_live_date)?.toISOString().split('T')[0] || '' : '',
         episode_link: placement.episode_link || '',
         outreach_topic: placement.outreach_topic || '',
         notes: placement.notes || ''
@@ -98,10 +99,10 @@ export const PlacementEditDialog: React.FC<PlacementEditDialogProps> = ({
   useEffect(() => {
     const originalData = {
       current_status: placement.current_status || 'pending',
-      meeting_date: placement.meeting_date ? placement.meeting_date.split('T')[0] : '',
-      call_date: placement.call_date ? placement.call_date.split('T')[0] : '',
-      recording_date: placement.recording_date ? placement.recording_date.split('T')[0] : '',
-      go_live_date: placement.go_live_date ? placement.go_live_date.split('T')[0] : '',
+      meeting_date: placement.meeting_date ? utcToLocal(placement.meeting_date)?.toISOString().split('T')[0] || '' : '',
+      call_date: placement.call_date ? utcToLocal(placement.call_date)?.toISOString().split('T')[0] || '' : '',
+      recording_date: placement.recording_date ? utcToLocal(placement.recording_date)?.toISOString().split('T')[0] || '' : '',
+      go_live_date: placement.go_live_date ? utcToLocal(placement.go_live_date)?.toISOString().split('T')[0] || '' : '',
       episode_link: placement.episode_link || '',
       outreach_topic: placement.outreach_topic || '',
       notes: placement.notes || ''
@@ -119,10 +120,10 @@ export const PlacementEditDialog: React.FC<PlacementEditDialogProps> = ({
       const changedFields: any = {};
       const originalData = {
         current_status: placement.current_status || 'pending',
-        meeting_date: placement.meeting_date ? placement.meeting_date.split('T')[0] : '',
-        call_date: placement.call_date ? placement.call_date.split('T')[0] : '',
-        recording_date: placement.recording_date ? placement.recording_date.split('T')[0] : '',
-        go_live_date: placement.go_live_date ? placement.go_live_date.split('T')[0] : '',
+        meeting_date: placement.meeting_date ? utcToLocal(placement.meeting_date)?.toISOString().split('T')[0] || '' : '',
+        call_date: placement.call_date ? utcToLocal(placement.call_date)?.toISOString().split('T')[0] || '' : '',
+        recording_date: placement.recording_date ? utcToLocal(placement.recording_date)?.toISOString().split('T')[0] || '' : '',
+        go_live_date: placement.go_live_date ? utcToLocal(placement.go_live_date)?.toISOString().split('T')[0] || '' : '',
         episode_link: placement.episode_link || '',
         outreach_topic: placement.outreach_topic || '',
         notes: placement.notes || ''
@@ -130,7 +131,14 @@ export const PlacementEditDialog: React.FC<PlacementEditDialogProps> = ({
 
       Object.keys(data).forEach(key => {
         if (data[key] !== originalData[key as keyof typeof originalData]) {
-          changedFields[key] = data[key] || null;
+          // Convert date fields to UTC before sending to backend
+          if (['meeting_date', 'call_date', 'recording_date', 'go_live_date'].includes(key) && data[key]) {
+            // Date input gives us YYYY-MM-DD, we need to convert to UTC ISO string
+            const localDate = new Date(data[key] + 'T00:00:00');
+            changedFields[key] = localToUTC(localDate);
+          } else {
+            changedFields[key] = data[key] || null;
+          }
         }
       });
 

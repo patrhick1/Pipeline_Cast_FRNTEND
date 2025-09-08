@@ -13,6 +13,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { Clock, Calendar, Settings, Info, Save, Check, Zap } from "lucide-react";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { getUserTimezone } from "@/lib/timezone";
 
 interface SmartSendSettingsProps {
   campaignId: string | null;
@@ -398,7 +399,7 @@ export function SmartSendSettings({ campaignId, campaignName, campaigns, onCampa
               </div>
             </div>
             <p className="text-xs text-gray-500">
-              All times are in UTC. Current UTC time: {new Date().toUTCString().split(" ")[4]}
+              Times are in your local timezone ({getUserTimezone()}). Current time: {new Date().toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}
             </p>
           </div>
 

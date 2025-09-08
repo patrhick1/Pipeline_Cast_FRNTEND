@@ -37,6 +37,7 @@ import { SmartSendSettings } from "@/components/pitch/SmartSendSettings";
 import { AIGeneratePitchButton } from "@/components/pitch/AIGeneratePitchButton";
 import { AIGenerateFollowUpButton } from "@/components/pitch/AIGenerateFollowUpButton";
 import { BatchAIGenerateButton } from "@/components/pitch/BatchAIGenerateButton";
+import { formatUTCToLocal } from "@/lib/timezone";
 
 // --- Interfaces (Aligned with expected enriched backend responses) ---
 
@@ -839,8 +840,8 @@ function SentPitchesTab({ pitches, isLoadingPitches }: { pitches: SentPitchStatu
                             <TableCell className="text-xs text-gray-600">{pitch.campaign_name || 'N/A'} ({pitch.client_name || 'N/A'})</TableCell>
                             <TableCell className="text-xs text-gray-600 italic">{pitch.subject_line || "N/A"}</TableCell>
                             <TableCell><Badge variant={pitch.pitch_state === 'replied' || pitch.pitch_state === 'replied_interested' ? 'default' : 'secondary'} className="capitalize text-xs">{pitch.pitch_state?.replace('_', ' ') || "N/A"}</Badge></TableCell>
-                            <TableCell className="text-xs text-gray-500">{pitch.send_ts ? new Date(pitch.send_ts).toLocaleString() : "-"}</TableCell>
-                            <TableCell className="text-xs text-gray-500">{pitch.reply_ts ? new Date(pitch.reply_ts).toLocaleString() : "-"}</TableCell>
+                            <TableCell className="text-xs text-gray-500">{pitch.send_ts ? formatUTCToLocal(pitch.send_ts, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : "-"}</TableCell>
+                            <TableCell className="text-xs text-gray-500">{pitch.reply_ts ? formatUTCToLocal(pitch.reply_ts, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : "-"}</TableCell>
                             <TableCell>
                                 <div className="flex gap-2">
                                     
@@ -1317,7 +1318,7 @@ export default function PitchOutreach() {
           </Button>
           {lastRefreshTime && (
             <span className="text-xs text-gray-500">
-              Last updated: {lastRefreshTime.toLocaleTimeString()}
+              Last updated: {lastRefreshTime.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
             </span>
           )}
           {capabilities && (
