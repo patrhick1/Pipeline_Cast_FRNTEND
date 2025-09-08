@@ -45,6 +45,9 @@ import PrivacyPolicy from "@/pages/PrivacyPolicy"; // Privacy policy page
 import TermsOfService from "@/pages/TermsOfService"; // Terms of service page
 import Contact from "@/pages/Contact"; // Contact page
 import NylasCallback from "@/pages/NylasCallback"; // Nylas OAuth callback handler
+import Pricing from "@/pages/Pricing"; // Pricing page
+import Billing from "@/pages/Billing"; // Billing page
+import BillingSuccess from "@/pages/BillingSuccess"; // Billing success page
 
 
 function Router() {
@@ -105,6 +108,9 @@ function Router() {
                 <Route path="/discover" component={PodcastDiscovery} /> {/* Client's limited discovery */}
                 <Route path="/pitch-outreach" component={PitchOutreach} /> {/* Pitch outreach for clients */}
                 <Route path="/media/:mediaId" component={MediaDetail} /> {/* Add new route */}
+                <Route path="/pricing" component={Pricing} /> {/* Pricing page */}
+                <Route path="/billing" component={Billing} /> {/* Billing management */}
+                <Route path="/billing/success" component={BillingSuccess} /> {/* Checkout success */}
               </>
             )}
 

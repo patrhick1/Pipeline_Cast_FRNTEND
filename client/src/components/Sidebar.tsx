@@ -20,7 +20,9 @@ import {
   Send,
   FileText as PitchTemplateIcon,
   Inbox as InboxIcon,
-  X
+  X,
+  CreditCard,
+  Tag
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
@@ -45,7 +47,7 @@ const clientNavigationItems: NavigationItem[] = [
   { name: "Approve Matches", href: "/approvals", icon: CheckCircle, roles: ['client'] }, // Approvals page will filter for clients
   { name: "Pitch Outreach", href: "/pitch-outreach", icon: Send, roles: ['client'] }, // New pitch outreach for clients
   { name: "Inbox", href: "/inbox", icon: InboxIcon, roles: ['client'] }, // Nylas inbox
-  { name: "Placements & Analytics", href: "/placement-tracking", icon: TrendingUp, roles: ['client'] }
+  { name: "Placements & Analytics", href: "/placement-tracking", icon: TrendingUp, roles: ['client'] },
 ];
 
 // --- INTERNAL STAFF/ADMIN NAVIGATION ---
@@ -64,6 +66,7 @@ const internalNavigationItems: NavigationItem[] = [
 
 const accountNavigationItems: NavigationItem[] = [
   { name: "My Settings", href: "/settings", icon: Settings, roles: ['client', 'staff', 'admin'] },
+  { name: "Billing", href: "/billing", icon: CreditCard, roles: ['client'] },
 ];
 
 interface SidebarProps {

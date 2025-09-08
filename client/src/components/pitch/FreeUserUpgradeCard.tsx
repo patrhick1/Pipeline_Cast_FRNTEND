@@ -2,6 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Sparkles, Zap, Brain, Mail, TrendingUp, CheckCircle } from 'lucide-react';
+import { useLocation } from 'wouter';
 
 interface FreeUserUpgradeCardProps {
   variant?: 'compact' | 'detailed';
@@ -9,8 +10,9 @@ interface FreeUserUpgradeCardProps {
 }
 
 export function FreeUserUpgradeCard({ variant = 'detailed', context = 'banner' }: FreeUserUpgradeCardProps) {
+  const [, setLocation] = useLocation();
   const handleUpgrade = () => {
-    window.open('https://calendly.com/alex-podcastguestlaunch/30min', '_blank');
+    setLocation('/pricing');
   };
 
   if (variant === 'compact') {
@@ -29,12 +31,12 @@ export function FreeUserUpgradeCard({ variant = 'detailed', context = 'banner' }
                 </p>
               </div>
             </div>
-            <Button 
+            <Button
               onClick={handleUpgrade}
               size="sm"
               className="bg-purple-600 hover:bg-purple-700 text-white whitespace-nowrap"
             >
-              Book Demo
+              Upgrade
             </Button>
           </div>
         </CardContent>
@@ -62,7 +64,7 @@ export function FreeUserUpgradeCard({ variant = 'detailed', context = 'banner' }
           While templates are great for getting started, Premium unlocks the full power of AI-driven personalization
           that dramatically increases your response rates.
         </p>
-        
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           <div className="flex items-start gap-2">
             <Brain className="h-4 w-4 text-purple-600 mt-0.5 flex-shrink-0" />
@@ -73,7 +75,7 @@ export function FreeUserUpgradeCard({ variant = 'detailed', context = 'banner' }
               </p>
             </div>
           </div>
-          
+
           <div className="flex items-start gap-2">
             <Zap className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
             <div>
@@ -83,7 +85,7 @@ export function FreeUserUpgradeCard({ variant = 'detailed', context = 'banner' }
               </p>
             </div>
           </div>
-          
+
           <div className="flex items-start gap-2">
             <Mail className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
             <div>
@@ -93,7 +95,7 @@ export function FreeUserUpgradeCard({ variant = 'detailed', context = 'banner' }
               </p>
             </div>
           </div>
-          
+
           <div className="flex items-start gap-2">
             <TrendingUp className="h-4 w-4 text-orange-600 mt-0.5 flex-shrink-0" />
             <div>
@@ -124,12 +126,12 @@ export function FreeUserUpgradeCard({ variant = 'detailed', context = 'banner' }
             <p className="text-xs text-gray-500">Currently using: <strong>Free Plan</strong></p>
             <p className="text-xs text-gray-500">Templates only • Manual editing required</p>
           </div>
-          <Button 
+          <Button
             onClick={handleUpgrade}
             className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white shadow-md"
           >
             <Sparkles className="mr-2 h-4 w-4" />
-            Book Demo to Upgrade
+            Upgrade to Premium
           </Button>
         </div>
       </CardContent>

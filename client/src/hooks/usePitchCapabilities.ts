@@ -4,7 +4,7 @@ import { useAuth } from '@/hooks/useAuth';
 
 export interface PitchCapabilities {
   user_role: 'admin' | 'staff' | 'client';
-  plan_type: 'admin' | 'paid' | 'free';
+  plan_type: 'admin' | 'paid_basic' | 'paid_premium' | 'free';
   capabilities: {
     manual_pitch_creation: boolean;
     ai_pitch_generation: boolean;
@@ -61,7 +61,9 @@ export function usePitchCapabilities() {
     canSendNylas: capabilities?.capabilities?.send_via_nylas !== false,
     canSendInstantly: capabilities?.capabilities?.send_via_instantly !== false,
     isFreePlan: capabilities?.plan_type === 'free',
-    isPaidPlan: capabilities?.plan_type === 'paid',
+    isPaidPlan: capabilities?.plan_type === 'paid_basic' || capabilities?.plan_type === 'paid_premium',
+    isBasicPlan: capabilities?.plan_type === 'paid_basic',
+    isPremiumPlan: capabilities?.plan_type === 'paid_premium',
     isAdmin: capabilities?.user_role === 'admin' || capabilities?.user_role === 'staff',
   };
 }

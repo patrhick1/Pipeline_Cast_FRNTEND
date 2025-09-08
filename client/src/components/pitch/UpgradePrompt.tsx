@@ -23,7 +23,7 @@ export function UpgradePrompt({
     if (onUpgrade) {
       onUpgrade();
     } else {
-      window.open('https://calendly.com/alex-podcastguestlaunch/30min', '_blank');
+      setLocation('/pricing');
     }
   };
 
