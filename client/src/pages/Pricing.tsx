@@ -154,7 +154,7 @@ export default function Pricing() {
             <div>
               <h4 className="font-semibold text-lg mb-2">Do you offer refunds?</h4>
               <p className="text-muted-foreground">
-                All paid plans come with a 14-day money-back guarantee. If you're not satisfied, 
+                All paid plans come with a 3-day money-back guarantee. If you're not satisfied, 
                 contact our support team for a full refund.
               </p>
             </div>

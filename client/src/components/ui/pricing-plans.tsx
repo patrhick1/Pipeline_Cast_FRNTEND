@@ -92,8 +92,15 @@ export default function PricingPlans({ currentPlan, onSelectPlan, isLoading }: P
     }
   });
 
+  // Debug: Log the API response
+  console.log('API Plans Response:', apiPlans);
+  
   const plans: PLAN[] = (
-    apiPlans?.filter(p => p.billing_period === 'month' && p.plan_type !== 'free').map(p => {
+    apiPlans?.filter(p => {
+      console.log('Filtering plan:', p);
+      // Only filter out free plans since we only have monthly plans
+      return p.plan_type !== 'free';
+    }).map(p => {
       let title = '';
       let desc = '';
       let buttonText = '';
@@ -139,12 +146,22 @@ export default function PricingPlans({ currentPlan, onSelectPlan, isLoading }: P
     }) || []
   ).sort((a, b) => a.monthlyPrice - b.monthlyPrice);
 
+  console.log('Filtered plans:', plans);
+
   if (isLoadingPlans) {
     return <div className="text-center py-20">Loading plans...</div>;
   }
 
   if (plansError) {
     return <div className="text-center py-20 text-red-500">Error loading plans: {plansError.message}</div>;
+  }
+  
+  if (!apiPlans || apiPlans.length === 0) {
+    return <div className="text-center py-20 text-yellow-500">No pricing plans available. Please check your backend configuration.</div>;
+  }
+  
+  if (plans.length === 0) {
+    return <div className="text-center py-20 text-yellow-500">No monthly plans found. API returned {apiPlans.length} plans but none matched the filter criteria.</div>;
   }
   
   return (
