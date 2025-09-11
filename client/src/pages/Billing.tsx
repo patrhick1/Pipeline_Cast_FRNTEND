@@ -6,8 +6,10 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { apiRequest } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/useAuth";
-import { Link } from "wouter";
+import { useSubscription } from "@/hooks/useSubscription";
+import { Link, useLocation } from "wouter";
 import { formatUTCDateOnly } from "@/lib/timezone";
+import BillingFreePlan from "./BillingFreePlan";
 import {
   CreditCard,
   CheckCircle,
@@ -196,36 +198,11 @@ function BillingInfoCard({ subscription }: { subscription: SubscriptionData }) {
   );
 }
 
-function NoSubscriptionCard() {
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle>No Active Subscription</CardTitle>
-        <CardDescription>You're currently on the free plan</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <div className="text-center py-8">
-          <div className="mx-auto w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
-            <Package className="h-8 w-8 text-gray-400" />
-          </div>
-          <h3 className="text-lg font-semibold mb-2">Get Started with a Paid Plan</h3>
-          <p className="text-gray-600 mb-6">
-            Unlock premium features and take your podcast outreach to the next level
-          </p>
-          <Link href="/pricing">
-            <Button size="lg">
-              View Plans
-            </Button>
-          </Link>
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
 
 
 export default function Billing() {
   const { user } = useAuth();
+  const { isFreePlan, subscription: subscriptionFromHook } = useSubscription();
 
   const { data: subscription, isLoading, error } = useQuery({
     queryKey: ['billing-subscription'],
@@ -251,6 +228,11 @@ export default function Billing() {
         </Alert>
       </div>
     );
+  }
+
+  // Redirect free plan users to the dedicated free plan page
+  if (!isLoading && (isFreePlan || !subscription || subscription?.plan_type === 'free')) {
+    return <BillingFreePlan />;
   }
 
   if (isLoading) {
@@ -296,11 +278,7 @@ export default function Billing() {
         </div>
 
         <div className="grid gap-6">
-          {subscription ? (
-            <BillingInfoCard subscription={subscription} />
-          ) : (
-            <NoSubscriptionCard />
-          )}
+          <BillingInfoCard subscription={subscription!} />
         </div>
       </div>
     </div>
