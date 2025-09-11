@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { AutoTextarea } from "@/components/ui/auto-textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
@@ -728,9 +729,10 @@ function ProfessionalBioSection({ form }: any) {
             In a few sentences, tell us about yourself and your work. Don't worry about wording—just share what you do and what you're passionate about.
           </FormDescription>
           <FormControl>
-            <Textarea 
+            <AutoTextarea 
               placeholder="I'm a marketing director at a SaaS company, passionate about growth strategies and helping businesses scale. I specialize in digital marketing and have helped increase our user base by 300% over the past two years..."
-              className="min-h-[120px]" 
+              minRows={3}
+              maxRows={10}
               {...field} 
             />
           </FormControl>
@@ -745,9 +747,10 @@ function ProfessionalBioSection({ form }: any) {
             What are your main areas of expertise or topics you love to talk about? (List a few, e.g., SaaS Growth, Leadership, AI in Marketing)
           </FormDescription>
           <FormControl>
-            <Textarea 
+            <AutoTextarea 
               placeholder="SaaS Growth Strategies, Digital Marketing, Lead Generation, Marketing Automation, Team Leadership"
-              rows={3}
+              minRows={2}
+              maxRows={6}
               {...field} 
             />
           </FormControl>
@@ -762,9 +765,10 @@ function ProfessionalBioSection({ form }: any) {
             Are there any unique experiences or achievements you'd like to highlight? (e.g., awards won, significant projects, unique background)
           </FormDescription>
           <FormControl>
-            <Textarea 
+            <AutoTextarea 
               placeholder="Won 'Marketing Leader of the Year' award, authored a popular blog with 50K+ monthly readers, grew startup from 0 to $5M ARR..."
-              rows={3}
+              minRows={2}
+              maxRows={8}
               {...field} 
             />
           </FormControl>
@@ -904,9 +908,10 @@ function SuggestedTopicsSection({ form }: any) {
             List 3-5 topics you'd be excited to discuss on a podcast. Be specific!
           </FormDescription>
           <FormControl>
-            <Textarea 
+            <AutoTextarea 
               placeholder="1. How to scale SaaS companies from 0 to $10M ARR&#10;2. Building high-performing marketing teams&#10;3. The future of AI in digital marketing&#10;4. Common mistakes startups make with growth strategies&#10;5. Building a personal brand as a marketing leader"
-              className="min-h-[120px]" 
+              minRows={3}
+              maxRows={10}
               {...field} 
             />
           </FormControl>
@@ -921,9 +926,10 @@ function SuggestedTopicsSection({ form }: any) {
             Are there any specific stories, lessons, or messages you want to share with listeners related to these topics?
           </FormDescription>
           <FormControl>
-            <Textarea 
+            <AutoTextarea 
               placeholder="I love sharing the story of how we turned around our failing marketing strategy by focusing on customer success metrics instead of vanity metrics. I also have insights about building diverse, inclusive teams that drive innovation..."
-              rows={4}
+              minRows={3}
+              maxRows={10}
               {...field} 
             />
           </FormControl>
@@ -944,9 +950,10 @@ function SampleQuestionsSection({ form }: any) {
             What are some questions you're often asked about your work or expertise?
           </FormDescription>
           <FormControl>
-            <Textarea 
+            <AutoTextarea 
               placeholder="• How do you measure marketing ROI effectively?&#10;• What's the biggest mistake you see companies make with growth?&#10;• How do you build a team that scales with your company?&#10;• What metrics should early-stage startups focus on?"
-              rows={4}
+              minRows={3}
+              maxRows={10}
               {...field} 
             />
           </FormControl>
@@ -961,9 +968,10 @@ function SampleQuestionsSection({ form }: any) {
             Are there any questions you wish more people would ask you?
           </FormDescription>
           <FormControl>
-            <Textarea 
+            <AutoTextarea 
               placeholder="• How do you balance growth with sustainability?&#10;• What role does empathy play in effective marketing?&#10;• How do you handle failure and pivot strategies?&#10;• What advice would you give your younger self?"
-              rows={4}
+              minRows={3}
+              maxRows={10}
               {...field} 
             />
           </FormControl>
@@ -984,9 +992,10 @@ function SocialProofSection({ form }: any) {
             Do you have any testimonials, reviews, or positive feedback from previous podcast hosts, clients, or audiences? Please share them here or provide links.
           </FormDescription>
           <FormControl>
-            <Textarea 
+            <AutoTextarea 
               placeholder="'Sarah was an incredible guest - our audience loved her practical insights and engaging stories. We saw our highest engagement rates after her episode!' - John Smith, Host of Marketing Mastery Podcast"
-              rows={4}
+              minRows={3}
+              maxRows={10}
               {...field} 
             />
           </FormControl>
@@ -1001,9 +1010,10 @@ function SocialProofSection({ form }: any) {
             Any notable stats or accomplishments (e.g., awards, audience size for your own platforms, books published, significant company milestones)?
           </FormDescription>
           <FormControl>
-            <Textarea 
+            <AutoTextarea 
               placeholder="• Grew company from $500K to $5M ARR in 3 years&#10;• 15K+ LinkedIn followers&#10;• Featured in Forbes '30 Under 30'&#10;• Author of 'Growth Hacking for SaaS' (10K+ copies sold)&#10;• Speaker at 20+ industry conferences"
-              rows={4}
+              minRows={3}
+              maxRows={10}
               {...field} 
             />
           </FormControl>
@@ -1082,9 +1092,10 @@ function PromotionPrefsSection({ form }: any) {
             How would you like to be introduced on podcasts? (e.g., 'Founder of X, helping Y achieve Z', or a short, punchy intro)
           </FormDescription>
           <FormControl>
-            <Textarea 
+            <AutoTextarea 
               placeholder="Sarah is the VP of Marketing at TechCorp, where she's helped grow the company from startup to $10M ARR. She's passionate about sustainable growth strategies and building diverse, high-performing teams."
-              rows={3}
+              minRows={2}
+              maxRows={8}
               {...field} 
             />
           </FormControl>
@@ -1099,9 +1110,10 @@ function PromotionPrefsSection({ form }: any) {
             Are there specific products, services, projects, or a book you want to promote during appearances?
           </FormDescription>
           <FormControl>
-            <Textarea 
+            <AutoTextarea 
               placeholder="My new book 'Growth Marketing Mastery', our free SaaS growth assessment tool at growthcheck.com, and our monthly newsletter with 10K+ subscribers"
-              rows={3}
+              minRows={2}
+              maxRows={8}
               {...field} 
             />
           </FormControl>
@@ -1187,9 +1199,10 @@ function FinalNotesSection({ form }: any) {
             </div>
           </FormDescription>
           <FormControl>
-            <Textarea 
+            <AutoTextarea 
               placeholder="Example: I'm passionate about discussing data-driven marketing strategies on business and marketing podcasts. I connect best with shows targeting B2B marketers and growth leaders who want practical, actionable insights. I enjoy conversational formats where I can share real case studies and results."
-              className="min-h-[100px]"
+              minRows={3}
+              maxRows={10}
               {...field} 
             />
           </FormControl>
@@ -1204,9 +1217,10 @@ function FinalNotesSection({ form }: any) {
             Any other information you'd like us to know? (recording preferences, availability, resources you can provide to listeners, etc.)
           </FormDescription>
           <FormControl>
-            <Textarea 
+            <AutoTextarea 
               placeholder="I prefer morning recordings (EST), I'm happy to provide additional resources to listeners, and I'm always excited to connect with fellow marketers on LinkedIn after episodes..."
-              rows={3}
+              minRows={2}
+              maxRows={8}
               {...field} 
             />
           </FormControl>
@@ -1221,9 +1235,10 @@ function FinalNotesSection({ form }: any) {
             Any questions or concerns about this process, your media kit, or the podcast discovery process?
           </FormDescription>
           <FormControl>
-            <Textarea 
+            <AutoTextarea 
               placeholder="I'd love to review the media kit before it goes live. Also, how often can I update this information? Any specific requirements for podcast bookings?"
-              rows={3}
+              minRows={2}
+              maxRows={8}
               {...field} 
             />
           </FormControl>

@@ -1,4 +1,4 @@
-import { useState, KeyboardEvent } from 'react';
+import { useState, KeyboardEvent, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Send } from 'lucide-react';
@@ -12,6 +12,24 @@ interface ChatInputProps {
 
 export function ChatInput({ onSend, disabled, placeholder = "Type your message..." }: ChatInputProps) {
   const [message, setMessage] = useState('');
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  
+  // Auto-resize textarea based on content
+  useEffect(() => {
+    if (textareaRef.current) {
+      // Reset height to recalculate
+      textareaRef.current.style.height = 'auto';
+      
+      // Calculate new height based on scrollHeight
+      const scrollHeight = textareaRef.current.scrollHeight;
+      const minHeight = 60; // Minimum height in pixels
+      const maxHeight = 240; // Maximum height for ~10 lines
+      
+      // Set new height within bounds
+      const newHeight = Math.min(Math.max(scrollHeight, minHeight), maxHeight);
+      textareaRef.current.style.height = `${newHeight}px`;
+    }
+  }, [message]);
   
   const handleSend = () => {
     if (message.trim() && !disabled) {
@@ -31,16 +49,18 @@ export function ChatInput({ onSend, disabled, placeholder = "Type your message..
     <div className="p-4 border-t bg-background">
       <div className="flex gap-2">
         <Textarea
+          ref={textareaRef}
           value={message}
           onChange={(e) => setMessage(e.target.value)}
           onKeyDown={handleKeyDown}
           placeholder={placeholder}
           disabled={disabled}
           className={cn(
-            "min-h-[60px] max-h-[120px] resize-none",
+            "resize-none overflow-y-auto transition-all duration-150",
             "focus:ring-1 focus:ring-primary"
           )}
-          rows={2}
+          style={{ minHeight: '60px', maxHeight: '240px' }}
+          rows={1}
         />
         <Button
           onClick={handleSend}
