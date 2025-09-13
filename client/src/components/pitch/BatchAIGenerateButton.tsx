@@ -203,14 +203,17 @@ export function BatchAIGenerateButton({
 
       {/* Batch Generation Progress Dialog */}
       <Dialog open={showBatchDialog} onOpenChange={(open) => !isGenerating && setShowBatchDialog(open)}>
-        <DialogContent className="sm:max-w-[600px]">
+        <DialogContent className="sm:max-w-[600px]" hideCloseButton={isGenerating}>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Sparkles className="h-5 w-5 text-purple-600" />
-              Batch AI Generation
+              Batch AI Generation {isGenerating && '(Processing...)'}
             </DialogTitle>
             <DialogDescription>
-              Generating personalized pitches for {matches.length} approved matches.
+              {isGenerating
+                ? `Please wait while we generate ${matches.length} personalized pitches. This may take a few minutes.`
+                : `Successfully processed ${matches.length} pitches.`
+              }
             </DialogDescription>
           </DialogHeader>
 

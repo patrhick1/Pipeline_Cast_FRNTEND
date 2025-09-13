@@ -15,7 +15,6 @@ import {
   SelectTrigger, 
   SelectValue 
 } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { usePitchCapabilities } from "@/hooks/usePitchCapabilities";
@@ -53,8 +52,6 @@ export function AIGenerateFollowUpButton({
   const [isGenerating, setIsGenerating] = useState(false);
   const [showFollowUpDialog, setShowFollowUpDialog] = useState(false);
   const [templateId, setTemplateId] = useState("follow_up_gentle");
-  const [customSubject, setCustomSubject] = useState("");
-  const [customBody, setCustomBody] = useState("");
   const [followUpNumber, setFollowUpNumber] = useState(1);
   
   const { toast } = useToast();
@@ -62,22 +59,22 @@ export function AIGenerateFollowUpButton({
   const { canUseAI, isFreePlan } = usePitchCapabilities();
 
   const followUpTemplates = [
-    { 
-      value: "follow_up_gentle", 
+    {
+      value: "follow_up_gentle",
       label: "Gentle Reminder (7 days)",
       description: "Friendly follow-up to check if they saw your email",
       icon: MessageSquare,
       recommendedDays: 7
     },
-    { 
-      value: "follow_up_value", 
+    {
+      value: "follow_up_value",
       label: "Value Reinforcement (14 days)",
       description: "Emphasize the value you can bring to their audience",
       icon: Zap,
       recommendedDays: 14
     },
-    { 
-      value: "follow_up_urgent", 
+    {
+      value: "follow_up_urgent",
       label: "Time Sensitive (21 days)",
       description: "Create urgency with a time-limited opportunity",
       icon: Clock,
@@ -89,13 +86,6 @@ export function AIGenerateFollowUpButton({
       description: "Final outreach using reverse psychology",
       icon: AlertCircle,
       recommendedDays: 28
-    },
-    { 
-      value: "follow_up_custom", 
-      label: "Custom Follow-up",
-      description: "Create your own custom follow-up message",
-      icon: RefreshCw,
-      recommendedDays: null
     }
   ];
   
@@ -175,17 +165,9 @@ export function AIGenerateFollowUpButton({
 
     setIsGenerating(true);
     try {
-      const payload: any = {
+      const payload = {
         template_id: templateId
       };
-      
-      // Only add custom fields if they have values
-      if (customSubject) {
-        payload.custom_subject = customSubject;
-      }
-      if (customBody) {
-        payload.custom_body = customBody;
-      }
 
       const response = await apiRequest("POST", `/pitches/match/${matchId}/generate-followup`, payload);
 
@@ -231,8 +213,6 @@ export function AIGenerateFollowUpButton({
       }
       
       setShowFollowUpDialog(false);
-      setCustomSubject(""); // Reset form
-      setCustomBody(""); // Reset form
     } catch (error: any) {
       toast({
         title: "Generation Failed",
@@ -350,33 +330,10 @@ export function AIGenerateFollowUpButton({
               </Select>
             </div>
 
-            {/* Custom Subject (Optional) */}
-            <div className="space-y-2">
-              <Label>Custom Subject Line (Optional)</Label>
-              <Textarea
-                placeholder="Leave blank to use template default..."
-                value={customSubject}
-                onChange={(e) => setCustomSubject(e.target.value)}
-                rows={2}
-                className="resize-none"
-              />
-              <p className="text-xs text-gray-500">
-                Override the template's default subject line if needed.
-              </p>
-            </div>
-
-            {/* Custom Body (Optional) */}
-            <div className="space-y-2">
-              <Label>Custom Body Text (Optional)</Label>
-              <Textarea
-                placeholder="Add any specific points or customize the message..."
-                value={customBody}
-                onChange={(e) => setCustomBody(e.target.value)}
-                rows={4}
-                className="resize-none"
-              />
-              <p className="text-xs text-gray-500">
-                Customize the follow-up message or add specific talking points.
+            {/* Template Info */}
+            <div className="p-3 bg-gray-50 rounded-lg">
+              <p className="text-sm text-gray-600">
+                The selected template will be used to generate a personalized follow-up message.
               </p>
             </div>
 
@@ -384,7 +341,7 @@ export function AIGenerateFollowUpButton({
             <Alert className="border-blue-200 bg-blue-50">
               <AlertCircle className="h-4 w-4 text-blue-600" />
               <AlertDescription className="text-blue-800 text-sm">
-                The AI will generate a follow-up based on your previous pitch and the selected template. The system automatically tracks which follow-up number this is.
+                The AI will generate a follow-up based on your previous pitch and the selected template.
               </AlertDescription>
             </Alert>
           </div>

@@ -15,7 +15,8 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import { Send, Edit3, Check, X, ListChecks, MailCheck, MailOpen, RefreshCw, ExternalLink, Eye, MessageSquare, Filter, Search, Lightbulb, Info, Save, LinkIcon, SendHorizontal, CheckSquare, Clock, CheckCircle, ChevronDown, ChevronRight } from "lucide-react";
+import { nn } from "@/lib/utils";
+import { Send, Edit3, Check, X, ListChecks, MailCheck, MailOpen, RefreshCw, ExternalLink, Eye, MessageSquare, Filter, Search, Lightbulb, Info, Save, LinkIcon, SendHorizontal, CheckSquare, Clock, CheckCircle, ChevronDown, ChevronRight, Loader2 } from "lucide-react";
 import { PodcastDetailsModal } from "@/components/modals/PodcastDetailsModal";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Link, useLocation } from "wouter";
@@ -78,6 +79,8 @@ interface PitchDraftForReview { // From GET /review-tasks/?task_type=pitch_revie
   media_website?: string | null; // Added for context
   relevant_episode_analysis?: EpisodeAnalysisData | null; // NEW - To be populated by backend
   status?: string; // Status of the review task
+  sequence_number?: number | null; // Sequence number for ordering pitches
+  pitch_type?: string | null; // Type of pitch (initial, follow_up_1, etc.)
 }
 
 interface PitchReadyToSend { // From GET /pitches/?pitch_state=ready_to_send (enriched)
@@ -97,6 +100,7 @@ interface PitchReadyToSend { // From GET /pitches/?pitch_state=ready_to_send (en
   pitch_type?: string | null; // To identify if it's initial or follow-up
   parent_pitch_gen_id?: number | null; // To identify if it has follow-ups
   follow_up_count?: number; // Number of follow-ups configured
+  sequence_number?: number | null; // Sequence number for ordering
 }
 
 interface SentPitchStatus { // From GET /pitches/?pitch_state__in=... (enriched)
@@ -200,9 +204,9 @@ function ReadyForDraftTab({
                             </p>
                         </div>
                         <BatchAIGenerateButton
-                            matches={approvedMatches.map(m => ({ 
-                                match_id: m.match_id, 
-                                media_name: m.media_name 
+                            matches={approvedMatches.map(m => ({
+                                match_id: m.match_id,
+                                media_name: m.media_name ?? undefined
                             }))}
                             onComplete={() => {
                                 // Refresh all pitch-related data immediately
@@ -252,8 +256,8 @@ function ReadyForDraftTab({
                                 {canUseAI ? (
                                     <AIGeneratePitchButton
                                         matchId={match.match_id}
-                                        mediaName={match.media_name}
-                                        campaignName={match.campaign_name}
+                                        mediaName={match.media_name ?? undefined}
+                                        campaignName={match.campaign_name ?? undefined}
                                         onSuccess={() => {
                                             // Refresh all pitch-related data immediately
                                             globalRefreshAllPitchData();
@@ -390,41 +394,65 @@ function DraftsReviewTab({
 }) {
     const { canUseAI } = usePitchCapabilities();
     const [followUpStates, setFollowUpStates] = useState<Record<number, { count: number; generated: boolean }>>({});
-    const [expandedThreads, setExpandedThreads] = useState<Set<number>>(new Set());
+    const [expandedThreads, setExpandedThreads] = useState<Set<string>>(new Set());
     
-    // Group drafts by parent/follow-up relationship
+    // Group drafts by campaign_id and media_id, then sort by sequence_number
     const groupedDrafts = useMemo(() => {
-        const groups: Map<number, { parent: PitchDraftForReview; followUps: PitchDraftForReview[] }> = new Map();
-        
-        // First pass: identify all parent pitches
+        const groups: Map<string, {
+            campaign_id: string;
+            media_id: number;
+            media_name: string | null | undefined;
+            campaign_name: string | null | undefined;
+            client_name: string | null | undefined;
+            media_website: string | null | undefined;
+            pitches: PitchDraftForReview[];
+        }> = new Map();
+
+        // Group by campaign_id and media_id
         drafts.forEach(draft => {
-            if (!draft.parent_pitch_gen_id) {
-                groups.set(draft.pitch_gen_id, { parent: draft, followUps: [] });
+            const key = `${draft.campaign_id}_${draft.media_id}`;
+
+            if (!groups.has(key)) {
+                groups.set(key, {
+                    campaign_id: draft.campaign_id,
+                    media_id: draft.media_id,
+                    media_name: draft.media_name,
+                    campaign_name: draft.campaign_name,
+                    client_name: draft.client_name,
+                    media_website: draft.media_website,
+                    pitches: []
+                });
             }
+
+            groups.get(key)!.pitches.push(draft);
         });
-        
-        // Second pass: attach follow-ups to their parents
-        drafts.forEach(draft => {
-            if (draft.parent_pitch_gen_id) {
-                const parentGroup = groups.get(draft.parent_pitch_gen_id);
-                if (parentGroup) {
-                    parentGroup.followUps.push(draft);
-                } else {
-                    // If parent not found in current page, show as standalone
-                    groups.set(draft.pitch_gen_id, { parent: draft, followUps: [] });
+
+        // Sort pitches within each group by sequence_number (or pitch_type as fallback)
+        groups.forEach(group => {
+            group.pitches.sort((a, b) => {
+                // First try to sort by sequence_number
+                if (a.sequence_number !== undefined && b.sequence_number !== undefined) {
+                    return (a.sequence_number || 0) - (b.sequence_number || 0);
                 }
-            }
+                // Fallback: sort by pitch_type (initial first, then follow_up_1, follow_up_2, etc.)
+                const getTypeOrder = (type?: string | null) => {
+                    if (!type || type === 'initial') return 0;
+                    const match = type.match(/follow_up_(\d+)/);
+                    return match ? parseInt(match[1]) : 999;
+                };
+                return getTypeOrder(a.pitch_type) - getTypeOrder(b.pitch_type);
+            });
         });
-        
+
         return Array.from(groups.values());
     }, [drafts]);
     
-    const toggleThread = (pitchGenId: number) => {
+    const toggleThread = (groupKey: string) => {
         const newExpanded = new Set(expandedThreads);
-        if (newExpanded.has(pitchGenId)) {
-            newExpanded.delete(pitchGenId);
+        if (newExpanded.has(groupKey)) {
+            newExpanded.delete(groupKey);
         } else {
-            newExpanded.add(pitchGenId);
+            newExpanded.add(groupKey);
         }
         setExpandedThreads(newExpanded);
     };
@@ -443,20 +471,22 @@ function DraftsReviewTab({
     return (
         <div className="space-y-4">
             <div className="space-y-3 max-h-[60vh] overflow-y-auto pr-2">
-                {groupedDrafts.map(({ parent, followUps }) => {
-                    const isExpanded = expandedThreads.has(parent.pitch_gen_id);
-                    const hasFollowUps = followUps.length > 0;
-                    
+                {groupedDrafts.map((group) => {
+                    const groupKey = `${group.campaign_id}_${group.media_id}`;
+                    const isExpanded = expandedThreads.has(groupKey);
+                    const hasMultiplePitches = group.pitches.length > 1;
+                    const firstPitch = group.pitches[0];
+
                     return (
-                        <div key={parent.pitch_gen_id} className="space-y-2">
-                            {/* Parent Pitch */}
+                        <div key={groupKey} className="space-y-2">
+                            {/* Group Header Card */}
                             <Card className="p-4 hover:shadow-md transition-shadow">
                                 <div className="flex flex-col sm:flex-row justify-between sm:items-start">
                                     <div className="flex-1 mb-3 sm:mb-0">
                                         <div className="flex items-center gap-2">
-                                            {hasFollowUps && (
+                                            {hasMultiplePitches && (
                                                 <button
-                                                    onClick={() => toggleThread(parent.pitch_gen_id)}
+                                                    onClick={() => toggleThread(groupKey)}
                                                     className="p-0.5 hover:bg-gray-100 rounded transition-colors"
                                                 >
                                                     {isExpanded ? (
@@ -467,31 +497,33 @@ function DraftsReviewTab({
                                                 </button>
                                             )}
                                             <h4 className="font-semibold text-gray-800">
-                                                {parent.media_name || `Media ID: ${parent.media_id}`}
-                                                {hasFollowUps && (
+                                                {group.media_name || `Media ID: ${group.media_id}`}
+                                                {group.pitches.length > 0 && (
                                                     <Badge variant="secondary" className="ml-2 text-xs">
-                                                        {followUps.length} follow-up{followUps.length > 1 ? 's' : ''}
+                                                        {group.pitches.length} pitch{group.pitches.length > 1 ? ' sequence' : ''}
                                                     </Badge>
                                                 )}
                                             </h4>
                                         </div>
-                                        <p className="text-xs text-gray-500 mt-1">Campaign: {parent.campaign_name || 'N/A'} (Client: {parent.client_name || 'N/A'})</p>
-                                        <p className="text-xs text-gray-600 mt-1 italic">Subject: {parent.subject_line || "Not set"}</p>
-                                        <p className="text-xs text-gray-600 mt-1 italic line-clamp-2">Preview: {parent.draft_text?.substring(0, 100) || "No preview."}...</p>
-                                        {parent.media_website && (
-                                            <a href={parent.media_website} target="_blank" rel="noopener noreferrer" className="text-xs text-primary hover:underline inline-flex items-center mt-1">
+                                        <p className="text-xs text-gray-500 mt-1">Campaign: {group.campaign_name || 'N/A'} (Client: {group.client_name || 'N/A'})</p>
+                                        {!isExpanded && firstPitch && (
+                                            <>
+                                                <p className="text-xs text-gray-600 mt-1 italic">Initial Subject: {firstPitch.subject_line || "Not set"}</p>
+                                                <p className="text-xs text-gray-600 mt-1 italic line-clamp-2">Preview: {firstPitch.draft_text?.substring(0, 100) || "No preview."}...</p>
+                                            </>
+                                        )}
+                                        {group.media_website && (
+                                            <a href={group.media_website} target="_blank" rel="noopener noreferrer" className="text-xs text-primary hover:underline inline-flex items-center mt-1">
                                                 <ExternalLink className="h-3 w-3 mr-1"/> Visit Podcast
                                             </a>
                                         )}
                                     </div>
                                     <div className="flex flex-col sm:flex-row sm:items-center space-y-2 sm:space-y-0 sm:space-x-2 flex-shrink-0 mt-2 sm:mt-0">
-                                        <Button size="sm" variant="outline" onClick={() => onEdit(parent)}><Edit3 className="h-3 w-3 mr-1.5"/> Review/Edit</Button>
-                                        
-                                        {/* Plan Follow-ups Button - only for parent pitches */}
-                                        {canUseAI && !parent.parent_pitch_gen_id && (
+                                        {/* Add Follow-ups Button - only if AI enabled */}
+                                        {canUseAI && firstPitch?.match_id && (
                                             <AIGenerateFollowUpButton
-                                                matchId={parent.match_id}
-                                                mediaName={parent.media_name}
+                                                matchId={firstPitch.match_id}
+                                                mediaName={group.media_name ?? undefined}
                                                 onSuccess={() => {
                                                     // Refresh the data to show new follow-ups
                                                     window.location.reload(); // Temporary - should refresh via React Query
@@ -501,67 +533,79 @@ function DraftsReviewTab({
                                                 className="border-blue-200 hover:bg-blue-50"
                                             />
                                         )}
-                                        
+
+                                        {/* Approve All Button */}
                                         <Button
                                             size="sm"
                                             className="bg-green-600 hover:bg-green-700 text-white"
-                                            onClick={() => onApprove(parent.pitch_gen_id)}
-                                            disabled={isLoadingApproveForPitchGenId === parent.pitch_gen_id}
+                                            onClick={() => {
+                                                // Approve all pitches in the sequence
+                                                group.pitches.forEach(pitch => onApprove(pitch.pitch_gen_id));
+                                            }}
+                                            disabled={group.pitches.some(p => isLoadingApproveForPitchGenId === p.pitch_gen_id)}
                                         >
-                                            {isLoadingApproveForPitchGenId === parent.pitch_gen_id ? <RefreshCw className="h-4 w-4 animate-spin mr-1"/> : <Check className="h-4 w-4 mr-1.5"/>}
-                                            Approve {hasFollowUps ? 'Sequence' : 'Pitch'}
+                                            {group.pitches.some(p => isLoadingApproveForPitchGenId === p.pitch_gen_id) ?
+                                                <RefreshCw className="h-4 w-4 animate-spin mr-1"/> :
+                                                <Check className="h-4 w-4 mr-1.5"/>
+                                            }
+                                            Approve All ({group.pitches.length})
                                         </Button>
                                     </div>
                                 </div>
                             </Card>
-                            
-                            {/* Follow-up Pitches - shown when expanded */}
-                            {isExpanded && hasFollowUps && (
+
+                            {/* Individual Pitches - shown when expanded or when only one pitch */}
+                            {(isExpanded || group.pitches.length === 1) && (
                                 <div className="ml-8 space-y-2">
-                                    {followUps.map((followUp, index) => (
-                                        <Card key={followUp.review_task_id} className="p-3 border-l-4 border-blue-300 bg-blue-50/30">
-                                            <div className="flex flex-col sm:flex-row justify-between sm:items-start">
-                                                <div className="flex-1 mb-2 sm:mb-0">
-                                                    <div className="flex items-center gap-2 mb-1">
-                                                        <Badge variant="outline" className="text-xs">
-                                                            Follow-up #{index + 1}
-                                                        </Badge>
-                                                        <span className="text-xs text-gray-500">
-                                                            {followUp.subject_line || "No subject"}
-                                                        </span>
+                                    {group.pitches.map((pitch, index) => {
+                                        const sequenceLabel = pitch.pitch_type === 'initial' ? 'Initial Pitch' :
+                                                            pitch.pitch_type?.startsWith('follow_up_') ?
+                                                                `Follow-up #${pitch.pitch_type.replace('follow_up_', '')}` :
+                                                                `Sequence #${pitch.sequence_number ?? (index + 1)}`;
+
+                                        return (
+                                            <Card key={pitch.review_task_id} className={`p-3 border-l-4 ${
+                                                pitch.pitch_type === 'initial' ? 'border-green-400 bg-green-50/30' :
+                                                'border-blue-300 bg-blue-50/30'
+                                            }`}>
+                                                <div className="flex flex-col sm:flex-row justify-between sm:items-start">
+                                                    <div className="flex-1 mb-2 sm:mb-0">
+                                                        <div className="flex items-center gap-2 mb-1">
+                                                            <Badge variant="outline" className="text-xs">
+                                                                {sequenceLabel}
+                                                            </Badge>
+                                                            <span className="text-xs text-gray-500">
+                                                                {pitch.subject_line || "No subject"}
+                                                            </span>
+                                                        </div>
+                                                        <p className="text-xs text-gray-600 italic line-clamp-2">
+                                                            {pitch.draft_text?.substring(0, 150) || "No preview."}...
+                                                        </p>
                                                     </div>
-                                                    <p className="text-xs text-gray-600 italic line-clamp-2">
-                                                        {followUp.draft_text?.substring(0, 150) || "No preview."}...
-                                                    </p>
+                                                    <div className="flex gap-2 flex-shrink-0">
+                                                        <Button
+                                                            size="sm"
+                                                            variant="outline"
+                                                            onClick={() => onEdit(pitch)}
+                                                        >
+                                                            <Edit3 className="h-3 w-3 mr-1"/> Edit
+                                                        </Button>
+                                                        <Button
+                                                            size="sm"
+                                                            className="bg-green-600 hover:bg-green-700 text-white"
+                                                            onClick={() => onApprove(pitch.pitch_gen_id)}
+                                                            disabled={isLoadingApproveForPitchGenId === pitch.pitch_gen_id}
+                                                        >
+                                                            {isLoadingApproveForPitchGenId === pitch.pitch_gen_id ?
+                                                                <RefreshCw className="h-3 w-3 animate-spin"/> :
+                                                                <Check className="h-3 w-3"/>
+                                                            }
+                                                        </Button>
+                                                    </div>
                                                 </div>
-                                                <div className="flex gap-2 flex-shrink-0">
-                                                    <Button 
-                                                        size="sm" 
-                                                        variant="outline" 
-                                                        onClick={() => onEdit(followUp)}
-                                                    >
-                                                        <Edit3 className="h-3 w-3 mr-1"/> Edit
-                                                    </Button>
-                                                </div>
-                                            </div>
-                                        </Card>
-                                    ))}
-                                    
-                                    {/* Add more follow-ups button */}
-                                    {canUseAI && (
-                                        <div className="ml-4">
-                                            <AIGenerateFollowUpButton
-                                                matchId={parent.match_id}
-                                                mediaName={parent.media_name}
-                                                onSuccess={() => {
-                                                    window.location.reload(); // Temporary
-                                                }}
-                                                size="sm"
-                                                variant="ghost"
-                                                className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-                                            />
-                                        </div>
-                                    )}
+                                            </Card>
+                                        );
+                                    })}
                                 </div>
                             )}
                         </div>
@@ -580,12 +624,13 @@ function DraftsReviewTab({
 }
 
 function ReadyToSendTab({
-    pitches, onSend, onBulkSend, onPreview, isLoadingSendForPitchId, isLoadingBulkSend, isLoadingPitches
+    pitches, onSend, onBulkSend, onPreview, onSendSequence, isLoadingSendForPitchId, isLoadingBulkSend, isLoadingPitches
 }: {
     pitches: PitchReadyToSend[];
     onSend: (pitchGenId: number) => void;
     onBulkSend: (pitchGenIds: number[]) => void;
     onPreview: (pitch: PitchReadyToSend) => void;
+    onSendSequence?: (matchId: number) => void;
     isLoadingSendForPitchId: number | null;
     isLoadingBulkSend: boolean;
     isLoadingPitches: boolean;
@@ -593,8 +638,61 @@ function ReadyToSendTab({
     const [selectedPitchGenIds, setSelectedPitchGenIds] = useState<number[]>([]);
     const [selectAll, setSelectAll] = useState(false);
     const [pitchEmails, setPitchEmails] = useState<Record<number, string>>({});
-    const [expandedSequences, setExpandedSequences] = useState<Set<number>>(new Set());
+    const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
+    const [updatingEmailForGroup, setUpdatingEmailForGroup] = useState<string | null>(null);
+    const [editingGroupEmail, setEditingGroupEmail] = useState<string | null>(null);
+    const [tempGroupEmail, setTempGroupEmail] = useState("");
     const { isFreePlan } = usePitchCapabilities();
+    const { toast } = useToast();
+
+    // Group pitches by campaign_id and media_id
+    const groupedPitches = useMemo(() => {
+        const groups: Map<string, {
+            campaign_id: string;
+            media_id: number;
+            media_name: string | null | undefined;
+            campaign_name: string | null | undefined;
+            client_name: string | null | undefined;
+            media_website: string | null | undefined;
+            pitches: PitchReadyToSend[];
+        }> = new Map();
+
+        pitches.forEach(pitch => {
+            const key = `${pitch.campaign_id}_${pitch.media_id}`;
+
+            if (!groups.has(key)) {
+                groups.set(key, {
+                    campaign_id: pitch.campaign_id,
+                    media_id: pitch.media_id,
+                    media_name: pitch.media_name,
+                    campaign_name: pitch.campaign_name,
+                    client_name: pitch.client_name,
+                    media_website: pitch.media_website,
+                    pitches: []
+                });
+            }
+
+            groups.get(key)!.pitches.push(pitch);
+        });
+
+        // Sort pitches within each group
+        groups.forEach(group => {
+            group.pitches.sort((a, b) => {
+                // Sort by sequence_number or pitch_type
+                if (a.sequence_number !== undefined && b.sequence_number !== undefined) {
+                    return (a.sequence_number || 0) - (b.sequence_number || 0);
+                }
+                const getTypeOrder = (type?: string | null) => {
+                    if (!type || type === 'initial') return 0;
+                    const match = type.match(/follow_up_(\d+)/);
+                    return match ? parseInt(match[1]) : 999;
+                };
+                return getTypeOrder(a.pitch_type) - getTypeOrder(b.pitch_type);
+            });
+        });
+
+        return Array.from(groups.values());
+    }, [pitches]);
 
     const handleSelectAll = (checked: boolean) => {
         setSelectAll(checked);
@@ -619,6 +717,64 @@ function ReadyToSendTab({
         onBulkSend(selectedPitchGenIds);
         setSelectedPitchGenIds([]);
         setSelectAll(false);
+    };
+
+    const toggleGroup = (groupKey: string) => {
+        const newExpanded = new Set(expandedGroups);
+        if (newExpanded.has(groupKey)) {
+            newExpanded.delete(groupKey);
+        } else {
+            newExpanded.add(groupKey);
+        }
+        setExpandedGroups(newExpanded);
+    };
+
+    // Function to update email for all pitches in a group
+    const updateGroupEmail = async (groupKey: string, newEmail: string, pitchGenIds: number[]) => {
+        if (!newEmail || !newEmail.includes('@')) {
+            toast({
+                title: "Invalid Email",
+                description: "Please enter a valid email address",
+                variant: "destructive"
+            });
+            return;
+        }
+
+        setUpdatingEmailForGroup(groupKey);
+
+        try {
+            // Update all pitches in the group
+            const updatePromises = pitchGenIds.map(pitchGenId =>
+                apiRequest('PATCH', `/pitches/generations/${pitchGenId}/content`, {
+                    recipient_email: newEmail
+                })
+            );
+
+            const results = await Promise.all(updatePromises);
+            const allSuccessful = results.every(r => r.ok);
+
+            if (allSuccessful) {
+                // Update local state for all pitches
+                pitchGenIds.forEach(id => {
+                    setPitchEmails(prev => ({ ...prev, [id]: newEmail }));
+                });
+
+                toast({
+                    title: "Email Updated",
+                    description: `Email updated for all ${pitchGenIds.length} pitches in the sequence`,
+                });
+            } else {
+                throw new Error('Some updates failed');
+            }
+        } catch (error) {
+            toast({
+                title: "Update Failed",
+                description: "Failed to update email addresses. Please try again.",
+                variant: "destructive"
+            });
+        } finally {
+            setUpdatingEmailForGroup(null);
+        }
     };
 
     if (isLoadingPitches) {
@@ -659,142 +815,258 @@ function ReadyToSendTab({
                 </Button>
             </div>
 
-            {/* Pitch Cards */}
+            {/* Grouped Pitch Cards */}
             <div className="space-y-3 max-h-[60vh] overflow-y-auto pr-2">
-                {pitches.map((pitch) => (
-                    <Card key={pitch.pitch_id} className="p-4 hover:shadow-md transition-shadow">
-                        <div className="flex items-start space-x-3">
-                            <Checkbox
-                                checked={selectedPitchGenIds.includes(pitch.pitch_gen_id)}
-                                onCheckedChange={(checked) => handleSelectPitch(pitch.pitch_gen_id, checked as boolean)}
-                                disabled={isLoadingBulkSend || isLoadingSendForPitchId === pitch.pitch_id}
-                                className="mt-1"
-                            />
-                            <div className="flex-1 flex flex-col sm:flex-row justify-between sm:items-start">
-                                <div className="flex-1 mb-3 sm:mb-0">
-                                    <div className="flex items-center gap-2 mb-1">
-                                        <h4 className="font-semibold text-gray-800">{pitch.media_name || `Media ID: ${pitch.media_id}`}</h4>
-                                        {pitch.pitch_type === 'initial' && pitch.follow_up_count && pitch.follow_up_count > 0 && (
-                                            <Badge 
-                                                variant="secondary" 
-                                                className="text-xs bg-blue-100 text-blue-700 cursor-pointer hover:bg-blue-200"
-                                                onClick={() => {
-                                                    const newExpanded = new Set(expandedSequences);
-                                                    if (newExpanded.has(pitch.pitch_gen_id)) {
-                                                        newExpanded.delete(pitch.pitch_gen_id);
-                                                    } else {
-                                                        newExpanded.add(pitch.pitch_gen_id);
-                                                    }
-                                                    setExpandedSequences(newExpanded);
-                                                }}
-                                            >
-                                                <MessageSquare className="w-3 h-3 mr-1" />
-                                                {pitch.follow_up_count} follow-up{pitch.follow_up_count > 1 ? 's' : ''} planned
-                                            </Badge>
-                                        )}
-                                        {pitch.pitch_type && pitch.pitch_type !== 'initial' && (
-                                            <Badge variant="outline" className="text-xs">
-                                                Follow-up #{pitch.pitch_type.replace('follow_up_', '')}
-                                            </Badge>
-                                        )}
-                                    </div>
-                                    <p className="text-xs text-gray-500">Campaign: {pitch.campaign_name || 'N/A'} (Client: {pitch.client_name || 'N/A'})</p>
-                                    <div className="mt-1">
-                                        <RecipientEmailEditor
-                                            pitchGenId={pitch.pitch_gen_id}
-                                            currentEmail={pitchEmails[pitch.pitch_gen_id] || pitch.recipient_email}
-                                            onEmailUpdated={(newEmail) => {
-                                                setPitchEmails(prev => ({ ...prev, [pitch.pitch_gen_id]: newEmail }));
-                                            }}
-                                            compact
-                                            method="PATCH"
-                                        />
-                                    </div>
-                                    <p className="text-xs text-gray-600 mt-1 italic">Subject: {pitch.subject_line || "Not set"}</p>
-                                    <p className="text-xs text-gray-600 mt-1 italic line-clamp-2">
-                                        Preview: {(pitch.final_text || pitch.draft_text || "No content").substring(0,100) + "..."}
-                                    </p>
-                                    
-                                    {/* Reminder for free users about editing */}
-                                    {isFreePlan && (
-                                        <div className="mt-2 p-2 bg-amber-50 border border-amber-200 rounded text-xs">
-                                            <span className="text-amber-700">
-                                                <strong>💡 Tip:</strong> Review and personalize any placeholder text before sending for best results.
-                                            </span>
-                                        </div>
-                                    )}
-                                    
-                                    {/* Show follow-up sequence details when expanded */}
-                                    {expandedSequences.has(pitch.pitch_gen_id) && pitch.follow_up_count && pitch.follow_up_count > 0 && (
-                                        <div className="mt-3 p-3 bg-blue-50 rounded-md border border-blue-200">
-                                            <h5 className="text-xs font-semibold text-blue-800 mb-2">📧 Follow-up Sequence:</h5>
-                                            <div className="space-y-1">
-                                                <div className="flex items-center gap-2 text-xs text-blue-700">
-                                                    <Badge variant="outline" className="text-xs">Day 1</Badge>
-                                                    <span>Initial pitch (this message)</span>
-                                                </div>
-                                                <div className="flex items-center gap-2 text-xs text-blue-700">
-                                                    <Badge variant="outline" className="text-xs">Day 7</Badge>
-                                                    <span>Follow-up 1 - Gentle reminder</span>
-                                                </div>
-                                                {pitch.follow_up_count >= 2 && (
-                                                    <div className="flex items-center gap-2 text-xs text-blue-700">
-                                                        <Badge variant="outline" className="text-xs">Day 14</Badge>
-                                                        <span>Follow-up 2 - Value reinforcement</span>
-                                                    </div>
-                                                )}
-                                                {pitch.follow_up_count >= 3 && (
-                                                    <div className="flex items-center gap-2 text-xs text-blue-700">
-                                                        <Badge variant="outline" className="text-xs">Day 21</Badge>
-                                                        <span>Follow-up 3 - Different angle</span>
-                                                    </div>
-                                                )}
+                {groupedPitches.map((group) => {
+                    const groupKey = `${group.campaign_id}_${group.media_id}`;
+                    const isExpanded = expandedGroups.has(groupKey);
+                    const hasMultiplePitches = group.pitches.length > 1;
+                    const firstPitch = group.pitches[0];
+                    const isEditingEmail = editingGroupEmail === groupKey;
+                    const groupEmail = pitchEmails[firstPitch.pitch_gen_id] || firstPitch.recipient_email;
+
+                    return (
+                        <div key={groupKey} className="space-y-2">
+                            {/* Group Header Card */}
+                            <Card className="p-4 hover:shadow-md transition-shadow">
+                                <div className="flex flex-col">
+                                    {/* Header Row */}
+                                    <div className="flex items-start justify-between mb-3">
+                                        <div className="flex items-center gap-2">
+                                            {hasMultiplePitches && (
+                                                <button
+                                                    onClick={() => toggleGroup(groupKey)}
+                                                    className="p-0.5 hover:bg-gray-100 rounded transition-colors"
+                                                >
+                                                    {isExpanded ? (
+                                                        <ChevronDown className="h-4 w-4 text-gray-600" />
+                                                    ) : (
+                                                        <ChevronRight className="h-4 w-4 text-gray-600" />
+                                                    )}
+                                                </button>
+                                            )}
+                                            <div>
+                                                <h4 className="font-semibold text-gray-800">
+                                                    {group.media_name || `Media ID: ${group.media_id}`}
+                                                </h4>
+                                                <p className="text-xs text-gray-500 mt-1">
+                                                    Campaign: {group.campaign_name || 'N/A'} (Client: {group.client_name || 'N/A'})
+                                                </p>
                                             </div>
-                                            <p className="text-xs text-blue-600 mt-2 italic">
-                                                ℹ️ Follow-ups will be sent automatically if no reply is received
+                                        </div>
+                                        <Badge variant="secondary" className="text-xs">
+                                            {group.pitches.length} pitch{group.pitches.length > 1 ? ' sequence' : ''}
+                                        </Badge>
+                                    </div>
+
+                                    {/* Email Address Section */}
+                                    <div className="mb-3 p-3 bg-gray-50 rounded-lg">
+                                        <div className="flex items-center justify-between mb-1">
+                                            <label className="text-xs font-medium text-gray-700">
+                                                Recipient Email {hasMultiplePitches && '(for all pitches)'}
+                                            </label>
+                                            {hasMultiplePitches && (
+                                                <Badge variant="outline" className="text-xs">
+                                                    Updates all {group.pitches.length} pitches
+                                                </Badge>
+                                            )}
+                                        </div>
+                                        {isEditingEmail ? (
+                                            <div className="flex items-center gap-2">
+                                                <Input
+                                                    type="email"
+                                                    value={tempGroupEmail}
+                                                    onChange={(e) => setTempGroupEmail(e.target.value)}
+                                                    placeholder="Enter recipient email"
+                                                    className="flex-1 h-8 text-sm"
+                                                    disabled={updatingEmailForGroup === groupKey}
+                                                />
+                                                <Button
+                                                    size="sm"
+                                                    className="h-8"
+                                                    onClick={() => {
+                                                        const pitchIds = group.pitches.map(p => p.pitch_gen_id);
+                                                        updateGroupEmail(groupKey, tempGroupEmail, pitchIds).then(() => {
+                                                            setEditingGroupEmail(null);
+                                                        });
+                                                    }}
+                                                    disabled={updatingEmailForGroup === groupKey}
+                                                >
+                                                    {updatingEmailForGroup === groupKey ? (
+                                                        <Loader2 className="h-3 w-3 animate-spin" />
+                                                    ) : (
+                                                        <Check className="h-3 w-3" />
+                                                    )}
+                                                </Button>
+                                                <Button
+                                                    size="sm"
+                                                    variant="outline"
+                                                    className="h-8"
+                                                    onClick={() => {
+                                                        setEditingGroupEmail(null);
+                                                        setTempGroupEmail("");
+                                                    }}
+                                                    disabled={updatingEmailForGroup === groupKey}
+                                                >
+                                                    <X className="h-3 w-3" />
+                                                </Button>
+                                            </div>
+                                        ) : (
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-sm text-gray-800 flex-1">
+                                                    {groupEmail || "No email set"}
+                                                </span>
+                                                <Button
+                                                    size="sm"
+                                                    variant="ghost"
+                                                    className="h-7"
+                                                    onClick={() => {
+                                                        setEditingGroupEmail(groupKey);
+                                                        setTempGroupEmail(groupEmail || "");
+                                                    }}
+                                                >
+                                                    <Edit3 className="h-3 w-3 mr-1" /> Edit
+                                                </Button>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {/* Quick Preview (when collapsed) */}
+                                    {!isExpanded && (
+                                        <div className="text-xs text-gray-600 mb-3">
+                                            <p className="italic">Initial: {firstPitch.subject_line || "No subject"}</p>
+                                            <p className="line-clamp-1 mt-1">
+                                                {(firstPitch.final_text || firstPitch.draft_text || "No content").substring(0, 100)}...
                                             </p>
                                         </div>
                                     )}
-                                    
-                                    {/* Email thread component removed - not needed for initial implementation */}
-                                     {pitch.media_website && (
-                                        <a href={pitch.media_website} target="_blank" rel="noopener noreferrer" className="text-xs text-primary hover:underline inline-flex items-center mt-1">
-                                            <ExternalLink className="h-3 w-3 mr-1"/> Visit Podcast
+
+                                    {/* Website Link */}
+                                    {group.media_website && (
+                                        <a
+                                            href={group.media_website}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="text-xs text-primary hover:underline inline-flex items-center mb-3"
+                                        >
+                                            <ExternalLink className="h-3 w-3 mr-1" /> Visit Podcast
                                         </a>
                                     )}
+
+                                    {/* Action Buttons */}
+                                    <div className="flex gap-2 justify-end">
+                                        {/* Use new send-sequence endpoint if match_id is available */}
+                                        {firstPitch.match_id && onSendSequence ? (
+                                            <Button
+                                                size="sm"
+                                                className="bg-blue-600 hover:bg-blue-700 text-white"
+                                                onClick={() => {
+                                                    const confirmMessage = hasMultiplePitches
+                                                        ? `Send initial pitch and schedule ${group.pitches.length - 1} follow-up${group.pitches.length - 1 > 1 ? 's' : ''}?`
+                                                        : 'Send this pitch?';
+                                                    if (confirm(confirmMessage)) {
+                                                        onSendSequence(firstPitch.match_id!);
+                                                    }
+                                                }}
+                                                disabled={isLoadingBulkSend || isLoadingSendForPitchId === firstPitch.match_id}
+                                            >
+                                                {isLoadingSendForPitchId === firstPitch.match_id ? (
+                                                    <><RefreshCw className="h-4 w-4 animate-spin mr-1" /> Sending...</>
+                                                ) : (
+                                                    <>
+                                                        <Send className="h-4 w-4 mr-1.5" />
+                                                        {hasMultiplePitches ? `Send & Schedule (${group.pitches.length})` : 'Send Pitch'}
+                                                    </>
+                                                )}
+                                            </Button>
+                                        ) : (
+                                            // Fallback to old method if no match_id
+                                            <Button
+                                                size="sm"
+                                                className="bg-blue-600 hover:bg-blue-700 text-white"
+                                                onClick={() => {
+                                                    const confirmMessage = hasMultiplePitches
+                                                        ? `Send all ${group.pitches.length} pitches in this sequence?`
+                                                        : 'Send this pitch?';
+                                                    if (confirm(confirmMessage)) {
+                                                        group.pitches.forEach(p => onSend(p.pitch_gen_id));
+                                                    }
+                                                }}
+                                                disabled={isLoadingBulkSend || group.pitches.some(p => isLoadingSendForPitchId === p.pitch_gen_id)}
+                                            >
+                                                {group.pitches.some(p => isLoadingSendForPitchId === p.pitch_gen_id) ? (
+                                                    <><RefreshCw className="h-4 w-4 animate-spin mr-1" /> Sending...</>
+                                                ) : (
+                                                    <><Send className="h-4 w-4 mr-1.5" /> Send All ({group.pitches.length})</>
+                                                )}
+                                            </Button>
+                                        )}
+                                    </div>
                                 </div>
-                                <div className="flex flex-col sm:flex-row gap-2 mt-2 sm:mt-0">
-                                    <Button
-                                        size="sm"
-                                        variant="outline"
-                                        onClick={() => onPreview(pitch)}
-                                        disabled={isLoadingBulkSend || isLoadingSendForPitchId === pitch.pitch_id}
-                                    >
-                                        <Eye className="h-3.5 w-3.5 mr-1"/> Preview
-                                    </Button>
-                                    <Button
-                                        size="sm"
-                                        className="bg-blue-600 hover:bg-blue-700 text-white"
-                                        onClick={() => {
-                                            if (pitch.pitch_type === 'initial' && pitch.follow_up_count && pitch.follow_up_count > 0) {
-                                                // Show confirmation for sequences
-                                                if (confirm(`This will send the initial pitch and schedule ${pitch.follow_up_count} automatic follow-up${pitch.follow_up_count > 1 ? 's' : ''}. Continue?`)) {
-                                                    onSend(pitch.pitch_gen_id);
-                                                }
-                                            } else {
-                                                onSend(pitch.pitch_gen_id);
-                                            }
-                                        }}
-                                        disabled={isLoadingBulkSend || isLoadingSendForPitchId === pitch.pitch_gen_id}
-                                    >
-                                        {isLoadingSendForPitchId === pitch.pitch_gen_id ? <RefreshCw className="h-4 w-4 animate-spin mr-1"/> : <Send className="h-4 w-4 mr-1.5"/>}
-                                        {pitch.pitch_type === 'initial' && pitch.follow_up_count && pitch.follow_up_count > 0 ? 'Send & Schedule' : 'Send'}
-                                    </Button>
+                            </Card>
+
+                            {/* Individual Pitches (when expanded) */}
+                            {isExpanded && hasMultiplePitches && (
+                                <div className="ml-8 space-y-2">
+                                    {group.pitches.map((pitch, index) => {
+                                        const sequenceLabel = pitch.pitch_type === 'initial' ? 'Initial Pitch' :
+                                                            pitch.pitch_type?.startsWith('follow_up_') ?
+                                                                `Follow-up #${pitch.pitch_type.replace('follow_up_', '')}` :
+                                                                `Sequence #${pitch.sequence_number ?? (index + 1)}`;
+
+                                        return (
+                                            <Card key={pitch.pitch_id} className={`p-3 border-l-4 ${
+                                                pitch.pitch_type === 'initial' ? 'border-green-400 bg-green-50/30' :
+                                                'border-blue-300 bg-blue-50/30'
+                                            }`}>
+                                                <div className="flex items-start space-x-3">
+                                                    <Checkbox
+                                                        checked={selectedPitchGenIds.includes(pitch.pitch_gen_id)}
+                                                        onCheckedChange={(checked) => handleSelectPitch(pitch.pitch_gen_id, checked as boolean)}
+                                                        disabled={isLoadingBulkSend || isLoadingSendForPitchId === pitch.pitch_id}
+                                                        className="mt-1"
+                                                    />
+                                                    <div className="flex-1">
+                                                        <div className="flex items-center gap-2 mb-1">
+                                                            <Badge variant="outline" className="text-xs">
+                                                                {sequenceLabel}
+                                                            </Badge>
+                                                        </div>
+                                                        <p className="text-xs text-gray-600 italic">Subject: {pitch.subject_line || "Not set"}</p>
+                                                        <p className="text-xs text-gray-600 mt-1 line-clamp-2">
+                                                            {(pitch.final_text || pitch.draft_text || "No content").substring(0, 150)}...
+                                                        </p>
+                                                    </div>
+                                                    <div className="flex gap-2">
+                                                        <Button
+                                                            size="sm"
+                                                            variant="outline"
+                                                            onClick={() => onPreview(pitch)}
+                                                        >
+                                                            <Eye className="h-3 w-3" />
+                                                        </Button>
+                                                        <Button
+                                                            size="sm"
+                                                            className="bg-blue-600 hover:bg-blue-700 text-white"
+                                                            onClick={() => onSend(pitch.pitch_gen_id)}
+                                                            disabled={isLoadingBulkSend || isLoadingSendForPitchId === pitch.pitch_gen_id}
+                                                        >
+                                                            {isLoadingSendForPitchId === pitch.pitch_gen_id ? (
+                                                                <Loader2 className="h-3 w-3 animate-spin" />
+                                                            ) : (
+                                                                <Send className="h-3 w-3" />
+                                                            )}
+                                                        </Button>
+                                                    </div>
+                                                </div>
+                                            </Card>
+                                        );
+                                    })}
                                 </div>
-                            </div>
+                            )}
                         </div>
-                    </Card>
-                ))}
+                    );
+                })}
             </div>
         </div>
     );
@@ -924,7 +1196,7 @@ export default function PitchOutreach() {
 
   // State for pagination for "Review Drafts" tab
   const [reviewDraftsPage, setReviewDraftsPage] = useState(1);
-  const REVIEW_DRAFTS_PAGE_SIZE = 10;
+  const REVIEW_DRAFTS_PAGE_SIZE = 100; // Increased from 10 to show more drafts per page
 
   // Filter campaign ID based on user role - clients only see their own campaigns
   const [selectedCampaignFilter, setSelectedCampaignFilter] = useState<string | null>(initialCampaignIdFilter);
@@ -1151,7 +1423,40 @@ export default function PitchOutreach() {
   });
   */
 
-  // NEW: Using Nylas for sending
+  // NEW: Send entire sequence using the new endpoint
+  const sendSequenceMutation = useMutation({
+    mutationFn: async (matchId: number) => {
+      const response = await apiRequest("POST", `/pitches/send-sequence/${matchId}`, {});
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ detail: "Failed to send sequence" }));
+        throw new Error(errorData.detail);
+      }
+      return response.json();
+    },
+    onSuccess: (data) => {
+      const followUpCount = data.scheduled_follow_ups?.length || 0;
+      toast({
+        title: "Sequence Sent Successfully!",
+        description: followUpCount > 0
+          ? `Initial pitch sent and ${followUpCount} follow-up${followUpCount > 1 ? 's' : ''} scheduled`
+          : "Pitch sent successfully",
+      });
+      refreshAllPitchData();
+      setActiveTabState("sentPitches");
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Send Failed",
+        description: error.message,
+        variant: "destructive"
+      });
+    },
+    onSettled: () => {
+      setIsLoadingSendForPitchId(null);
+    }
+  });
+
+  // Legacy: Keep old sending for backwards compatibility if needed
   const sendPitchMutation = {
     mutate: (pitchGenId: number) => {
       setIsLoadingSendForPitchId(pitchGenId);
@@ -1260,6 +1565,10 @@ export default function PitchOutreach() {
   };
   const handleApprovePitch = (pitchGenId: number) => { approvePitchDraftMutation.mutate(pitchGenId); };
   const handleSendPitch = (pitchGenId: number) => { sendPitchMutation.mutate(pitchGenId); };
+  const handleSendSequence = (matchId: number) => {
+    setIsLoadingSendForPitchId(matchId); // Use matchId as loading indicator
+    sendSequenceMutation.mutate(matchId);
+  };
   const handleBulkSendPitches = (pitchGenIds: number[]) => { bulkSendPitchesMutation.mutate(pitchGenIds); };
   const handleOpenEditModal = (draft: PitchDraftForReview) => { setEditingDraft(draft); setIsEditModalOpen(true); };
   const handleSaveEditedDraft = (pitchGenId: number, data: EditDraftFormData) => { updatePitchDraftMutation.mutate({ pitchGenId, data }); };
@@ -1421,6 +1730,7 @@ export default function PitchOutreach() {
              onSend={handleSendPitch}
              onBulkSend={handleBulkSendPitches}
              onPreview={handlePreviewPitch}
+             onSendSequence={handleSendSequence}
              isLoadingSendForPitchId={isLoadingSendForPitchId}
              isLoadingBulkSend={isLoadingBulkSend}
              isLoadingPitches={isLoadingReadyToSend}
