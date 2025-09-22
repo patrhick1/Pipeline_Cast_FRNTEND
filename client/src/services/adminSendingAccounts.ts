@@ -3,14 +3,18 @@ import { apiRequest } from "@/lib/queryClient";
 
 export interface SendingAccount {
   id: string;
-  email: string;
+  email_address: string;
   sending_name: string;
+  nylas_grant_id: string;
   is_active: boolean;
   daily_send_limit: number;
   sends_today: number;
   last_used_at: string | null;
+  last_reset_at: string;
   created_at: string;
   updated_at: string;
+  notes: string | null;
+  provider_info: Record<string, any>;
 }
 
 export interface SendingAccountStats {

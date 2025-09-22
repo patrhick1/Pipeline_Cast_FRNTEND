@@ -18,7 +18,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu';
-import { MoreHorizontal, Trash2, Mail, AlertCircle } from 'lucide-react';
+import { MoreHorizontal, Trash2, AlertCircle } from 'lucide-react';
 import { SendingAccount } from '@/services/adminSendingAccounts';
 
 interface SendingAccountsTableProps {
@@ -67,10 +67,7 @@ export function SendingAccountsTable({
             return (
               <TableRow key={account.id}>
                 <TableCell className="font-medium">
-                  <div className="flex items-center gap-2">
-                    <Mail className="h-4 w-4 text-muted-foreground" />
-                    {account.email}
-                  </div>
+                  {account.email_address}
                 </TableCell>
 
                 <TableCell>{account.sending_name}</TableCell>
