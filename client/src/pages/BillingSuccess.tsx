@@ -63,10 +63,10 @@ export default function BillingSuccess() {
         linkText: "Complete Profile"
       },
       {
-        title: "Discover Podcasts",
-        description: "Search for podcasts that match your expertise",
-        link: "/discover",
-        linkText: "Start Discovering"
+        title: "View Match Approvals",
+        description: "Review and approve podcast matches for your campaigns",
+        link: "/approvals",
+        linkText: "View Matches"
       },
       {
         title: "Create Your Media Kit",

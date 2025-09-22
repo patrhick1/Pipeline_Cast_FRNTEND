@@ -110,7 +110,8 @@ export default function Header() {
                   </Tooltip>
                 )}
                 
-                {user?.show_onboarding_button && (
+                {/* Only show setup badge for client users, not admin/staff */}
+                {user?.show_onboarding_button && user?.role?.toLowerCase() !== 'admin' && user?.role?.toLowerCase() !== 'staff' && (
                   <Tooltip>
                     <TooltipTrigger>
                       <Badge variant="outline" className="border-blue-200 bg-blue-50 text-blue-700">

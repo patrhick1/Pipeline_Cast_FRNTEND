@@ -233,11 +233,11 @@ export default function Dashboard() {
         />
       )}
       
-      {/* Onboarding Prompt and Checklist */}
-      {user?.show_onboarding_button && (
+      {/* Onboarding Prompt and Checklist - Only show for client users */}
+      {user?.show_onboarding_button && user?.role?.toLowerCase() !== 'admin' && user?.role?.toLowerCase() !== 'staff' && (
         <>
           <OnboardingPrompt />
-          
+
           {/* New User Onboarding Checklist */}
           <Card className="border-blue-200 bg-blue-50/50">
             <CardHeader className="pb-3">

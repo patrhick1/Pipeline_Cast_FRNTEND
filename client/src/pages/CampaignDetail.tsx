@@ -427,11 +427,7 @@ function PodcastMatchesTab({ campaignId, userRole }: { campaignId: string; userR
             <div className="text-center py-6">
                 <Search className="mx-auto h-10 w-10 text-gray-400 mb-2"/>
                 <p className="text-gray-600">No podcast matches found for this campaign yet.</p>
-                {(userRole === 'staff' || userRole === 'admin') && (
-                    <Link href={`/discover?campaignId=${campaignId}`}>
-                        <Button variant="link" className="mt-2">Discover Podcasts for this Campaign</Button>
-                    </Link>
-                )}
+                <p className="text-sm text-gray-500 mt-2">Discovery is processed automatically in the background.</p>
             </div>
         ) : (
           <div className="space-y-3">
@@ -767,9 +763,6 @@ export default function CampaignDetail({ campaignIdParam, embedded = false }: Ca
         </div>
         {(user?.role === 'staff' || user?.role === 'admin') && (
             <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2 w-full sm:w-auto">
-                <Link href={`/discover?campaignId=${campaign.campaign_id}`} className="w-full sm:w-auto">
-                    <Button variant="outline" className="w-full"><Search className="mr-2 h-4 w-4"/> Discover Podcasts</Button>
-                </Link>
                 <Link href={`/pitch-outreach?campaignId=${campaign.campaign_id}`} className="w-full sm:w-auto">
                     <Button className="w-full bg-primary text-primary-foreground"><Send className="mr-2 h-4 w-4"/> Manage Pitches</Button>
                 </Link>

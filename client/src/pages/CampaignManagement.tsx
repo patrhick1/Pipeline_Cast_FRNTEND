@@ -11,12 +11,14 @@ import { Users as ClientsIcon, Plus, Edit, Trash2, Search, ArrowRight, RefreshCw
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { Badge } from "@/components/ui/badge";
-import CreateCampaignDialog, { PersonForClientSelection as PersonForCampaignDialogs } from "@/components/dialogs/CreateCampaignDialog";
 import EditCampaignDialog, { CampaignForEdit } from "@/components/dialogs/EditCampaignDialog";
 
 
-interface PersonSummaryForCampaignManagement extends PersonForCampaignDialogs { // Ensure role is available
-  // Inherits person_id, full_name, email, role from PersonForCampaignDialogs
+interface PersonSummaryForCampaignManagement {
+  person_id: string;
+  full_name: string;
+  email: string;
+  role?: string;
 }
 
 interface CampaignSummaryForManagement extends CampaignForEdit { // Use CampaignForEdit as base
@@ -32,7 +34,6 @@ export default function CampaignManagement() {
   const tanstackQueryClient = useTanstackQueryClient();
   const [searchTerm, setSearchTerm] = useState("");
   
-  const [isCreateCampaignDialogOpen, setIsCreateCampaignDialogOpen] = useState(false);
   const [editingCampaign, setEditingCampaign] = useState<CampaignSummaryForManagement | null>(null);
   const [isEditCampaignDialogOpen, setIsEditCampaignDialogOpen] = useState(false);
 
@@ -144,9 +145,7 @@ export default function CampaignManagement() {
           </h1>
           <p className="text-gray-600">Oversee all client campaigns and their progress.</p>
         </div>
-        <Button onClick={() => setIsCreateCampaignDialogOpen(true)} className="bg-primary text-primary-foreground hover:bg-primary/90">
-          <Plus className="mr-2 h-4 w-4" /> Create New Campaign
-        </Button>
+        {/* Admin and staff manage campaigns but don't create new ones - campaigns are created for clients */}
       </div>
 
       <Card>
@@ -228,13 +227,6 @@ export default function CampaignManagement() {
           </div>
         </CardContent>
       </Card>
-
-      <CreateCampaignDialog 
-        people={peopleData}
-        open={isCreateCampaignDialogOpen}
-        onOpenChange={setIsCreateCampaignDialogOpen}
-        onSuccess={() => tanstackQueryClient.invalidateQueries({ queryKey: ["allCampaignsForManagement"] })}
-      />
 
       {editingCampaign && (
         <EditCampaignDialog 

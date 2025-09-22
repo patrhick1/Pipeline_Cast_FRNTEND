@@ -11,9 +11,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { apiRequest, queryClient as appQueryClient } from "@/lib/queryClient"; // Use appQueryClient
-import { 
+import {
   CheckCircle, Clock, XCircle, Search, Filter, Podcast, Users, ExternalLink, ThumbsUp, ThumbsDown, Edit3, Eye, MessageSquare,
-  ChevronLeft, ChevronRight, ListChecks, Info, CheckSquare, Square, Sparkles // Added ListChecks for Total icon and Info for details
+  ChevronLeft, ChevronRight, ListChecks, Info, CheckSquare, Square, Sparkles, FolderOpen // Added FolderOpen for campaign filter
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton"; // For loading states
 import { MatchIntelligenceCard } from "@/components/MatchIntelligenceCard";
@@ -560,14 +560,16 @@ export default function Approvals() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("pending");
   const [taskTypeFilter, setTaskTypeFilter] = useState<"all" | "match_suggestion">("match_suggestion");
+  const [campaignFilter, setCampaignFilter] = useState<string>("all"); // New campaign filter
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedTasks, setSelectedTasks] = useState<Set<number>>(new Set());
   const [isBulkApproving, setIsBulkApproving] = useState(false);
   const [approvedMatches, setApprovedMatches] = useState<any[]>([]);
   const [showBatchAIGenerate, setShowBatchAIGenerate] = useState(false);
-  
-  // Determine if user is a client
+
+  // Determine if user is a client or admin/staff
   const isClient = user?.role?.toLowerCase() === 'client';
+  const isStaffOrAdmin = user?.role?.toLowerCase() === 'staff' || user?.role?.toLowerCase() === 'admin';
   const { canUseAI } = usePitchCapabilities();
 
   interface PaginatedReviewTasks {
@@ -587,9 +589,20 @@ export default function Approvals() {
     pages?: number;
   }
 
+  // Fetch campaigns for filter dropdown (only for admin/staff)
+  const { data: campaignsData = [] } = useQuery({
+    queryKey: ['/campaigns'],
+    queryFn: async () => {
+      const response = await apiRequest('GET', '/campaigns');
+      if (!response.ok) throw new Error('Failed to fetch campaigns');
+      return response.json();
+    },
+    enabled: isStaffOrAdmin, // Only fetch for admin/staff
+  });
+
   // Always fetch ALL tasks, then filter client-side
   const { data: allTasksData, isLoading, error, isFetching } = useQuery<ReviewTask[], Error>({
-    queryKey: ["/review-tasks/enhanced", { 
+    queryKey: ["/review-tasks/enhanced", {
       task_type: "match_suggestion"
       // Always fetch all, no status filter
     }],
@@ -600,11 +613,21 @@ export default function Approvals() {
 
   // Use all tasks for stats
   const allTasksForStats = allTasksData || [];
-  
-  // Filter tasks client-side based on statusFilter
-  const allDataResponse = statusFilter === "all" 
-    ? allTasksData 
-    : allTasksData?.filter(task => task.status === statusFilter);
+
+  // Filter tasks client-side based on statusFilter AND campaignFilter
+  let filteredTasks = allTasksData || [];
+
+  // Apply status filter
+  if (statusFilter !== "all") {
+    filteredTasks = filteredTasks.filter(task => task.status === statusFilter);
+  }
+
+  // Apply campaign filter (only for admin/staff)
+  if (isStaffOrAdmin && campaignFilter !== "all") {
+    filteredTasks = filteredTasks.filter(task => task.campaign_id === campaignFilter);
+  }
+
+  const allDataResponse = filteredTasks;
   
   // Client-side pagination
   const allTasks = allDataResponse || [];
@@ -640,9 +663,18 @@ export default function Approvals() {
   const displayedTasks = reviewTasks.filter((task: ReviewTask) => {
     if (!searchTerm) return true;
     const term = searchTerm.toLowerCase();
-    const relatedIdMatch = task.related_id.toString().includes(term);
+
+    // Search by multiple fields
+    const mediaNameMatch = task.media_name?.toLowerCase().includes(term);
+    const campaignNameMatch = task.campaign_name?.toLowerCase().includes(term);
+    const clientNameMatch = task.client_name?.toLowerCase().includes(term);
     const notesMatch = task.notes?.toLowerCase().includes(term);
-    return relatedIdMatch || notesMatch;
+    const mediaIdMatch = task.media_id?.toString().includes(term);
+    const relatedIdMatch = task.related_id.toString().includes(term);
+    const descriptionMatch = task.media_description?.toLowerCase().includes(term);
+
+    return mediaNameMatch || campaignNameMatch || clientNameMatch ||
+           notesMatch || mediaIdMatch || relatedIdMatch || descriptionMatch;
   });
 
   // Calculate stats from all tasks (unfiltered)
@@ -661,7 +693,7 @@ export default function Approvals() {
   useEffect(() => {
     setCurrentPage(1);
     setSelectedTasks(new Set()); // Clear selections when filters change
-  }, [statusFilter, taskTypeFilter]);
+  }, [statusFilter, taskTypeFilter, campaignFilter]);
 
   // Get pending tasks that can be selected (only for clients viewing pending tasks)
   const selectableTasks = displayedTasks.filter(task => 
@@ -841,15 +873,15 @@ export default function Approvals() {
               <div className="relative flex-1 min-w-[180px] sm:min-w-[240px]">
                 <Search className="absolute left-2.5 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                 <Input
-                  placeholder="Search by ID or notes..."
+                  placeholder="Search by podcast name, campaign, client, or description..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-9 text-sm"
                 />
               </div>
               
-              <Select 
-                value={statusFilter} 
+              <Select
+                value={statusFilter}
                 onValueChange={(value) => {
                   setStatusFilter(value);
                 }}
@@ -867,7 +899,31 @@ export default function Approvals() {
                 </SelectContent>
               </Select>
 
-              {/* Task type filter removed - only showing match suggestions */}
+              {/* Campaign filter for admin/staff only */}
+              {isStaffOrAdmin && (
+                <Select
+                  value={campaignFilter}
+                  onValueChange={(value) => {
+                    setCampaignFilter(value);
+                  }}
+                >
+                  <SelectTrigger className="w-full sm:w-[200px] text-sm">
+                    <FolderOpen className="h-3.5 w-3.5 mr-1.5" />
+                    <SelectValue placeholder="All Campaigns" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Campaigns</SelectItem>
+                    {campaignsData?.map((campaign: any) => (
+                      <SelectItem
+                        key={campaign.campaign_id}
+                        value={campaign.campaign_id}
+                      >
+                        {campaign.campaign_name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
             </div>
           </div>
 

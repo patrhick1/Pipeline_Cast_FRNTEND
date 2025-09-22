@@ -258,9 +258,9 @@ export default function MediaDetail() {
 
   return (
     <div className="p-4 md:p-6 space-y-6">
-      <Link href="/podcast-discovery" className="inline-flex items-center text-sm text-primary hover:underline mb-4">
+      <Link href="/approvals" className="inline-flex items-center text-sm text-primary hover:underline mb-4">
         <ArrowLeft className="h-4 w-4 mr-1" />
-        Back to Discovery / Media Library
+        Back to Approvals
       </Link>
 
       <Card>

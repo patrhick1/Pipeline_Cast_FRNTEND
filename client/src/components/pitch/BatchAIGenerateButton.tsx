@@ -55,7 +55,7 @@ export function BatchAIGenerateButton({
   
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const { canUseAI, isFreePlan, capabilities } = usePitchCapabilities();
+  const { canUseAI, isFreePlan, capabilities, isAdmin } = usePitchCapabilities();
 
   const handleBatchGenerate = async () => {
     if (!canUseAI) {
@@ -85,9 +85,12 @@ export function BatchAIGenerateButton({
       setProcessedMatches([...updatedMatches]);
 
       try {
+        // Use admin_pitch template for admin/staff users, generic_pitch_v1 for others
+        const templateId = isAdmin ? "admin_pitch" : "generic_pitch_v1";
+
         const response = await apiRequest("POST", "/pitches/generate", {
           match_id: match.match_id,
-          pitch_template_id: "generic_pitch_v1"
+          pitch_template_id: templateId
         });
 
         if (!response.ok) {

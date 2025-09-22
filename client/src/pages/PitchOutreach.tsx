@@ -27,8 +27,10 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { usePitchSending } from "@/hooks/usePitchSending";
 import { EmailStatusBadge } from "@/components/pitch/EmailStatusBadge";
 import { SendPitchButton } from "@/components/pitch/SendPitchButton";
+import { AdminSendPitchButton } from "@/components/pitch/AdminSendPitchButton";
 import { BatchSendButton } from "@/components/pitch/BatchSendButton";
 import { usePitchCapabilities } from "@/hooks/usePitchCapabilities";
+import { useSubscription } from "@/hooks/useSubscription";
 // ManualPitchEditor removed - using PitchSequenceEditor for all pitch creation
 import { PitchSequenceEditor } from "@/components/pitch/PitchSequenceEditor";
 import { RecipientEmailEditor } from "@/components/pitch/RecipientEmailEditor";
@@ -39,6 +41,7 @@ import { AIGeneratePitchButton } from "@/components/pitch/AIGeneratePitchButton"
 import { AIGenerateFollowUpButton } from "@/components/pitch/AIGenerateFollowUpButton";
 import { BatchAIGenerateButton } from "@/components/pitch/BatchAIGenerateButton";
 import { formatUTCToLocal } from "@/lib/timezone";
+import { ModernPitchReview } from "@/components/pitch/ModernPitchReview";
 
 // --- Interfaces (Aligned with expected enriched backend responses) ---
 
@@ -624,7 +627,7 @@ function DraftsReviewTab({
 }
 
 function ReadyToSendTab({
-    pitches, onSend, onBulkSend, onPreview, onSendSequence, isLoadingSendForPitchId, isLoadingBulkSend, isLoadingPitches
+    pitches, onSend, onBulkSend, onPreview, onSendSequence, isLoadingSendForPitchId, isLoadingBulkSend, isLoadingPitches, campaigns
 }: {
     pitches: PitchReadyToSend[];
     onSend: (pitchGenId: number) => void;
@@ -634,6 +637,7 @@ function ReadyToSendTab({
     isLoadingSendForPitchId: number | null;
     isLoadingBulkSend: boolean;
     isLoadingPitches: boolean;
+    campaigns?: any[];
 }) {
     const [selectedPitchGenIds, setSelectedPitchGenIds] = useState<number[]>([]);
     const [selectAll, setSelectAll] = useState(false);
@@ -644,6 +648,15 @@ function ReadyToSendTab({
     const [tempGroupEmail, setTempGroupEmail] = useState("");
     const { isFreePlan } = usePitchCapabilities();
     const { toast } = useToast();
+    const { user } = useAuth();
+
+    // Function to check if a campaign's client has premium subscription
+    const getCampaignSubscription = (campaignId: string) => {
+        const campaign = campaigns?.find(c => c.campaign_id === campaignId);
+        return campaign?.subscription_plan || 'free';
+    };
+
+    const isStaffOrAdmin = user?.role?.toLowerCase() === 'staff' || user?.role?.toLowerCase() === 'admin';
 
     // Group pitches by campaign_id and media_id
     const groupedPitches = useMemo(() => {
@@ -955,51 +968,67 @@ function ReadyToSendTab({
 
                                     {/* Action Buttons */}
                                     <div className="flex gap-2 justify-end">
-                                        {/* Use new send-sequence endpoint if match_id is available */}
-                                        {firstPitch.match_id && onSendSequence ? (
-                                            <Button
+                                        {/* Check if this is a premium client and user is staff/admin */}
+                                        {isStaffOrAdmin && getCampaignSubscription(group.campaign_id) === 'paid_premium' ? (
+                                            // Show admin send button for premium clients
+                                            <AdminSendPitchButton
+                                                pitchGenId={firstPitch.pitch_gen_id}
+                                                campaignId={group.campaign_id}
+                                                recipientEmail={groupEmail || firstPitch.recipient_email}
+                                                clientSubscriptionPlan="paid_premium"
                                                 size="sm"
-                                                className="bg-blue-600 hover:bg-blue-700 text-white"
-                                                onClick={() => {
-                                                    const confirmMessage = hasMultiplePitches
-                                                        ? `Send initial pitch and schedule ${group.pitches.length - 1} follow-up${group.pitches.length - 1 > 1 ? 's' : ''}?`
-                                                        : 'Send this pitch?';
-                                                    if (confirm(confirmMessage)) {
-                                                        onSendSequence(firstPitch.match_id!);
-                                                    }
-                                                }}
-                                                disabled={isLoadingBulkSend || isLoadingSendForPitchId === firstPitch.match_id}
-                                            >
-                                                {isLoadingSendForPitchId === firstPitch.match_id ? (
-                                                    <><RefreshCw className="h-4 w-4 animate-spin mr-1" /> Sending...</>
-                                                ) : (
-                                                    <>
-                                                        <Send className="h-4 w-4 mr-1.5" />
-                                                        {hasMultiplePitches ? `Send & Schedule (${group.pitches.length})` : 'Send Pitch'}
-                                                    </>
-                                                )}
-                                            </Button>
+                                                buttonText={hasMultiplePitches ? `Send Sequence (${group.pitches.length})` : 'Send Pitch'}
+                                            />
                                         ) : (
-                                            // Fallback to old method if no match_id
-                                            <Button
-                                                size="sm"
-                                                className="bg-blue-600 hover:bg-blue-700 text-white"
-                                                onClick={() => {
-                                                    const confirmMessage = hasMultiplePitches
-                                                        ? `Send all ${group.pitches.length} pitches in this sequence?`
-                                                        : 'Send this pitch?';
-                                                    if (confirm(confirmMessage)) {
-                                                        group.pitches.forEach(p => onSend(p.pitch_gen_id));
-                                                    }
-                                                }}
-                                                disabled={isLoadingBulkSend || group.pitches.some(p => isLoadingSendForPitchId === p.pitch_gen_id)}
-                                            >
-                                                {group.pitches.some(p => isLoadingSendForPitchId === p.pitch_gen_id) ? (
-                                                    <><RefreshCw className="h-4 w-4 animate-spin mr-1" /> Sending...</>
+                                            // Regular send flow for non-premium or client users
+                                            <>
+                                                {/* Use new send-sequence endpoint if match_id is available */}
+                                                {firstPitch.match_id && onSendSequence ? (
+                                                    <Button
+                                                        size="sm"
+                                                        className="bg-blue-600 hover:bg-blue-700 text-white"
+                                                        onClick={() => {
+                                                            const confirmMessage = hasMultiplePitches
+                                                                ? `Send initial pitch and schedule ${group.pitches.length - 1} follow-up${group.pitches.length - 1 > 1 ? 's' : ''}?`
+                                                                : 'Send this pitch?';
+                                                            if (confirm(confirmMessage)) {
+                                                                onSendSequence(firstPitch.match_id!);
+                                                            }
+                                                        }}
+                                                        disabled={isLoadingBulkSend || isLoadingSendForPitchId === firstPitch.match_id}
+                                                    >
+                                                        {isLoadingSendForPitchId === firstPitch.match_id ? (
+                                                            <><RefreshCw className="h-4 w-4 animate-spin mr-1" /> Sending...</>
+                                                        ) : (
+                                                            <>
+                                                                <Send className="h-4 w-4 mr-1.5" />
+                                                                {hasMultiplePitches ? `Send & Schedule (${group.pitches.length})` : 'Send Pitch'}
+                                                            </>
+                                                        )}
+                                                    </Button>
                                                 ) : (
-                                                    <><Send className="h-4 w-4 mr-1.5" /> Send All ({group.pitches.length})</>
+                                                    // Fallback to old method if no match_id
+                                                    <Button
+                                                        size="sm"
+                                                        className="bg-blue-600 hover:bg-blue-700 text-white"
+                                                        onClick={() => {
+                                                            const confirmMessage = hasMultiplePitches
+                                                                ? `Send all ${group.pitches.length} pitches in this sequence?`
+                                                                : 'Send this pitch?';
+                                                            if (confirm(confirmMessage)) {
+                                                                group.pitches.forEach(p => onSend(p.pitch_gen_id));
+                                                            }
+                                                        }}
+                                                        disabled={isLoadingBulkSend || group.pitches.some(p => isLoadingSendForPitchId === p.pitch_gen_id)}
+                                                    >
+                                                        {group.pitches.some(p => isLoadingSendForPitchId === p.pitch_gen_id) ? (
+                                                            <><RefreshCw className="h-4 w-4 animate-spin mr-1" /> Sending...</>
+                                                        ) : (
+                                                            <><Send className="h-4 w-4 mr-1.5" /> Send All ({group.pitches.length})</>
+                                                        )}
+                                                    </Button>
                                                 )}
-                                            </Button>
+                                            </>
                                         )}
                                     </div>
                                 </div>
@@ -1045,18 +1074,31 @@ function ReadyToSendTab({
                                                         >
                                                             <Eye className="h-3 w-3" />
                                                         </Button>
-                                                        <Button
-                                                            size="sm"
-                                                            className="bg-blue-600 hover:bg-blue-700 text-white"
-                                                            onClick={() => onSend(pitch.pitch_gen_id)}
-                                                            disabled={isLoadingBulkSend || isLoadingSendForPitchId === pitch.pitch_gen_id}
-                                                        >
-                                                            {isLoadingSendForPitchId === pitch.pitch_gen_id ? (
-                                                                <Loader2 className="h-3 w-3 animate-spin" />
-                                                            ) : (
-                                                                <Send className="h-3 w-3" />
-                                                            )}
-                                                        </Button>
+                                                        {/* Show admin send button for premium clients when user is staff/admin */}
+                                                        {isStaffOrAdmin && getCampaignSubscription(pitch.campaign_id) === 'paid_premium' ? (
+                                                            <AdminSendPitchButton
+                                                                pitchGenId={pitch.pitch_gen_id}
+                                                                campaignId={pitch.campaign_id}
+                                                                recipientEmail={pitch.recipient_email || pitchEmails[pitch.pitch_gen_id]}
+                                                                clientSubscriptionPlan="paid_premium"
+                                                                size="sm"
+                                                                showIcon={false}
+                                                                buttonText="Send"
+                                                            />
+                                                        ) : (
+                                                            <Button
+                                                                size="sm"
+                                                                className="bg-blue-600 hover:bg-blue-700 text-white"
+                                                                onClick={() => onSend(pitch.pitch_gen_id)}
+                                                                disabled={isLoadingBulkSend || isLoadingSendForPitchId === pitch.pitch_gen_id}
+                                                            >
+                                                                {isLoadingSendForPitchId === pitch.pitch_gen_id ? (
+                                                                    <Loader2 className="h-3 w-3 animate-spin" />
+                                                                ) : (
+                                                                    <Send className="h-3 w-3" />
+                                                                )}
+                                                            </Button>
+                                                        )}
                                                     </div>
                                                 </div>
                                             </Card>
@@ -1711,15 +1753,20 @@ export default function PitchOutreach() {
         </TabsContent>
 
         <TabsContent value="draftsReview" className="mt-6">
-          <DraftsReviewTab
+          <ModernPitchReview
             drafts={pitchDraftsForReview}
             onApprove={handleApprovePitch}
             onEdit={handleOpenEditModal}
-            isLoadingApproveForPitchGenId={isLoadingApproveForPitchGenId}
-            isLoadingDrafts={isLoadingPitchDrafts}
-            currentPage={reviewDraftsPage}
-            totalPages={reviewDraftsTotalPages}
-            onPageChange={handleReviewDraftsPageChange}
+            onBatchAction={(action, draftIds) => {
+              if (action === 'approve') {
+                draftIds.forEach(id => {
+                  const draft = pitchDraftsForReview.find(d => d.pitch_gen_id === id);
+                  if (draft) handleApprovePitch(draft.pitch_gen_id);
+                });
+              }
+            }}
+            isLoading={isLoadingPitchDrafts}
+            isProcessing={isLoadingApproveForPitchGenId !== null}
           />
           {reviewDraftsError && <p className="text-red-500 mt-2">Error loading drafts for review: {(reviewDraftsError as Error).message}</p>}
         </TabsContent>
@@ -1734,6 +1781,7 @@ export default function PitchOutreach() {
              isLoadingSendForPitchId={isLoadingSendForPitchId}
              isLoadingBulkSend={isLoadingBulkSend}
              isLoadingPitches={isLoadingReadyToSend}
+             campaigns={campaignsData}
            />
            {pitchesReadyError && <p className="text-red-500 mt-2">Error loading pitches ready to send: {(pitchesReadyError as Error).message}</p>}
         </TabsContent>

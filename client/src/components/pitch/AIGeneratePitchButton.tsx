@@ -54,12 +54,14 @@ export function AIGeneratePitchButton({
 }: AIGeneratePitchButtonProps) {
   const [isGenerating, setIsGenerating] = useState(false);
   const [showTemplateDialog, setShowTemplateDialog] = useState(false);
-  const [selectedTemplate, setSelectedTemplate] = useState("generic_pitch_v1");
-  const [generationResult, setGenerationResult] = useState<any>(null);
-  
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const { canUseAI, isFreePlan, capabilities } = usePitchCapabilities();
+  const { canUseAI, isFreePlan, capabilities, isAdmin } = usePitchCapabilities();
+
+  // Set default template based on user role
+  const defaultTemplate = isAdmin ? "admin_pitch" : "generic_pitch_v1";
+  const [selectedTemplate, setSelectedTemplate] = useState(defaultTemplate);
+  const [generationResult, setGenerationResult] = useState<any>(null);
 
   const handleGeneratePitch = async () => {
     if (!canUseAI) {
@@ -176,7 +178,10 @@ export function AIGeneratePitchButton({
               Generate AI Pitch
             </DialogTitle>
             <DialogDescription>
-              Select a template and let AI create a personalized pitch for {mediaName || "this podcast"}.
+              {isAdmin
+                ? `Using the admin template to create a pitch on behalf of your client for ${mediaName || "this podcast"}.`
+                : `Select a template and let AI create a personalized pitch for ${mediaName || "this podcast"}.`
+              }
             </DialogDescription>
           </DialogHeader>
 
@@ -197,24 +202,37 @@ export function AIGeneratePitchButton({
                   <SelectValue placeholder="Select a template" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="generic_pitch_v1">
-                    <div className="flex items-center gap-2">
-                      <FileText className="h-4 w-4" />
-                      Generic Pitch (Default)
-                    </div>
-                  </SelectItem>
-                  <SelectItem value="personalized_pitch_v1">
-                    <div className="flex items-center gap-2">
-                      <Sparkles className="h-4 w-4" />
-                      Personalized Pitch
-                    </div>
-                  </SelectItem>
-                  <SelectItem value="expert_pitch_v1">
-                    <div className="flex items-center gap-2">
-                      <CheckCircle className="h-4 w-4" />
-                      Expert Authority
-                    </div>
-                  </SelectItem>
+                  {isAdmin ? (
+                    // Admin/Staff only see admin_pitch template
+                    <SelectItem value="admin_pitch">
+                      <div className="flex items-center gap-2">
+                        <FileText className="h-4 w-4" />
+                        Admin Template (Client Pitch)
+                      </div>
+                    </SelectItem>
+                  ) : (
+                    // Regular users see all templates
+                    <>
+                      <SelectItem value="generic_pitch_v1">
+                        <div className="flex items-center gap-2">
+                          <FileText className="h-4 w-4" />
+                          Generic Pitch (Default)
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="personalized_pitch_v1">
+                        <div className="flex items-center gap-2">
+                          <Sparkles className="h-4 w-4" />
+                          Personalized Pitch
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="expert_pitch_v1">
+                        <div className="flex items-center gap-2">
+                          <CheckCircle className="h-4 w-4" />
+                          Expert Authority
+                        </div>
+                      </SelectItem>
+                    </>
+                  )}
                 </SelectContent>
               </Select>
             </div>

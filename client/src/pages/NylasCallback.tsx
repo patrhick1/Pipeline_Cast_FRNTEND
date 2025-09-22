@@ -20,6 +20,7 @@ export default function NylasCallback() {
   const [status, setStatus] = useState<'processing' | 'success' | 'error'>('processing');
   const [errorMessage, setErrorMessage] = useState<string>('');
   const [successEmail, setSuccessEmail] = useState<string>('');
+  const [isAdminFlow, setIsAdminFlow] = useState(false);
 
   useEffect(() => {
     const handleCallback = async () => {
@@ -54,11 +55,38 @@ export default function NylasCallback() {
         return;
       }
 
+      // First, decode the state to determine if this is admin or user flow
+      let adminFlow = false;
+      let backendCallbackUrl = '/inbox/nylas/callback';
+
       try {
-        // Exchange code for grant_id
+        // Add padding if needed for base64 decode
+        const padding = (4 - (state.length % 4)) % 4;
+        const paddedState = state + '='.repeat(padding);
+
+        // Decode base64
+        const decoded = atob(paddedState.replace(/-/g, '+').replace(/_/g, '/'));
+        const stateData = JSON.parse(decoded);
+
+        // Check if this is an admin flow
+        if (stateData.flow === 'admin') {
+          adminFlow = true;
+          setIsAdminFlow(true);
+          backendCallbackUrl = '/api/admin/oauth/nylas/callback';  // Fixed: added /api prefix
+          console.log('Detected admin OAuth flow, routing to:', backendCallbackUrl);
+        } else {
+          console.log('Detected user OAuth flow');
+        }
+      } catch (decodeError) {
+        console.log('Could not decode state, defaulting to user flow:', decodeError);
+        // Default to user flow if state can't be decoded (backward compatibility)
+      }
+
+      try {
+        // Call the appropriate backend callback endpoint
         const response = await apiRequest(
           'GET',
-          `/inbox/nylas/callback?code=${encodeURIComponent(code)}&state=${encodeURIComponent(state)}`
+          `${backendCallbackUrl}?code=${encodeURIComponent(code)}&state=${encodeURIComponent(state)}`
         );
 
         if (!response.ok) {
@@ -68,32 +96,55 @@ export default function NylasCallback() {
 
         const data = await response.json();
 
-        // Check for success using either 'success' or 'status' field
-        if (data.success || data.status === 'success') {
-          setStatus('success');
-          setSuccessEmail(data.email || 'your email');
-          
-          // Invalidate queries to refresh inbox data
-          queryClient.invalidateQueries({ queryKey: ['/inbox/nylas-status'] });
-          queryClient.invalidateQueries({ queryKey: ['/inbox/threads'] });
-          
-          toast({
-            title: 'Email Connected!',
-            description: `Successfully connected ${data.email || 'your email account'}.`,
-          });
+        // Handle admin flow success differently
+        if (adminFlow) {
+          // Admin flow typically returns a redirect URL directly
+          if (data.redirect_url) {
+            window.location.href = data.redirect_url;
+          } else if (data.success || data.status === 'success') {
+            // Redirect to admin sending accounts dashboard
+            setStatus('success');
+            setSuccessEmail(data.email || 'admin account');
 
-          // Redirect based on redirect_url or default to inbox
-          setTimeout(() => {
-            if (data.redirect_url) {
-              // Parse the redirect URL and navigate to the path
-              const url = new URL(data.redirect_url);
-              setLocation(url.pathname + url.search);
-            } else {
-              setLocation('/inbox');
-            }
-          }, 2000);
+            toast({
+              title: 'Admin Account Connected!',
+              description: `Successfully added sending account: ${data.email || 'admin email'}.`,
+            });
+
+            setTimeout(() => {
+              setLocation('/admin/sending-accounts?new_account=' + encodeURIComponent(data.email || ''));
+            }, 2000);
+          } else {
+            throw new Error(data.error || data.message || 'Admin account connection failed');
+          }
         } else {
-          throw new Error(data.error || data.message || 'Connection failed');
+          // Regular user flow
+          if (data.success || data.status === 'success') {
+            setStatus('success');
+            setSuccessEmail(data.email || 'your email');
+
+            // Invalidate queries to refresh inbox data
+            queryClient.invalidateQueries({ queryKey: ['/inbox/nylas-status'] });
+            queryClient.invalidateQueries({ queryKey: ['/inbox/threads'] });
+
+            toast({
+              title: 'Email Connected!',
+              description: `Successfully connected ${data.email || 'your email account'}.`,
+            });
+
+            // Redirect based on redirect_url or default to inbox
+            setTimeout(() => {
+              if (data.redirect_url) {
+                // Parse the redirect URL and navigate to the path
+                const url = new URL(data.redirect_url);
+                setLocation(url.pathname + url.search);
+              } else {
+                setLocation('/inbox');
+              }
+            }, 2000);
+          } else {
+            throw new Error(data.error || data.message || 'Connection failed');
+          }
         }
       } catch (error) {
         console.error('Nylas callback error:', error);
@@ -143,12 +194,14 @@ export default function NylasCallback() {
                 <CheckCircle className="h-8 w-8 text-green-600" />
               </div>
               <div className="text-center space-y-2">
-                <h3 className="font-semibold text-lg">Email Connected Successfully!</h3>
+                <h3 className="font-semibold text-lg">
+                  {isAdminFlow ? 'Admin Account Added!' : 'Email Connected Successfully!'}
+                </h3>
                 <p className="text-sm text-muted-foreground">
-                  {successEmail} has been connected to your account.
+                  {successEmail} has been {isAdminFlow ? 'added to the sending pool' : 'connected to your account'}.
                 </p>
                 <p className="text-xs text-muted-foreground">
-                  Redirecting to your inbox...
+                  Redirecting to {isAdminFlow ? 'admin dashboard' : 'your inbox'}...
                 </p>
               </div>
             </div>
@@ -180,19 +233,19 @@ export default function NylasCallback() {
           </Alert>
           
           <div className="flex flex-col gap-2">
-            <Button 
-              onClick={() => setLocation('/inbox')}
+            <Button
+              onClick={() => setLocation(isAdminFlow ? '/admin/sending-accounts' : '/inbox')}
               className="w-full"
             >
               <Mail className="w-4 h-4 mr-2" />
               Try Again
             </Button>
-            <Button 
+            <Button
               variant="outline"
-              onClick={() => setLocation('/settings')}
+              onClick={() => setLocation(isAdminFlow ? '/admin' : '/settings')}
               className="w-full"
             >
-              Go to Settings
+              {isAdminFlow ? 'Back to Admin' : 'Go to Settings'}
               <ArrowRight className="w-4 h-4 ml-2" />
             </Button>
           </div>

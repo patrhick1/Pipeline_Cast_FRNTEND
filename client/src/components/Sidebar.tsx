@@ -1,20 +1,20 @@
 // client/src/components/Sidebar.tsx
 import { Link, useLocation } from "wouter";
-import { 
-  BarChart3, 
-  Search, 
-  FolderOpen, 
-  Lightbulb, 
-  CheckCircle, 
-  TrendingUp, 
-  Settings, 
-  LogOut, 
-  Mic, 
-  Shield, 
+import {
+  BarChart3,
+  Search,
+  FolderOpen,
+  Lightbulb,
+  CheckCircle,
+  TrendingUp,
+  Settings,
+  LogOut,
+  Mic,
+  Shield,
   User,
-  ClipboardList, 
+  ClipboardList,
   // BookOpen, // Icon for Media Kit if it becomes a top-level item again
-  Users as ClientsIcon, 
+  Users as ClientsIcon,
   LayoutGrid,
   // Sparkles, // Icon for AI Content Tools if it becomes a top-level item
   Send,
@@ -22,10 +22,12 @@ import {
   Inbox as InboxIcon,
   X,
   CreditCard,
-  Tag
+  Tag,
+  Mail
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
+import { useSubscription } from "@/hooks/useSubscription";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -53,15 +55,16 @@ const clientNavigationItems: NavigationItem[] = [
 // --- INTERNAL STAFF/ADMIN NAVIGATION ---
 const internalNavigationItems: NavigationItem[] = [
   { name: "Team Dashboard", href: "/", icon: LayoutGrid, roles: ['staff', 'admin'] },
-  { name: "Inbox", href: "/inbox", icon: InboxIcon, roles: ['staff', 'admin'] }, // Nylas inbox
+  { name: "Shared Inboxes", href: "/admin/inbox", icon: InboxIcon, roles: ['staff', 'admin'] }, // Admin inbox for staff/admin
   { name: "Client & Campaigns", href: "/campaign-management", icon: ClientsIcon, roles: ['staff', 'admin'] },
-  { name: "Podcast Discovery", href: "/discover", icon: Search, roles: ['staff', 'admin'] },
+  // Podcast discovery removed - managed automatically in backend
   { name: "Pitch Outreach Hub", href: "/pitch-outreach", icon: Send, roles: ['staff', 'admin'] },
   { name: "Approval Queue", href: "/approvals", icon: CheckCircle, roles: ['staff', 'admin'] }, // Staff sees all relevant approvals
   { name: "Placements & Analytics", href: "/placement-tracking", icon: TrendingUp, roles: ['staff', 'admin'] },
   // { name: "Reporting", href: "/reports", icon: BarChart3, roles: ['staff', 'admin'] }, // Future
-  { name: "Pitch Templates", href: "/pitch-templates", icon: PitchTemplateIcon, roles: ['staff', 'admin'] }, 
+  { name: "Pitch Templates", href: "/pitch-templates", icon: PitchTemplateIcon, roles: ['staff', 'admin'] },
   { name: "Admin Panel", href: "/admin", icon: Shield, roles: ['admin'] },
+  { name: "Sending Accounts", href: "/admin/sending-accounts", icon: Mail, roles: ['admin'] },
 ];
 
 const accountNavigationItems: NavigationItem[] = [
@@ -76,6 +79,7 @@ interface SidebarProps {
 export default function Sidebar({ onClose }: SidebarProps = {}) {
   const [location, setLocation] = useLocation();
   const { user, isAuthenticated, isLoading: authLoading } = useAuth(); // user contains role and person_id
+  const { isPremiumPlan } = useSubscription();
   const { toast } = useToast();
 
   const logoutMutation = useMutation({
@@ -122,10 +126,17 @@ export default function Sidebar({ onClose }: SidebarProps = {}) {
 
   let currentNavigation: NavigationItem[];
   if (userRoleLower === 'client') {
-    currentNavigation = clientNavigationItems;
+    // For premium clients, filter out Pitch Outreach and Inbox as they're handled by staff
+    if (isPremiumPlan) {
+      currentNavigation = clientNavigationItems.filter(item =>
+        item.name !== 'Pitch Outreach' && item.name !== 'Inbox'
+      );
+    } else {
+      currentNavigation = clientNavigationItems;
+    }
   } else if (userRoleLower === 'staff' || userRoleLower === 'admin') {
     // Filter items based on the specific staff/admin role
-    currentNavigation = internalNavigationItems.filter(item => 
+    currentNavigation = internalNavigationItems.filter(item =>
         !item.roles || item.roles.includes(userRoleLower as 'staff' | 'admin')
     );
   } else {
