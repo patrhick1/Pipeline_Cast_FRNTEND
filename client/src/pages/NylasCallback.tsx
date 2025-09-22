@@ -72,7 +72,7 @@ export default function NylasCallback() {
         if (stateData.flow === 'admin') {
           adminFlow = true;
           setIsAdminFlow(true);
-          backendCallbackUrl = '/api/admin/oauth/nylas/callback';  // Fixed: added /api prefix
+          backendCallbackUrl = '/api/admin/sending-accounts/nylas/callback';  // Correct endpoint for admin sending accounts
           console.log('Detected admin OAuth flow, routing to:', backendCallbackUrl);
         } else {
           console.log('Detected user OAuth flow');
