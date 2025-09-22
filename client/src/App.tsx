@@ -99,64 +99,65 @@ function Router() {
           {/* All other routes wrapped in Layout */}
           <Route>
             <Layout> {/* Layout includes Sidebar and Header */}
-              {/* Common Routes for all authenticated users */}
-              <Route path="/" component={Dashboard} />
-              {/* Analytics is now consolidated into PlacementTracking page */}
-              <Route path="/settings" component={Settings} />
-              <Route path="/placement-tracking" component={PlacementTracking} />
-              <Route path="/approvals" component={Approvals} />
-              {/* Approvals page will internally handle data/UI based on user.role */}
+              <Switch> {/* Inner Switch for route matching */}
+                {/* Common Routes for all authenticated users */}
+                <Route path="/" component={Dashboard} />
+                {/* Analytics is now consolidated into PlacementTracking page */}
+                <Route path="/settings" component={Settings} />
+                <Route path="/placement-tracking" component={PlacementTracking} />
+                <Route path="/approvals" component={Approvals} />
+                {/* Approvals page will internally handle data/UI based on user.role */}
 
+                {/* Client-Specific Routes */}
+                {userRoleLower === 'client' && (
+                  <>
+                    <Route path="/my-campaigns" component={ClientCampaigns} />
+                    <Route path="/my-campaigns/:campaignId">{params => <CampaignDetail campaignIdParam={params.campaignId} />}</Route>
+                    <Route path="/profile-setup" component={ProfileSetup} />
+                    {/* Podcast discovery removed - managed automatically in backend */}
+                    <Route path="/inbox">
+                      <PremiumClientRoute>
+                        <Inbox />
+                      </PremiumClientRoute>
+                    </Route> {/* Client inbox - blocked for premium clients */}
+                    <Route path="/pitch-outreach">
+                      <PremiumClientRoute>
+                        <PitchOutreach />
+                      </PremiumClientRoute>
+                    </Route> {/* Pitch outreach for clients - blocked for premium clients */}
+                    <Route path="/media/:mediaId" component={MediaDetail} /> {/* Add new route */}
+                    <Route path="/pricing" component={Pricing} /> {/* Pricing page */}
+                    <Route path="/billing" component={Billing} /> {/* Billing management */}
+                    <Route path="/billing/success" component={BillingSuccess} /> {/* Checkout success */}
+                  </>
+                )}
 
-              {/* Client-Specific Routes */}
-              {userRoleLower === 'client' && (
-                <>
-                  <Route path="/my-campaigns" component={ClientCampaigns} />
-                  <Route path="/my-campaigns/:campaignId">{params => <CampaignDetail campaignIdParam={params.campaignId} />}</Route>
-                  <Route path="/profile-setup" component={ProfileSetup} />
-                  {/* Podcast discovery removed - managed automatically in backend */}
-                  <Route path="/inbox">
-                    <PremiumClientRoute>
-                      <Inbox />
-                    </PremiumClientRoute>
-                  </Route> {/* Client inbox - blocked for premium clients */}
-                  <Route path="/pitch-outreach">
-                    <PremiumClientRoute>
-                      <PitchOutreach />
-                    </PremiumClientRoute>
-                  </Route> {/* Pitch outreach for clients - blocked for premium clients */}
-                  <Route path="/media/:mediaId" component={MediaDetail} /> {/* Add new route */}
-                  <Route path="/pricing" component={Pricing} /> {/* Pricing page */}
-                  <Route path="/billing" component={Billing} /> {/* Billing management */}
-                  <Route path="/billing/success" component={BillingSuccess} /> {/* Checkout success */}
-                </>
-              )}
+                {/* Internal Staff/Admin Routes */}
+                {(userRoleLower === 'staff' || userRoleLower === 'admin') && (
+                  <>
+                    {/* Dashboard for staff might be the same component but fetch different data based on role */}
+                    <Route path="/campaign-management" component={CampaignManagement} />
+                    <Route path="/manage/campaigns/:campaignId">{params => <CampaignDetail campaignIdParam={params.campaignId} />}</Route>
+                    {/* Podcast discovery removed - managed automatically in backend */}
+                    <Route path="/pitch-outreach" component={PitchOutreach} />
+                    <Route path="/pitch-templates" component={PitchTemplatesPage} /> {/* Added for Phase 5 */}
+                  </>
+                )}
 
-              {/* Internal Staff/Admin Routes */}
-              {(userRoleLower === 'staff' || userRoleLower === 'admin') && (
-                <>
-                  {/* Dashboard for staff might be the same component but fetch different data based on role */}
-                  <Route path="/campaign-management" component={CampaignManagement} />
-                  <Route path="/manage/campaigns/:campaignId">{params => <CampaignDetail campaignIdParam={params.campaignId} />}</Route>
-                  {/* Podcast discovery removed - managed automatically in backend */}
-                  <Route path="/pitch-outreach" component={PitchOutreach} />
-                  <Route path="/pitch-templates" component={PitchTemplatesPage} /> {/* Added for Phase 5 */}
-                </>
-              )}
+                {/* Admin-Only Routes */}
+                {userRoleLower === 'admin' && (
+                  <>
+                    <Route path="/admin" component={AdminPanel} />
+                    <Route path="/admin/sending-accounts" component={SendingAccountsDashboard} />
+                  </>
+                )}
 
-            {/* Admin-Only Routes */}
-            {userRoleLower === 'admin' && (
-              <>
-                <Route path="/admin" component={AdminPanel} />
-                <Route path="/admin/sending-accounts" component={SendingAccountsDashboard} />
-              </>
-            )}
-            
-              {/* Fallback for authenticated users if no specific route matches their role or path */}
-              {/* This ensures that if an authenticated user lands on a non-defined path, they go to their dashboard */}
-              <Route path="/:rest*">
-                <Redirect to="/" replace />
-              </Route>
+                {/* Fallback for authenticated users if no specific route matches their role or path */}
+                {/* This ensures that if an authenticated user lands on a non-defined path, they go to their dashboard */}
+                <Route path="/:rest*">
+                  <Redirect to="/" replace />
+                </Route>
+              </Switch>
             </Layout>
           </Route>
         </Switch>
