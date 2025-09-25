@@ -17,3 +17,9 @@ vite.config.ts.*
 # Screenshot/image files to ignore
 non-responsive.png
 top section.png
+
+# Hidden assets directory
+hidden_assets/
+
+# Claude documentation
+CLAUDE.md

@@ -59,7 +59,7 @@ export function AIGeneratePitchButton({
   const { canUseAI, isFreePlan, capabilities, isAdmin } = usePitchCapabilities();
 
   // Set default template based on user role
-  const defaultTemplate = isAdmin ? "admin_pitch" : "generic_pitch_v1";
+  const defaultTemplate = isAdmin ? "admin_pitch_authority_v2" : "ai_pitch_authority_v2";
   const [selectedTemplate, setSelectedTemplate] = useState(defaultTemplate);
   const [generationResult, setGenerationResult] = useState<any>(null);
 
@@ -203,32 +203,26 @@ export function AIGeneratePitchButton({
                 </SelectTrigger>
                 <SelectContent>
                   {isAdmin ? (
-                    // Admin/Staff only see admin_pitch template
-                    <SelectItem value="admin_pitch">
+                    // Admin/Staff only see admin template
+                    <SelectItem value="admin_pitch_authority_v2">
                       <div className="flex items-center gap-2">
                         <FileText className="h-4 w-4" />
-                        Admin Template (Client Pitch)
+                        Authority Builder Template
                       </div>
                     </SelectItem>
                   ) : (
-                    // Regular users see all templates
+                    // Premium users see both AI templates
                     <>
-                      <SelectItem value="generic_pitch_v1">
-                        <div className="flex items-center gap-2">
-                          <FileText className="h-4 w-4" />
-                          Generic Pitch (Default)
-                        </div>
-                      </SelectItem>
-                      <SelectItem value="personalized_pitch_v1">
-                        <div className="flex items-center gap-2">
-                          <Sparkles className="h-4 w-4" />
-                          Personalized Pitch
-                        </div>
-                      </SelectItem>
-                      <SelectItem value="expert_pitch_v1">
+                      <SelectItem value="ai_pitch_authority_v2">
                         <div className="flex items-center gap-2">
                           <CheckCircle className="h-4 w-4" />
-                          Expert Authority
+                          Authority Builder Template
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="ai_pitch_smart_v2">
+                        <div className="flex items-center gap-2">
+                          <Sparkles className="h-4 w-4" />
+                          Smart Personalized Template
                         </div>
                       </SelectItem>
                     </>
