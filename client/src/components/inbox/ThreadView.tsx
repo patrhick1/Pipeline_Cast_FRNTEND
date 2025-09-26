@@ -519,7 +519,7 @@ export default function ThreadView({ threadId, onClose, onReply }: ThreadViewPro
                             size="sm"
                             onClick={() => {
                               setReplyMode('reply');
-                              setReplyContent(getQuotedText(message));
+                              setReplyContent('');
                             }}
                           >
                             <Reply className="w-4 h-4 mr-2" />
@@ -530,7 +530,7 @@ export default function ThreadView({ threadId, onClose, onReply }: ThreadViewPro
                             size="sm"
                             onClick={() => {
                               setReplyMode('replyAll');
-                              setReplyContent(getQuotedText(message));
+                              setReplyContent('');
                             }}
                           >
                             <ReplyAll className="w-4 h-4 mr-2" />
