@@ -3,12 +3,12 @@ import { useQuery, useMutation } from '@tanstack/react-query';
 import { queryClient, apiRequest } from '@/lib/queryClient';
 import { useEmailThreads } from '@/hooks/useEmailThreads';
 import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Card } from '@/components/ui/card';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import RichTextEditor from './RichTextEditor';
 import { 
   X, 
   Reply, 
@@ -210,14 +210,9 @@ export default function ThreadView({ threadId, onClose, onReply }: ThreadViewPro
     const lastMessage = thread.messages[thread.messages.length - 1];
     const messageId = lastMessage.id || lastMessage.message_id;
 
-    // Convert line breaks to HTML <br> tags to preserve formatting
-    const formattedContent = replyContent
-      .split('\n')
-      .map(line => line || '&nbsp;') // Preserve empty lines
-      .join('<br>');
-
+    // Content is already in HTML format from RichTextEditor
     sendReplyMutation.mutate({
-      content: formattedContent,
+      content: replyContent,
       replyAll: replyMode === 'replyAll',
       messageId: messageId
     });
@@ -638,11 +633,12 @@ export default function ThreadView({ threadId, onClose, onReply }: ThreadViewPro
               </Button>
             </div>
             
-            <Textarea
+            <RichTextEditor
               value={replyContent}
-              onChange={(e) => setReplyContent(e.target.value)}
+              onChange={setReplyContent}
               placeholder="Type your reply..."
-              className="min-h-[150px] mb-3"
+              minHeight="min-h-[150px]"
+              className="mb-3"
             />
             
             <div className="flex justify-between items-center">

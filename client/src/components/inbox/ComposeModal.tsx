@@ -9,9 +9,9 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
+import RichTextEditor from './RichTextEditor';
 import { 
   Send, 
   Paperclip, 
@@ -203,18 +203,13 @@ export default function ComposeModal({ isOpen, onClose, replyTo }: ComposeModalP
       return;
     }
 
-    // Convert line breaks to HTML <br> tags to preserve formatting
-    const formattedBody = body
-      .split('\n')
-      .map(line => line || '&nbsp;') // Preserve empty lines
-      .join('<br>');
-
+    // Body is already in HTML format from RichTextEditor
     sendEmailMutation.mutate({
       to,
       cc: cc.length > 0 ? cc : undefined,
       bcc: bcc.length > 0 ? bcc : undefined,
       subject,
-      body: formattedBody,
+      body,
       attachments,
       reply_to_message_id: replyTo?.messageId,
       thread_id: replyTo?.threadId,
@@ -340,11 +335,12 @@ export default function ComposeModal({ isOpen, onClose, replyTo }: ComposeModalP
 
           {/* Message body */}
           <div className="flex-1 px-6 py-4 overflow-y-auto">
-            <Textarea
+            <RichTextEditor
               value={body}
-              onChange={(e) => setBody(e.target.value)}
+              onChange={setBody}
               placeholder="Compose your message..."
-              className="min-h-full border-0 shadow-none resize-none focus-visible:ring-0"
+              minHeight="min-h-[300px]"
+              className="border-0"
             />
           </div>
 

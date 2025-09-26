@@ -12,7 +12,6 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -63,6 +62,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import SmartReplies from '@/components/inbox/SmartReplies';
+import RichTextEditor from '@/components/inbox/RichTextEditor';
 
 export default function AdminInbox() {
   const [selectedThreadId, setSelectedThreadId] = useState<string | null>(null);
@@ -75,6 +75,8 @@ export default function AdminInbox() {
   const [replySubject, setReplySubject] = useState('');
   const [showSmartReplies, setShowSmartReplies] = useState(false);
   const [selectedAccountFilter, setSelectedAccountFilter] = useState<number | null>(null);
+  const [selectedCampaignFilter, setSelectedCampaignFilter] = useState<string | null>(null);
+  const [groupByCampaign, setGroupByCampaign] = useState(true);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
 
   const { toast } = useToast();
@@ -84,6 +86,18 @@ export default function AdminInbox() {
   const { data: accountsData, isLoading: isLoadingAccounts } = useQuery({
     queryKey: ['admin-accounts'],
     queryFn: () => adminInboxService.getAccounts(),
+  });
+
+  // Fetch all campaigns for grouping
+  const { data: campaigns } = useQuery({
+    queryKey: ['/campaigns'],
+    queryFn: async () => {
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/campaigns`, {
+        credentials: 'include',
+      });
+      if (!response.ok) throw new Error('Failed to fetch campaigns');
+      return response.json();
+    },
   });
 
   // Fetch threads for ALL accounts or filtered account
@@ -225,18 +239,13 @@ export default function AdminInbox() {
       ? [lastMessage.from_email]
       : lastMessage.to_emails || [];
 
-    // Convert line breaks to HTML <br> tags to preserve formatting
-    const formattedContent = replyContent
-      .split('\n')
-      .map(line => line || '&nbsp;') // Preserve empty lines
-      .join('<br>');
-
+    // Content is already in HTML format from RichTextEditor
     sendReplyMutation.mutate({
       threadId: threadDetails.thread.thread_id,
       replyData: {
         to: replyTo,
         subject: replySubject || `Re: ${threadDetails.thread.subject}`,
-        body: formattedContent,
+        body: replyContent,
         reply_all: replyMode === 'replyAll'
       }
     });
@@ -298,6 +307,12 @@ export default function AdminInbox() {
   };
 
   const filteredThreads = threadsData?.threads?.filter(thread => {
+    // Filter by campaign if selected
+    if (selectedCampaignFilter && thread.campaign_id !== selectedCampaignFilter) {
+      return false;
+    }
+
+    // Filter by search query
     if (!searchQuery) return true;
     const query = searchQuery.toLowerCase();
     return (
@@ -307,6 +322,36 @@ export default function AdminInbox() {
       thread.snippet?.toLowerCase().includes(query)
     );
   });
+
+  // Group threads by campaign if enabled
+  const groupedThreads = groupByCampaign && filteredThreads ?
+    filteredThreads.reduce((groups: Record<string, any[]>, thread) => {
+      const campaignId = thread.campaign_id || 'no-campaign';
+      if (!groups[campaignId]) {
+        groups[campaignId] = [];
+      }
+      groups[campaignId].push(thread);
+      return groups;
+    }, {}) : null;
+
+  const formatDate = (date: string) => {
+    const messageDate = new Date(date);
+    const now = new Date();
+    const diff = now.getTime() - messageDate.getTime();
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+
+    if (days === 0) {
+      return format(messageDate, 'h:mm a');
+    } else if (days === 1) {
+      return 'Yesterday';
+    } else if (days < 7) {
+      return format(messageDate, 'EEEE');
+    } else if (messageDate.getFullYear() === now.getFullYear()) {
+      return format(messageDate, 'MMM d');
+    } else {
+      return format(messageDate, 'MMM d, yyyy');
+    }
+  };
 
   const getInitials = (name: string | undefined, email: string) => {
     if (name) {
@@ -412,6 +457,46 @@ export default function AdminInbox() {
                 ))}
               </div>
             </div>
+
+            <div className="px-4 py-2 border-t">
+              <p className="text-xs text-gray-500 mb-2">Filter by Campaign</p>
+              <div className="space-y-1">
+                <button
+                  onClick={() => setSelectedCampaignFilter(null)}
+                  className={cn(
+                    'w-full text-left px-3 py-1.5 rounded text-xs transition-colors',
+                    !selectedCampaignFilter ? 'bg-gray-200' : 'hover:bg-gray-100'
+                  )}
+                >
+                  All Campaigns
+                </button>
+                {campaigns?.map((campaign: any) => (
+                  <button
+                    key={campaign.campaign_id}
+                    onClick={() => setSelectedCampaignFilter(campaign.campaign_id)}
+                    className={cn(
+                      'w-full text-left px-3 py-1.5 rounded text-xs transition-colors truncate',
+                      selectedCampaignFilter === campaign.campaign_id ? 'bg-gray-200' : 'hover:bg-gray-100'
+                    )}
+                    title={campaign.campaign_name}
+                  >
+                    {campaign.campaign_name}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="px-4 py-2 border-t">
+              <label className="flex items-center gap-2 text-xs">
+                <input
+                  type="checkbox"
+                  checked={groupByCampaign}
+                  onChange={(e) => setGroupByCampaign(e.target.checked)}
+                  className="rounded"
+                />
+                Group by Campaign
+              </label>
+            </div>
           </ScrollArea>
         </div>
 
@@ -443,6 +528,90 @@ export default function AdminInbox() {
               <div className="flex flex-col items-center justify-center h-32 text-gray-500">
                 <InboxIcon className="w-8 h-8 mb-2 text-gray-300" />
                 <p className="text-sm">No emails found</p>
+              </div>
+            ) : groupByCampaign && groupedThreads ? (
+              <div className="divide-y">
+                {Object.entries(groupedThreads).map(([campaignId, threads]: [string, any[]]) => {
+                  const campaign = campaigns?.find((c: any) => c.campaign_id === campaignId);
+                  const campaignName = campaign?.campaign_name || (campaignId === 'no-campaign' ? 'No Campaign' : 'Unknown Campaign');
+
+                  return (
+                    <div key={campaignId} className="border-b">
+                      <div className="sticky top-0 bg-gray-100 px-4 py-2 border-b">
+                        <h3 className="text-xs font-semibold text-gray-700 flex items-center gap-2">
+                          <FolderOpen className="w-3 h-3" />
+                          {campaignName}
+                          <Badge variant="secondary" className="ml-auto text-xs">
+                            {threads.length} {threads.length === 1 ? 'thread' : 'threads'}
+                          </Badge>
+                        </h3>
+                      </div>
+                      {threads.map((thread: any) => (
+                        <div
+                          key={thread.thread_id}
+                          onClick={() => handleThreadSelect(thread.thread_id)}
+                          className={cn(
+                            'group w-full p-4 text-left hover:bg-gray-50 transition-colors cursor-pointer',
+                            selectedThreadId === thread.thread_id && 'bg-blue-50',
+                            thread.unread && 'bg-blue-50/50'
+                          )}
+                        >
+                          <div className="flex items-start justify-between mb-1">
+                            <div className="flex items-center gap-2">
+                              <h3 className={cn(
+                                'text-sm truncate max-w-[250px]',
+                                thread.unread ? 'font-semibold' : 'font-medium'
+                              )}>
+                                {thread.from_name || thread.from_email || 'Unknown'}
+                              </h3>
+                              {thread.unread && (
+                                <div className="w-2 h-2 bg-blue-500 rounded-full" />
+                              )}
+                            </div>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                toggleStarMutation.mutate({
+                                  threadId: thread.thread_id,
+                                  starred: !thread.starred
+                                });
+                              }}
+                              className="text-gray-400 hover:text-yellow-500"
+                            >
+                              <Star className={cn(
+                                'w-4 h-4',
+                                thread.starred && 'fill-yellow-500 text-yellow-500'
+                              )} />
+                            </button>
+                          </div>
+                          <p className="text-sm text-gray-900 mb-1 line-clamp-1">
+                            {thread.subject || '(no subject)'}
+                          </p>
+                          {thread.snippet && (
+                            <p className="text-xs text-gray-600 line-clamp-2">
+                              {thread.snippet}
+                            </p>
+                          )}
+                          <div className="flex items-center justify-between mt-2">
+                            <div className="flex items-center gap-2 text-xs text-gray-500">
+                              <span>{formatDate(thread.date)}</span>
+                              {thread.message_count > 1 && (
+                                <Badge variant="outline" className="text-xs">
+                                  {thread.message_count} messages
+                                </Badge>
+                              )}
+                            </div>
+                            {thread.account_email && (
+                              <span className="text-xs text-gray-400 truncate max-w-[150px]" title={thread.account_email}>
+                                {thread.account_email}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  );
+                })}
               </div>
             ) : (
               <div className="divide-y">
@@ -778,11 +947,12 @@ export default function AdminInbox() {
                     </Button>
                   </div>
 
-                  <Textarea
+                  <RichTextEditor
                     value={replyContent}
-                    onChange={(e) => setReplyContent(e.target.value)}
+                    onChange={setReplyContent}
                     placeholder="Type your reply..."
-                    className="min-h-[150px] mb-3"
+                    minHeight="min-h-[150px]"
+                    className="mb-3"
                   />
 
                   <div className="flex justify-between items-center">
