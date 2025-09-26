@@ -71,6 +71,7 @@ export default function ComposeModal({ isOpen, onClose, replyTo }: ComposeModalP
         const formData = new FormData();
         formData.append('to', JSON.stringify(email.to));
         formData.append('subject', email.subject);
+        // Note: email.body is already formatted with <br> tags from handleSend
         formData.append('body', email.body);
         
         if (email.cc && email.cc.length > 0) {
@@ -202,12 +203,18 @@ export default function ComposeModal({ isOpen, onClose, replyTo }: ComposeModalP
       return;
     }
 
+    // Convert line breaks to HTML <br> tags to preserve formatting
+    const formattedBody = body
+      .split('\n')
+      .map(line => line || '&nbsp;') // Preserve empty lines
+      .join('<br>');
+
     sendEmailMutation.mutate({
       to,
       cc: cc.length > 0 ? cc : undefined,
       bcc: bcc.length > 0 ? bcc : undefined,
       subject,
-      body,
+      body: formattedBody,
       attachments,
       reply_to_message_id: replyTo?.messageId,
       thread_id: replyTo?.threadId,

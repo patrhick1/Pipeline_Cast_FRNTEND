@@ -225,12 +225,18 @@ export default function AdminInbox() {
       ? [lastMessage.from_email]
       : lastMessage.to_emails || [];
 
+    // Convert line breaks to HTML <br> tags to preserve formatting
+    const formattedContent = replyContent
+      .split('\n')
+      .map(line => line || '&nbsp;') // Preserve empty lines
+      .join('<br>');
+
     sendReplyMutation.mutate({
       threadId: threadDetails.thread.thread_id,
       replyData: {
         to: replyTo,
         subject: replySubject || `Re: ${threadDetails.thread.subject}`,
-        body: replyContent,
+        body: formattedContent,
         reply_all: replyMode === 'replyAll'
       }
     });

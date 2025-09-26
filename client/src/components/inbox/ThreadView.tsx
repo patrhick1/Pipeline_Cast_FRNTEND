@@ -206,11 +206,18 @@ export default function ThreadView({ threadId, onClose, onReply }: ThreadViewPro
 
   const handleSendReply = () => {
     if (!thread?.messages || thread.messages.length === 0) return;
-    
+
     const lastMessage = thread.messages[thread.messages.length - 1];
     const messageId = lastMessage.id || lastMessage.message_id;
+
+    // Convert line breaks to HTML <br> tags to preserve formatting
+    const formattedContent = replyContent
+      .split('\n')
+      .map(line => line || '&nbsp;') // Preserve empty lines
+      .join('<br>');
+
     sendReplyMutation.mutate({
-      content: replyContent,
+      content: formattedContent,
       replyAll: replyMode === 'replyAll',
       messageId: messageId
     });
