@@ -40,6 +40,7 @@ import { SmartSendSettings } from "@/components/pitch/SmartSendSettings";
 import { AIGeneratePitchButton } from "@/components/pitch/AIGeneratePitchButton";
 import { AIGenerateFollowUpButton } from "@/components/pitch/AIGenerateFollowUpButton";
 import { BatchAIGenerateButton } from "@/components/pitch/BatchAIGenerateButton";
+import { BulkFollowUpButton } from "@/components/pitch/BulkFollowUpButton";
 import { formatUTCToLocal } from "@/lib/timezone";
 import { ModernPitchReview } from "@/components/pitch/ModernPitchReview";
 
@@ -171,11 +172,13 @@ let globalRefreshAllPitchData: () => void = () => {};
 let globalSetActiveTab: (tab: string) => void = () => {};
 
 function ReadyForDraftTab({
-    approvedMatches, isLoadingMatches, onCreateSequence
+    approvedMatches, isLoadingMatches, onCreateSequence, selectedCampaignId, campaigns
 }: {
     approvedMatches: ApprovedMatchForPitching[];
     isLoadingMatches: boolean;
     onCreateSequence?: (match: ApprovedMatchForPitching) => void;
+    selectedCampaignId?: string | null;
+    campaigns?: any[];
 }) {
     const [selectedMediaId, setSelectedMediaId] = useState<number | null>(null);
     const [showPodcastDetails, setShowPodcastDetails] = useState(false);
@@ -203,7 +206,7 @@ function ReadyForDraftTab({
                         <div>
                             <h3 className="font-medium text-purple-900">Generate AI Pitches for All</h3>
                             <p className="text-sm text-purple-700">
-                                Create personalized pitches for all {approvedMatches.length} approved matches at once.
+                                Create personalized initial pitches for all {approvedMatches.length} approved matches at once.
                             </p>
                         </div>
                         <BatchAIGenerateButton
@@ -1739,6 +1742,8 @@ export default function PitchOutreach() {
           <ReadyForDraftTab
             approvedMatches={approvedMatches}
             isLoadingMatches={isLoadingApprovedMatches}
+            selectedCampaignId={selectedCampaignFilter}
+            campaigns={campaignsData}
             onCreateSequence={(match) => {
               setSequencePitchMatch({
                 match_id: match.match_id,
@@ -1753,22 +1758,48 @@ export default function PitchOutreach() {
         </TabsContent>
 
         <TabsContent value="draftsReview" className="mt-6">
-          <ModernPitchReview
-            drafts={pitchDraftsForReview}
-            onApprove={handleApprovePitch}
-            onEdit={handleOpenEditModal}
-            onBatchAction={(action, draftIds) => {
-              if (action === 'approve') {
-                draftIds.forEach(id => {
-                  const draft = pitchDraftsForReview.find(d => d.pitch_gen_id === id);
-                  if (draft) handleApprovePitch(draft.pitch_gen_id);
-                });
-              }
-            }}
-            isLoading={isLoadingPitchDrafts}
-            isProcessing={isLoadingApproveForPitchGenId !== null}
-          />
-          {reviewDraftsError && <p className="text-red-500 mt-2">Error loading drafts for review: {(reviewDraftsError as Error).message}</p>}
+          <div className="space-y-4">
+            {/* Bulk Follow-up Generation */}
+            {canUseAI && selectedCampaignFilter && pitchDraftsForReview.length > 0 && (
+              <div className="bg-gradient-to-r from-blue-50 to-cyan-50 border border-blue-200 rounded-lg p-4">
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
+                  <div>
+                    <h3 className="font-medium text-blue-900">Bulk Generate Follow-ups</h3>
+                    <p className="text-sm text-blue-700">
+                      Generate follow-ups for all existing pitches in this campaign.
+                    </p>
+                  </div>
+                  <BulkFollowUpButton
+                    campaignId={selectedCampaignFilter}
+                    campaignName={campaignsData?.find((c: any) => c.campaign_id === selectedCampaignFilter)?.campaign_name}
+                    onComplete={() => {
+                      // Refresh all pitch-related data
+                      refreshAllPitchData();
+                    }}
+                    size="sm"
+                  />
+                </div>
+              </div>
+            )}
+
+            <ModernPitchReview
+              drafts={pitchDraftsForReview}
+              onApprove={handleApprovePitch}
+              onEdit={handleOpenEditModal}
+              onBatchAction={(action, draftIds) => {
+                if (action === 'approve') {
+                  draftIds.forEach(id => {
+                    const draft = pitchDraftsForReview.find(d => d.pitch_gen_id === id);
+                    if (draft) handleApprovePitch(draft.pitch_gen_id);
+                  });
+                }
+              }}
+              isLoading={isLoadingPitchDrafts}
+              isProcessing={isLoadingApproveForPitchGenId !== null}
+              canUseAI={canUseAI}
+            />
+            {reviewDraftsError && <p className="text-red-500 mt-2">Error loading drafts for review: {(reviewDraftsError as Error).message}</p>}
+          </div>
         </TabsContent>
 
         <TabsContent value="readyToSend" className="mt-6">

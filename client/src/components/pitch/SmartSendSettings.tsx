@@ -13,7 +13,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { Clock, Calendar, Settings, Info, Save, Check, Zap } from "lucide-react";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { getUserTimezone } from "@/lib/timezone";
+import { getUserTimezone, utcTimeToLocal, localTimeToUTC } from "@/lib/timezone";
 
 interface SmartSendSettingsProps {
   campaignId: string | null;
@@ -79,8 +79,9 @@ export function SmartSendSettings({ campaignId, campaignName, campaigns, onCampa
       const loadedSettings: SmartSendConfig = {
         enabled: campaign.smart_send_enabled || false,
         days: campaign.smart_send_days || [],
-        start_time: campaign.smart_send_start_time || "09:00",
-        end_time: campaign.smart_send_end_time || "17:00",
+        // Convert UTC times from backend to local timezone for display
+        start_time: utcTimeToLocal(campaign.smart_send_start_time) || "09:00",
+        end_time: utcTimeToLocal(campaign.smart_send_end_time) || "17:00",
       };
       setSettings(loadedSettings);
       setOriginalSettings(loadedSettings);
@@ -102,8 +103,9 @@ export function SmartSendSettings({ campaignId, campaignName, campaigns, onCampa
       const updatedSettings: SmartSendConfig = {
         enabled: data.smart_send_enabled,
         days: data.smart_send_days,
-        start_time: data.smart_send_start_time,
-        end_time: data.smart_send_end_time,
+        // Convert UTC times from backend to local timezone for display
+        start_time: utcTimeToLocal(data.smart_send_start_time),
+        end_time: utcTimeToLocal(data.smart_send_end_time),
       };
       setSettings(updatedSettings);
       setOriginalSettings(updatedSettings);
@@ -167,7 +169,7 @@ export function SmartSendSettings({ campaignId, campaignName, campaigns, onCampa
   // Handle save
   const handleSave = () => {
     if (!hasUnsavedChanges) return;
-    
+
     // Validate settings
     if (settings.enabled && settings.days.length === 0) {
       toast({
@@ -177,8 +179,15 @@ export function SmartSendSettings({ campaignId, campaignName, campaigns, onCampa
       });
       return;
     }
-    
-    saveSettingsMutation.mutate(settings);
+
+    // Convert local times to UTC before sending to backend
+    const settingsForBackend: SmartSendConfig = {
+      ...settings,
+      start_time: localTimeToUTC(settings.start_time),
+      end_time: localTimeToUTC(settings.end_time),
+    };
+
+    saveSettingsMutation.mutate(settingsForBackend);
   };
 
   // Format selected days for display
@@ -261,7 +270,7 @@ export function SmartSendSettings({ campaignId, campaignName, campaigns, onCampa
                   <SelectValue placeholder="Choose a campaign" />
                 </SelectTrigger>
                 <SelectContent>
-                  {campaigns.map((campaign) => (
+                  {campaigns?.map((campaign) => (
                     <SelectItem key={campaign.campaign_id} value={campaign.campaign_id}>
                       {campaign.campaign_name}
                     </SelectItem>
@@ -298,7 +307,7 @@ export function SmartSendSettings({ campaignId, campaignName, campaigns, onCampa
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {campaigns.map((campaign) => (
+                      {campaigns?.map((campaign) => (
                         <SelectItem key={campaign.campaign_id} value={campaign.campaign_id}>
                           {campaign.campaign_name}
                         </SelectItem>
@@ -369,7 +378,7 @@ export function SmartSendSettings({ campaignId, campaignName, campaigns, onCampa
           <div className="space-y-2">
             <Label className="text-sm font-medium flex items-center gap-2">
               <Clock className="h-4 w-4" />
-              Sending Window (UTC)
+              Sending Window
             </Label>
             <div className="flex items-center gap-3">
               <div className="flex-1">
@@ -411,7 +420,7 @@ export function SmartSendSettings({ campaignId, campaignName, campaigns, onCampa
                 Smart Send will automatically send approved pitches on{" "}
                 <strong>{formatSelectedDays()}</strong> between{" "}
                 <strong>{settings.start_time}</strong> and{" "}
-                <strong>{settings.end_time}</strong> UTC.
+                <strong>{settings.end_time}</strong> in your local timezone ({getUserTimezone()}).
               </AlertDescription>
             </Alert>
           )}

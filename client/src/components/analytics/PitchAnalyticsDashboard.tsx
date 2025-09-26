@@ -18,12 +18,11 @@ import {
   Legend,
   ResponsiveContainer
 } from 'recharts';
-import { 
-  TrendingUp, 
-  TrendingDown, 
-  Mail, 
-  Eye, 
-  MessageSquare, 
+import {
+  TrendingUp,
+  TrendingDown,
+  Mail,
+  MessageSquare,
   CheckCircle,
   XCircle,
   Clock,
@@ -88,14 +87,12 @@ export default function PitchAnalyticsDashboard({ campaignId, days = 30 }: Pitch
 
   const performanceData = [
     { name: 'Sent', value: pitchMetrics?.total_sent || 0, icon: Mail, color: 'text-blue-600' },
-    { name: 'Opened', value: Math.round(pitchMetrics?.open_rate || 0), icon: Eye, color: 'text-green-600' },
     { name: 'Replied', value: Math.round(pitchMetrics?.reply_rate || 0), icon: MessageSquare, color: 'text-purple-600' },
     { name: 'Accepted', value: Math.round(pitchMetrics?.acceptance_rate || 0), icon: CheckCircle, color: 'text-emerald-600' },
   ];
 
   const COLORS = {
     pending: '#94a3b8',
-    opened: '#3b82f6',
     replied: '#8b5cf6',
     accepted: '#10b981',
     rejected: '#ef4444',
@@ -254,7 +251,6 @@ export default function PitchAnalyticsDashboard({ campaignId, days = 30 }: Pitch
                     <div key={event.id} className="flex items-start gap-4 pb-4 border-b last:border-0">
                       <div className="p-2 rounded-full bg-gray-100">
                         {event.type === 'email_sent' && <Mail className="w-4 h-4 text-blue-600" />}
-                        {event.type === 'email_opened' && <Eye className="w-4 h-4 text-green-600" />}
                         {event.type === 'email_replied' && <MessageSquare className="w-4 h-4 text-purple-600" />}
                         {event.type === 'booking_confirmed' && <CheckCircle className="w-4 h-4 text-emerald-600" />}
                         {event.type === 'placement_completed' && <Target className="w-4 h-4 text-orange-600" />}
@@ -298,17 +294,6 @@ export default function PitchAnalyticsDashboard({ campaignId, days = 30 }: Pitch
 
                   <div className="relative">
                     <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm font-medium">Opened</span>
-                      <span className="text-sm text-gray-600">
-                        {Math.round((pitchMetrics?.total_sent || 0) * (pitchMetrics?.open_rate || 0) / 100)}
-                        <span className="ml-2 text-gray-400">({pitchMetrics?.open_rate || 0}%)</span>
-                      </span>
-                    </div>
-                    <Progress value={pitchMetrics?.open_rate || 0} className="h-8" />
-                  </div>
-
-                  <div className="relative">
-                    <div className="flex items-center justify-between mb-2">
                       <span className="text-sm font-medium">Replied</span>
                       <span className="text-sm text-gray-600">
                         {Math.round((pitchMetrics?.total_sent || 0) * (pitchMetrics?.reply_rate || 0) / 100)}
@@ -335,10 +320,10 @@ export default function PitchAnalyticsDashboard({ campaignId, days = 30 }: Pitch
                   <h4 className="text-sm font-medium mb-3">Stage-to-Stage Conversion</h4>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <p className="text-sm text-gray-600">Open to Reply</p>
+                      <p className="text-sm text-gray-600">Sent to Reply</p>
                       <p className="text-2xl font-bold">
-                        {(pitchMetrics?.open_rate || 0) > 0 
-                          ? Math.round((pitchMetrics?.reply_rate || 0) / (pitchMetrics?.open_rate || 1) * 100)
+                        {(pitchMetrics?.total_sent || 0) > 0
+                          ? Math.round(pitchMetrics?.reply_rate || 0)
                           : 0}%
                       </p>
                     </div>

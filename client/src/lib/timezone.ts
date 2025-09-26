@@ -143,8 +143,48 @@ export const getRelativeTime = (utcDate: string | Date | null | undefined): stri
 export const isPastDate = (utcDate: string | Date | null | undefined): boolean => {
   const localDate = utcToLocal(utcDate);
   if (!localDate) return false;
-  
+
   return localDate < new Date();
+};
+
+/**
+ * Convert a UTC time string (HH:MM) to local time string
+ * @param utcTime - Time string in HH:MM format (24-hour) in UTC
+ * @returns Time string in HH:MM format in local timezone
+ */
+export const utcTimeToLocal = (utcTime: string | null | undefined): string => {
+  if (!utcTime) return '09:00'; // Default fallback
+
+  // Create a date object with the UTC time today
+  const [hours, minutes] = utcTime.split(':').map(Number);
+  const utcDate = new Date();
+  utcDate.setUTCHours(hours, minutes, 0, 0);
+
+  // Format to local time
+  return utcDate.toLocaleTimeString('en-US', {
+    hour12: false,
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+};
+
+/**
+ * Convert a local time string (HH:MM) to UTC time string
+ * @param localTime - Time string in HH:MM format (24-hour) in local timezone
+ * @returns Time string in HH:MM format in UTC
+ */
+export const localTimeToUTC = (localTime: string | null | undefined): string => {
+  if (!localTime) return '09:00'; // Default fallback
+
+  // Create a date object with the local time today
+  const [hours, minutes] = localTime.split(':').map(Number);
+  const localDate = new Date();
+  localDate.setHours(hours, minutes, 0, 0);
+
+  // Format to UTC time
+  const utcHours = localDate.getUTCHours().toString().padStart(2, '0');
+  const utcMinutes = localDate.getUTCMinutes().toString().padStart(2, '0');
+  return `${utcHours}:${utcMinutes}`;
 };
 
 /**

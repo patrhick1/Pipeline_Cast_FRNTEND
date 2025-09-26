@@ -91,7 +91,7 @@ export function FreeUserUpgradeCard({ variant = 'detailed', context = 'banner' }
             <div>
               <h5 className="font-semibold text-xs text-gray-900">Smart Send™ Technology</h5>
               <p className="text-xs text-gray-600">
-                Optimal timing & sequencing to maximize open rates
+                Optimal timing & sequencing to maximize response rates
               </p>
             </div>
           </div>

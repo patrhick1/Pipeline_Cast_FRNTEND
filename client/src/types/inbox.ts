@@ -106,13 +106,11 @@ export interface InboxFilters {
 
 export interface PitchMetrics {
   total_sent: number;
-  open_rate: number;
   reply_rate: number;
   acceptance_rate: number;
   average_response_time?: number;
   by_status: {
     pending: number;
-    opened: number;
     replied: number;
     accepted: number;
     rejected: number;
@@ -165,7 +163,7 @@ export interface CampaignMetrics {
 export interface TimelineEvent {
   id: string;
   timestamp: string;
-  type: 'email_sent' | 'email_opened' | 'email_replied' | 'booking_confirmed' | 'placement_completed';
+  type: 'email_sent' | 'email_replied' | 'booking_confirmed' | 'placement_completed';
   details: string;
   metadata?: Record<string, any>;
 }

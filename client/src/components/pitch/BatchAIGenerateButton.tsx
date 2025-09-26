@@ -85,8 +85,8 @@ export function BatchAIGenerateButton({
       setProcessedMatches([...updatedMatches]);
 
       try {
-        // Use admin_pitch template for admin/staff users, generic_pitch_v1 for others
-        const templateId = isAdmin ? "admin_pitch" : "generic_pitch_v1";
+        // Use updated v2 templates based on user role
+        const templateId = isAdmin ? "admin_pitch_authority_v2" : "ai_pitch_authority_v2";
 
         const response = await apiRequest("POST", "/pitches/generate", {
           match_id: match.match_id,
