@@ -562,7 +562,7 @@ export default function AdminInbox() {
                                 'text-sm truncate max-w-[250px]',
                                 thread.unread ? 'font-semibold' : 'font-medium'
                               )}>
-                                {thread.from_name || thread.from_email || 'Unknown'}
+                                {thread.media_name || thread.from_name || thread.from_email || 'Unknown'}
                               </h3>
                               {thread.unread && (
                                 <div className="w-2 h-2 bg-blue-500 rounded-full" />
@@ -631,7 +631,7 @@ export default function AdminInbox() {
                           'text-sm truncate max-w-[250px]',
                           thread.unread ? 'font-semibold' : 'font-medium'
                         )}>
-                          {thread.from_name || thread.from_email || 'Unknown'}
+                          {thread.media_name || thread.from_name || thread.from_email || 'Unknown'}
                         </h3>
                         {thread.unread && (
                           <div className="w-2 h-2 bg-blue-500 rounded-full" />
