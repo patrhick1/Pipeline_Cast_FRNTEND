@@ -121,12 +121,11 @@ export default function ThreadView({ threadId, onClose, onReply }: ThreadViewPro
 
   // Send reply mutation
   const sendReplyMutation = useMutation({
-    mutationFn: async (data: { 
-      content: string; 
+    mutationFn: async (data: {
+      content: string;
       replyAll: boolean;
-      messageId: string;
     }) => {
-      const res = await apiRequest('POST', `/inbox/messages/${data.messageId}/reply`, {
+      const res = await apiRequest('POST', `/inbox/reply?thread_id=${threadId}`, {
         body: data.content,
         reply_all: data.replyAll
       });
@@ -285,17 +284,9 @@ export default function ThreadView({ threadId, onClose, onReply }: ThreadViewPro
       }
     } else {
       // Send as regular reply (non-draft)
-      const lastMessage = thread.messages[thread.messages.length - 1] as any;
-      const messageId = (() => {
-        if ('id' in lastMessage) return lastMessage.id;
-        if ('nylas_message_id' in lastMessage) return lastMessage.nylas_message_id;
-        return lastMessage.message_id?.toString() || '';
-      })();
-
       sendReplyMutation.mutate({
         content: replyContent,
         replyAll: replyMode === 'replyAll',
-        messageId: messageId
       });
     }
   };

@@ -65,7 +65,7 @@ export const draftsApi = {
    * Create a new draft
    */
   async createDraft(draftData: DraftData): Promise<CreateDraftResponse> {
-    const response = await apiRequest('POST', '/api/inbox/drafts', draftData);
+    const response = await apiRequest('POST', '/inbox/drafts', draftData);
     if (!response.ok) {
       throw new Error('Failed to create draft');
     }
@@ -76,7 +76,7 @@ export const draftsApi = {
    * Update an existing draft
    */
   async updateDraft(draftId: number, updates: Partial<DraftData>): Promise<UpdateDraftResponse> {
-    const response = await apiRequest('PATCH', `/api/inbox/drafts/${draftId}`, updates);
+    const response = await apiRequest('PATCH', `/inbox/drafts/${draftId}`, updates);
     if (!response.ok) {
       throw new Error('Failed to update draft');
     }
@@ -87,7 +87,7 @@ export const draftsApi = {
    * Get a specific draft by ID
    */
   async getDraft(draftId: number): Promise<Draft> {
-    const response = await apiRequest('GET', `/api/inbox/drafts/${draftId}`);
+    const response = await apiRequest('GET', `/inbox/drafts/${draftId}`);
     if (!response.ok) {
       throw new Error('Failed to fetch draft');
     }
@@ -102,7 +102,7 @@ export const draftsApi = {
       limit: limit.toString(),
       offset: offset.toString(),
     });
-    const response = await apiRequest('GET', `/api/inbox/drafts?${params.toString()}`);
+    const response = await apiRequest('GET', `/inbox/drafts?${params.toString()}`);
     if (!response.ok) {
       throw new Error('Failed to fetch drafts');
     }
@@ -113,7 +113,7 @@ export const draftsApi = {
    * Delete a draft
    */
   async deleteDraft(draftId: number): Promise<{ status: string; message: string }> {
-    const response = await apiRequest('DELETE', `/api/inbox/drafts/${draftId}`);
+    const response = await apiRequest('DELETE', `/inbox/drafts/${draftId}`);
     if (!response.ok) {
       throw new Error('Failed to delete draft');
     }
@@ -124,7 +124,7 @@ export const draftsApi = {
    * Send a draft immediately
    */
   async sendDraft(draftId: number): Promise<SendDraftResponse> {
-    const response = await apiRequest('POST', `/api/inbox/drafts/${draftId}/send`);
+    const response = await apiRequest('POST', `/inbox/drafts/${draftId}/send`);
     if (!response.ok) {
       throw new Error('Failed to send draft');
     }
@@ -141,7 +141,7 @@ export const adminDraftsApi = {
    * Create a new draft for an admin account
    */
   async createDraft(accountId: number, draftData: DraftData): Promise<CreateDraftResponse> {
-    const response = await apiRequest('POST', `/api/admin/inbox/drafts?account_id=${accountId}`, draftData);
+    const response = await apiRequest('POST', `/admin/inbox/drafts?account_id=${accountId}`, draftData);
     if (!response.ok) {
       throw new Error('Failed to create draft');
     }
@@ -152,7 +152,7 @@ export const adminDraftsApi = {
    * Update an existing draft
    */
   async updateDraft(accountId: number, draftId: number, updates: Partial<DraftData>): Promise<UpdateDraftResponse> {
-    const response = await apiRequest('PATCH', `/api/admin/inbox/drafts/${draftId}?account_id=${accountId}`, updates);
+    const response = await apiRequest('PATCH', `/admin/inbox/drafts/${draftId}?account_id=${accountId}`, updates);
     if (!response.ok) {
       throw new Error('Failed to update draft');
     }
@@ -163,7 +163,7 @@ export const adminDraftsApi = {
    * Get a specific draft by ID
    */
   async getDraft(accountId: number, draftId: number): Promise<Draft> {
-    const response = await apiRequest('GET', `/api/admin/inbox/drafts/${draftId}?account_id=${accountId}`);
+    const response = await apiRequest('GET', `/admin/inbox/drafts/${draftId}?account_id=${accountId}`);
     if (!response.ok) {
       throw new Error('Failed to fetch draft');
     }
@@ -179,7 +179,7 @@ export const adminDraftsApi = {
       limit: limit.toString(),
       offset: offset.toString(),
     });
-    const response = await apiRequest('GET', `/api/admin/inbox/drafts?${params.toString()}`);
+    const response = await apiRequest('GET', `/admin/inbox/drafts?${params.toString()}`);
     if (!response.ok) {
       throw new Error('Failed to fetch drafts');
     }
@@ -190,7 +190,7 @@ export const adminDraftsApi = {
    * Delete a draft
    */
   async deleteDraft(accountId: number, draftId: number): Promise<{ status: string; message: string }> {
-    const response = await apiRequest('DELETE', `/api/admin/inbox/drafts/${draftId}?account_id=${accountId}`);
+    const response = await apiRequest('DELETE', `/admin/inbox/drafts/${draftId}?account_id=${accountId}`);
     if (!response.ok) {
       throw new Error('Failed to delete draft');
     }
@@ -201,7 +201,7 @@ export const adminDraftsApi = {
    * Send a draft immediately
    */
   async sendDraft(accountId: number, draftId: number): Promise<SendDraftResponse> {
-    const response = await apiRequest('POST', `/api/admin/inbox/drafts/${draftId}/send?account_id=${accountId}`);
+    const response = await apiRequest('POST', `/admin/inbox/drafts/${draftId}/send?account_id=${accountId}`);
     if (!response.ok) {
       throw new Error('Failed to send draft');
     }
