@@ -70,7 +70,7 @@ import { ScheduleModal } from '@/components/inbox/ScheduleModal';
 import { DraftsList } from '@/components/inbox/DraftsList';
 import { useDraftAutoSave } from '@/hooks/useDraftAutoSave';
 import { useDraftLoader } from '@/hooks/useDraftLoader';
-import { draftsApi } from '@/services/drafts';
+import { draftsApi, adminDraftsApi } from '@/services/drafts';
 
 export default function AdminInbox() {
   const [selectedThreadId, setSelectedThreadId] = useState<string | null>(null);
@@ -90,6 +90,16 @@ export default function AdminInbox() {
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  // Read URL query parameters to auto-select thread
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const threadParam = params.get('thread');
+    if (threadParam && threadParam !== selectedThreadId) {
+      setSelectedThreadId(threadParam);
+      setSelectedFolder('inbox'); // Switch to inbox when thread is selected from URL
+    }
+  }, []);
 
   // Fetch all available admin accounts
   const { data: accountsData, isLoading: isLoadingAccounts } = useQuery({
@@ -201,12 +211,15 @@ export default function AdminInbox() {
 
   // Populate reply box when draft loads
   useEffect(() => {
-    if (existingDraft && existingDraft.body && !replyMode) {
+    if (existingDraft && existingDraft.body) {
       setDraftBody(existingDraft.body);
       setDraftId(existingDraft.draft_id);
-      setReplyMode('reply'); // Auto-open reply mode if draft exists
+      setReplyContent(existingDraft.body);
+      if (!replyMode) {
+        setReplyMode('reply'); // Auto-open reply mode if draft exists
+      }
     }
-  }, [existingDraft]);
+  }, [existingDraft, setDraftBody, setDraftId]);
 
   // Sync draft body with replyContent state
   useEffect(() => {
@@ -893,14 +906,17 @@ export default function AdminInbox() {
               <div className="space-y-4">
                 {threadDetails.messages && threadDetails.messages.length > 0 ? (
                   threadDetails.messages.map((message, index) => {
-                  const messageId = message.message_id;
-                  const isExpanded = expandedMessages.has(messageId);
+                  // Use nylas_message_id for React key, but message_id for draft operations
+                  const messageKey = message.nylas_message_id || message.message_id || index;
+                  const internalMessageId = message.message_id; // Internal ID for draft operations
+                  const isExpanded = expandedMessages.has(messageKey.toString());
                   const isLastMessage = index === threadDetails.messages.length - 1;
+                  const isDraft = message.message_status === 'draft' || message.message_status === 'scheduled' || message.message_status === 'failed';
 
                   return (
-                    <Card key={messageId} className="overflow-hidden">
+                    <Card key={messageKey} className={`overflow-hidden ${isDraft ? 'border-2 border-yellow-300 bg-yellow-50' : ''}`}>
                       <button
-                        onClick={() => toggleMessageExpansion(messageId)}
+                        onClick={() => toggleMessageExpansion(messageKey.toString())}
                         className="w-full p-4 flex items-center justify-between hover:bg-gray-50 transition-colors"
                       >
                         <div className="flex items-center gap-3">
@@ -914,7 +930,26 @@ export default function AdminInbox() {
                               <p className="text-sm font-medium">
                                 {message.from_name || message.from_email || 'Unknown'}
                               </p>
-                              {message.direction === 'inbound' ? (
+                              {isDraft ? (
+                                <Badge variant="outline" className="text-xs bg-yellow-100 text-yellow-800 border-yellow-300">
+                                  {message.message_status === 'scheduled' ? (
+                                    <>
+                                      <Calendar className="w-3 h-3 mr-1" />
+                                      Scheduled
+                                    </>
+                                  ) : message.message_status === 'failed' ? (
+                                    <>
+                                      <X className="w-3 h-3 mr-1" />
+                                      Failed
+                                    </>
+                                  ) : (
+                                    <>
+                                      <FileText className="w-3 h-3 mr-1" />
+                                      Draft
+                                    </>
+                                  )}
+                                </Badge>
+                              ) : message.direction === 'inbound' ? (
                                 <ArrowDownLeft className="w-3 h-3 text-green-500" title="Received" />
                               ) : (
                                 <ArrowUpRight className="w-3 h-3 text-blue-500" title="Sent" />
@@ -966,7 +1001,98 @@ export default function AdminInbox() {
                             </div>
 
                             {/* Email body - handle both HTML and plain text */}
-                            {message.body_html ? (
+                            {isDraft ? (
+                              <div className="space-y-4">
+                                <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                                  {message.message_status === 'scheduled' && message.scheduled_send_at ? (
+                                    <>
+                                      <p className="text-sm font-medium text-yellow-900 mb-2">📅 Scheduled Message</p>
+                                      <p className="text-xs text-yellow-700">
+                                        This message is scheduled to send on {format(new Date(message.scheduled_send_at), 'MMM d, yyyy \'at\' h:mm a')}
+                                      </p>
+                                    </>
+                                  ) : message.message_status === 'failed' ? (
+                                    <>
+                                      <p className="text-sm font-medium text-red-900 mb-2">❌ Failed to Send</p>
+                                      <p className="text-xs text-red-700">This message failed to send. You can edit and try sending again.</p>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <p className="text-sm font-medium text-yellow-900 mb-2">📝 This is a draft message</p>
+                                      <p className="text-xs text-yellow-700">Click "Edit Draft" below to modify and send or schedule this message.</p>
+                                    </>
+                                  )}
+                                </div>
+                                <div
+                                  className="prose prose-sm max-w-none text-gray-800 [&_blockquote]:border-l-4 [&_blockquote]:border-gray-300 [&_blockquote]:pl-4 [&_blockquote]:ml-0 [&_blockquote]:text-gray-600"
+                                  dangerouslySetInnerHTML={{ __html: message.body_html || message.body_plain || '' }}
+                                />
+
+                                {/* Draft Actions */}
+                                <div className="flex gap-2 pt-4 border-t">
+                                  <Button
+                                    variant="default"
+                                    size="sm"
+                                    onClick={() => {
+                                      // Load draft into reply box for editing
+                                      setReplyMode('reply');
+                                      setReplyContent(message.body_html || message.body_plain || '');
+                                      setDraftBody(message.body_html || message.body_plain || '');
+                                      // Use internal message_id as draft_id
+                                      if (internalMessageId) {
+                                        setDraftId(internalMessageId);
+                                      }
+                                    }}
+                                  >
+                                    <FileText className="w-4 h-4 mr-2" />
+                                    Edit Draft
+                                  </Button>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={async () => {
+                                      if (internalMessageId && adminAccountId) {
+                                        try {
+                                          await adminDraftsApi.sendDraft(adminAccountId, internalMessageId);
+                                          toast({
+                                            title: 'Draft Sent',
+                                            description: 'Your message has been sent',
+                                          });
+                                          queryClient.invalidateQueries({ queryKey: ['admin-thread-details'] });
+                                        } catch (error) {
+                                          toast({
+                                            title: 'Error',
+                                            description: 'Failed to send draft',
+                                            variant: 'destructive',
+                                          });
+                                        }
+                                      }
+                                    }}
+                                  >
+                                    <Send className="w-4 h-4 mr-2" />
+                                    Send Now
+                                  </Button>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => {
+                                      setShowScheduleModal(true);
+                                      // Load draft into reply box
+                                      setReplyMode('reply');
+                                      setReplyContent(message.body_html || message.body_plain || '');
+                                      setDraftBody(message.body_html || message.body_plain || '');
+                                      // Use internal message_id as draft_id
+                                      if (internalMessageId) {
+                                        setDraftId(internalMessageId);
+                                      }
+                                    }}
+                                  >
+                                    <Calendar className="w-4 h-4 mr-2" />
+                                    Schedule
+                                  </Button>
+                                </div>
+                              </div>
+                            ) : message.body_html ? (
                               <div
                                 className="prose prose-sm max-w-none text-gray-800 [&_blockquote]:border-l-4 [&_blockquote]:border-gray-300 [&_blockquote]:pl-4 [&_blockquote]:ml-0 [&_blockquote]:text-gray-600"
                                 dangerouslySetInnerHTML={{ __html: message.body_html }}

@@ -5,10 +5,14 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { draftsApi, adminDraftsApi, type Draft } from '@/services/drafts';
-import { FileText, Send, Trash2, Calendar, Clock } from 'lucide-react';
+import { FileText, Send, Trash2, Calendar, Clock, Edit, X } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
+import RichTextEditor from '@/components/inbox/RichTextEditor';
 
 interface DraftsListProps {
   isAdminInbox?: boolean;
@@ -21,6 +25,12 @@ export function DraftsList({ isAdminInbox = false, adminAccountId }: DraftsListP
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [filter, setFilter] = useState<'all' | 'draft' | 'scheduled'>('all');
+  const [editingDraft, setEditingDraft] = useState<Draft | null>(null);
+  const [editForm, setEditForm] = useState({
+    to: [] as string[],
+    subject: '',
+    body: '',
+  });
 
   // Fetch drafts
   const { data: draftsData, isLoading } = useQuery({
@@ -92,6 +102,34 @@ export function DraftsList({ isAdminInbox = false, adminAccountId }: DraftsListP
     },
   });
 
+  // Update draft mutation
+  const updateMutation = useMutation({
+    mutationFn: async ({ draftId, updates }: { draftId: number; updates: any }) => {
+      if (isAdminInbox && adminAccountId) {
+        return adminDraftsApi.updateDraft(adminAccountId, draftId, updates);
+      } else {
+        return draftsApi.updateDraft(draftId, updates);
+      }
+    },
+    onSuccess: () => {
+      toast({
+        title: 'Draft Updated',
+        description: 'Your changes have been saved',
+      });
+      queryClient.invalidateQueries({
+        queryKey: isAdminInbox ? ['admin-drafts', adminAccountId] : ['drafts'],
+      });
+      setEditingDraft(null);
+    },
+    onError: (error) => {
+      toast({
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'Failed to update draft',
+        variant: 'destructive',
+      });
+    },
+  });
+
   const handleDraftClick = (draft: Draft) => {
     if (draft.thread_id) {
       // Navigate to thread to edit draft
@@ -100,7 +138,34 @@ export function DraftsList({ isAdminInbox = false, adminAccountId }: DraftsListP
       } else {
         setLocation(`/inbox?thread=${draft.thread_id}`);
       }
+    } else {
+      // Open editor modal for drafts without thread_id
+      setEditingDraft(draft);
+      setEditForm({
+        to: draft.to || [],
+        subject: draft.subject || '',
+        body: draft.body || '',
+      });
     }
+  };
+
+  const handleSaveEdit = () => {
+    if (!editingDraft) return;
+
+    updateMutation.mutate({
+      draftId: editingDraft.draft_id,
+      updates: {
+        to: editForm.to,
+        subject: editForm.subject,
+        body: editForm.body,
+      },
+    });
+  };
+
+  const handleToEmailsChange = (value: string) => {
+    // Split by comma or semicolon and trim
+    const emails = value.split(/[,;]/).map(e => e.trim()).filter(e => e);
+    setEditForm({ ...editForm, to: emails });
   };
 
   const handleDeleteDraft = async (e: React.MouseEvent, draftId: number) => {
@@ -265,6 +330,85 @@ export function DraftsList({ isAdminInbox = false, adminAccountId }: DraftsListP
           </div>
         )}
       </div>
+
+      {/* Draft Editor Modal */}
+      <Dialog open={!!editingDraft} onOpenChange={(open) => !open && setEditingDraft(null)}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Edit Draft</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            {/* To field */}
+            <div className="space-y-2">
+              <Label htmlFor="to">To</Label>
+              <Input
+                id="to"
+                placeholder="recipient@example.com, another@example.com"
+                value={editForm.to.join(', ')}
+                onChange={(e) => handleToEmailsChange(e.target.value)}
+              />
+              <p className="text-xs text-gray-500">Separate multiple emails with commas</p>
+            </div>
+
+            {/* Subject field */}
+            <div className="space-y-2">
+              <Label htmlFor="subject">Subject</Label>
+              <Input
+                id="subject"
+                placeholder="Email subject"
+                value={editForm.subject}
+                onChange={(e) => setEditForm({ ...editForm, subject: e.target.value })}
+              />
+            </div>
+
+            {/* Body field */}
+            <div className="space-y-2">
+              <Label htmlFor="body">Message</Label>
+              <RichTextEditor
+                value={editForm.body}
+                onChange={(value) => setEditForm({ ...editForm, body: value })}
+                placeholder="Type your message..."
+              />
+            </div>
+
+            {/* Actions */}
+            <div className="flex items-center justify-between pt-4 border-t">
+              <Button
+                variant="outline"
+                onClick={() => setEditingDraft(null)}
+                disabled={updateMutation.isPending}
+              >
+                <X className="h-4 w-4 mr-2" />
+                Cancel
+              </Button>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  onClick={handleSaveEdit}
+                  disabled={updateMutation.isPending || !editForm.to.length}
+                >
+                  <Edit className="h-4 w-4 mr-2" />
+                  {updateMutation.isPending ? 'Saving...' : 'Save Draft'}
+                </Button>
+                <Button
+                  onClick={() => {
+                    if (editingDraft) {
+                      handleSendDraft(
+                        { stopPropagation: () => {} } as React.MouseEvent,
+                        editingDraft.draft_id
+                      );
+                    }
+                  }}
+                  disabled={sendMutation.isPending || !editForm.to.length}
+                >
+                  <Send className="h-4 w-4 mr-2" />
+                  {sendMutation.isPending ? 'Sending...' : 'Send Now'}
+                </Button>
+              </div>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

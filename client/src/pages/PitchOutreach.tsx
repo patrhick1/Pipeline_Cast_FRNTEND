@@ -43,6 +43,8 @@ import { BatchAIGenerateButton } from "@/components/pitch/BatchAIGenerateButton"
 import { BulkFollowUpButton } from "@/components/pitch/BulkFollowUpButton";
 import { formatUTCToLocal } from "@/lib/timezone";
 import { ModernPitchReview } from "@/components/pitch/ModernPitchReview";
+import { useNylas } from "@/hooks/useNylas";
+import { Mail, Shield, Zap } from "lucide-react";
 
 // --- Interfaces (Aligned with expected enriched backend responses) ---
 
@@ -652,6 +654,7 @@ function ReadyToSendTab({
     const { isFreePlan } = usePitchCapabilities();
     const { toast } = useToast();
     const { user } = useAuth();
+    const { nylasStatus, isNylasConnected, connectNylas } = useNylas();
 
     // Function to check if a campaign's client has premium subscription
     const getCampaignSubscription = (campaignId: string) => {
@@ -799,9 +802,88 @@ function ReadyToSendTab({
     if (!pitches || pitches.length === 0) {
         return <div className="text-center py-8 text-gray-500"><Info className="mx-auto h-10 w-10 mb-2"/>No pitches currently approved and ready to send.</div>;
     }
-    
+
     return (
-        <div className="space-y-4">
+        <div className="space-y-4 relative">
+            {/* Email Connection Overlay */}
+            {!isNylasConnected && (
+                <div className="absolute inset-0 z-10 bg-white/95 backdrop-blur-sm flex items-center justify-center">
+                    <Card className="max-w-2xl mx-auto border-2 shadow-lg">
+                        <CardHeader className="text-center pb-4">
+                            <div className="mx-auto p-4 bg-blue-100 rounded-full w-fit mb-4">
+                                <Mail className="w-8 h-8 text-blue-600" />
+                            </div>
+                            <CardTitle className="text-2xl">Connect Your Email to Send Pitches</CardTitle>
+                            <CardDescription className="text-base mt-2">
+                                Connect your email account to send pitches directly from the platform
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent className="text-center space-y-6">
+                            {/* Features */}
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-left">
+                                <div className="flex gap-3">
+                                    <div className="p-2 bg-blue-100 rounded-lg h-fit">
+                                        <Zap className="w-5 h-5 text-blue-600" />
+                                    </div>
+                                    <div>
+                                        <p className="font-medium text-sm">Direct Sending</p>
+                                        <p className="text-xs text-gray-600">
+                                            Send pitches from your own email address
+                                        </p>
+                                    </div>
+                                </div>
+                                <div className="flex gap-3">
+                                    <div className="p-2 bg-green-100 rounded-lg h-fit">
+                                        <Mail className="w-5 h-5 text-green-600" />
+                                    </div>
+                                    <div>
+                                        <p className="font-medium text-sm">Track Responses</p>
+                                        <p className="text-xs text-gray-600">
+                                            See replies in your unified inbox
+                                        </p>
+                                    </div>
+                                </div>
+                                <div className="flex gap-3">
+                                    <div className="p-2 bg-purple-100 rounded-lg h-fit">
+                                        <Shield className="w-5 h-5 text-purple-600" />
+                                    </div>
+                                    <div>
+                                        <p className="font-medium text-sm">Secure & Private</p>
+                                        <p className="text-xs text-gray-600">
+                                            OAuth 2.0 authentication
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Connection button */}
+                            <div className="pt-4">
+                                <Button
+                                    size="lg"
+                                    onClick={() => connectNylas.mutate()}
+                                    disabled={connectNylas.isPending}
+                                    className="min-w-[200px]"
+                                >
+                                    {connectNylas.isPending ? (
+                                        <>
+                                            <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                                            Connecting...
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Mail className="w-4 h-4 mr-2" />
+                                            Connect Email Account
+                                        </>
+                                    )}
+                                </Button>
+                                <p className="text-xs text-gray-500 mt-3">
+                                    Supports Gmail, Outlook, and other major email providers
+                                </p>
+                            </div>
+                        </CardContent>
+                    </Card>
+                </div>
+            )}
             {/* Bulk Actions Bar */}
             <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border">
                 <div className="flex items-center space-x-3">
