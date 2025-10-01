@@ -7,13 +7,13 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { 
-  Search, 
-  Mail, 
-  Star, 
-  Archive, 
-  Trash2, 
-  RefreshCw, 
+import {
+  Search,
+  Mail,
+  Star,
+  Archive,
+  Trash2,
+  RefreshCw,
   Filter,
   Send,
   Inbox as InboxIcon,
@@ -21,7 +21,8 @@ import {
   ChevronRight,
   Settings,
   ExternalLink,
-  MoreVertical
+  MoreVertical,
+  FileText
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
@@ -35,6 +36,7 @@ import type { EmailThread, InboxFilters, NylasAuthStatus } from '@/types/inbox';
 import ThreadView from '@/components/inbox/ThreadView';
 import ComposeModal from '@/components/inbox/ComposeModal';
 import NylasConnect from '@/components/inbox/NylasConnect';
+import { DraftsList } from '@/components/inbox/DraftsList';
 import { useToast } from '@/hooks/use-toast';
 
 export default function Inbox() {
@@ -216,6 +218,7 @@ export default function Inbox() {
             {[
               { id: 'inbox', label: 'Inbox', icon: InboxIcon },
               { id: 'sent', label: 'Sent', icon: Send },
+              { id: 'drafts', label: 'Drafts', icon: FileText },
               { id: 'starred', label: 'Starred', icon: Star },
               { id: 'archive', label: 'Archive', icon: Archive },
               { id: 'trash', label: 'Trash', icon: Trash2 },
@@ -287,27 +290,33 @@ export default function Inbox() {
         </div>
       </div>
 
-      {/* Thread List */}
+      {/* Thread List or Drafts List */}
       <div className="flex-1 flex">
-        <div className={cn(
-          'border-r border-gray-200 bg-white transition-all',
-          selectedThread ? 'w-96' : 'flex-1'
-        )}>
-          {/* Search Bar */}
-          <div className="p-4 border-b">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-              <Input
-                placeholder="Search emails..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10"
-              />
-            </div>
+        {activeFolder === 'drafts' ? (
+          <div className="flex-1 bg-white">
+            <DraftsList isAdminInbox={false} />
           </div>
+        ) : (
+          <>
+          <div className={cn(
+            'border-r border-gray-200 bg-white transition-all',
+            selectedThread ? 'w-96' : 'flex-1'
+          )}>
+            {/* Search Bar */}
+            <div className="p-4 border-b">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                <Input
+                  placeholder="Search emails..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+            </div>
 
-          {/* Thread List */}
-          <ScrollArea className="h-[calc(100%-5rem)]">
+            {/* Thread List */}
+            <ScrollArea className="h-[calc(100%-5rem)]">
             {isLoading ? (
               <div className="flex items-center justify-center h-32">
                 <RefreshCw className="w-6 h-6 animate-spin text-gray-400" />
@@ -426,11 +435,13 @@ export default function Inbox() {
 
         {/* Thread View */}
         {selectedThread && (
-          <ThreadView 
+          <ThreadView
             threadId={selectedThread}
             onClose={() => setSelectedThread(null)}
             onReply={() => {}}
           />
+        )}
+        </>
         )}
       </div>
 

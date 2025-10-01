@@ -52,7 +52,10 @@ import {
   ArrowLeftIcon,
   Menu,
   Paperclip,
-  Download
+  Download,
+  Calendar,
+  Check,
+  FileText
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -63,6 +66,11 @@ import {
 } from '@/components/ui/dropdown-menu';
 import SmartReplies from '@/components/inbox/SmartReplies';
 import RichTextEditor from '@/components/inbox/RichTextEditor';
+import { ScheduleModal } from '@/components/inbox/ScheduleModal';
+import { DraftsList } from '@/components/inbox/DraftsList';
+import { useDraftAutoSave } from '@/hooks/useDraftAutoSave';
+import { useDraftLoader } from '@/hooks/useDraftLoader';
+import { draftsApi } from '@/services/drafts';
 
 export default function AdminInbox() {
   const [selectedThreadId, setSelectedThreadId] = useState<string | null>(null);
@@ -77,6 +85,7 @@ export default function AdminInbox() {
   const [selectedAccountFilter, setSelectedAccountFilter] = useState<number | null>(null);
   const [selectedCampaignFilter, setSelectedCampaignFilter] = useState<string | null>(null);
   const [groupByCampaign, setGroupByCampaign] = useState(true);
+  const [showScheduleModal, setShowScheduleModal] = useState(false);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
 
   const { toast } = useToast();
@@ -154,6 +163,65 @@ export default function AdminInbox() {
     enabled: !!selectedThreadId,
   });
 
+  // Get admin account ID from thread details
+  const adminAccountId = threadDetails?.admin_account?.id;
+
+  // Load existing draft for this thread
+  const { draft: existingDraft, isLoading: loadingDraft } = useDraftLoader({
+    threadId: selectedThreadId || '',
+    enabled: !!selectedThreadId && !!threadDetails,
+    isAdminInbox: true,
+    adminAccountId: adminAccountId,
+  });
+
+  // Get email metadata for auto-save
+  const emailMetadata = threadDetails?.messages && threadDetails.messages.length > 0
+    ? {
+        to: [(threadDetails as any).from_email || threadDetails.messages[0]?.from_email || ''],
+        subject: (threadDetails as any).subject || threadDetails.thread?.subject || '',
+        reply_to_message_id: threadDetails.messages[threadDetails.messages.length - 1]?.message_id || undefined,
+      }
+    : { to: [], subject: '' };
+
+  // Auto-save hook for reply content
+  const {
+    body: draftBody,
+    setBody: setDraftBody,
+    draftId,
+    setDraftId,
+    isSaving,
+    lastSavedAt,
+  } = useDraftAutoSave({
+    threadId: selectedThreadId || '',
+    initialBody: existingDraft?.body || '',
+    emailMetadata,
+    isAdminInbox: true,
+    adminAccountId: adminAccountId,
+  });
+
+  // Populate reply box when draft loads
+  useEffect(() => {
+    if (existingDraft && existingDraft.body && !replyMode) {
+      setDraftBody(existingDraft.body);
+      setDraftId(existingDraft.draft_id);
+      setReplyMode('reply'); // Auto-open reply mode if draft exists
+    }
+  }, [existingDraft]);
+
+  // Sync draft body with replyContent state
+  useEffect(() => {
+    if (replyMode && draftBody !== replyContent) {
+      setReplyContent(draftBody);
+    }
+  }, [draftBody, replyMode]);
+
+  // Update draft body when user types
+  useEffect(() => {
+    if (replyMode && replyContent !== draftBody) {
+      setDraftBody(replyContent);
+    }
+  }, [replyContent, replyMode]);
+
   // Auto-expand last message when thread details load
   useEffect(() => {
     if (threadDetails?.messages && threadDetails.messages.length > 0) {
@@ -161,6 +229,28 @@ export default function AdminInbox() {
       setExpandedMessages(new Set([lastMessage.message_id]));
     }
   }, [threadDetails]);
+
+  // Mark thread as read mutation
+  const markAsReadMutation = useMutation({
+    mutationFn: (threadId: string) => adminInboxService.markThreadRead(threadId, true),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-threads'] });
+    },
+    onError: () => {
+      // Silently fail - marking as read is not critical
+      console.error('Failed to mark thread as read');
+    },
+  });
+
+  // Auto-mark as read when thread is selected and it's unread
+  useEffect(() => {
+    if (selectedThreadId && threadsData?.threads) {
+      const thread = threadsData.threads.find(t => t.thread_id === selectedThreadId);
+      if (thread && thread.unread) {
+        markAsReadMutation.mutate(selectedThreadId);
+      }
+    }
+  }, [selectedThreadId]);
 
   // Send reply mutation
   const sendReplyMutation = useMutation({
@@ -231,24 +321,50 @@ export default function AdminInbox() {
     },
   });
 
-  const handleSendReply = () => {
+  const handleSendReply = async () => {
     if (!threadDetails || !replyContent.trim()) return;
 
-    const lastMessage = threadDetails.messages[threadDetails.messages.length - 1];
-    const replyTo = lastMessage.direction === 'inbound'
-      ? [lastMessage.from_email]
-      : lastMessage.to_emails || [];
-
-    // Content is already in HTML format from RichTextEditor
-    sendReplyMutation.mutate({
-      threadId: threadDetails.thread.thread_id,
-      replyData: {
-        to: replyTo,
-        subject: replySubject || `Re: ${threadDetails.thread.subject}`,
-        body: replyContent,
-        reply_all: replyMode === 'replyAll'
+    // If we have a draft, send it using the drafts API
+    if (draftId) {
+      try {
+        await draftsApi.sendDraft(draftId);
+        toast({
+          title: 'Reply sent',
+          description: 'Your reply has been sent successfully.',
+        });
+        setReplyMode(null);
+        setReplyContent('');
+        setDraftBody('');
+        setDraftId(null);
+        setShowSmartReplies(false);
+        queryClient.invalidateQueries({ queryKey: ['admin-thread-details', selectedThreadId] });
+        queryClient.invalidateQueries({ queryKey: ['admin-threads'] });
+        queryClient.invalidateQueries({ queryKey: ['drafts'] });
+      } catch (error) {
+        toast({
+          title: 'Failed to send',
+          description: 'There was an error sending your reply. Please try again.',
+          variant: 'destructive',
+        });
       }
-    });
+    } else {
+      // Send as regular reply (non-draft)
+      const lastMessage = threadDetails.messages[threadDetails.messages.length - 1];
+      const replyTo = lastMessage.direction === 'inbound'
+        ? [lastMessage.from_email]
+        : lastMessage.to_emails || [];
+
+      // Content is already in HTML format from RichTextEditor
+      sendReplyMutation.mutate({
+        threadId: threadDetails.thread.thread_id,
+        replyData: {
+          to: replyTo,
+          subject: replySubject || `Re: ${threadDetails.thread.subject}`,
+          body: replyContent,
+          reply_all: replyMode === 'replyAll'
+        }
+      });
+    }
   };
 
   const handleThreadSelect = (threadId: string) => {
@@ -353,16 +469,20 @@ export default function AdminInbox() {
     }
   };
 
-  const getInitials = (name: string | undefined, email: string) => {
+  const getInitials = (name: string | undefined, email: string | null | undefined) => {
     if (name) {
       return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
     }
-    return email.substring(0, 2).toUpperCase();
+    if (email) {
+      return email.substring(0, 2).toUpperCase();
+    }
+    return '??';
   };
 
   const folders = [
     { id: 'inbox', label: 'Inbox', icon: InboxIcon },
     { id: 'sent', label: 'Sent', icon: Send },
+    { id: 'drafts', label: 'Drafts', icon: FileText },
     { id: 'starred', label: 'Starred', icon: Star },
     { id: 'archive', label: 'Archive', icon: Archive },
     { id: 'trash', label: 'Trash', icon: Trash2 },
@@ -500,26 +620,34 @@ export default function AdminInbox() {
           </ScrollArea>
         </div>
 
-        {/* Thread List */}
-        <div className={cn(
-          'border-r border-gray-200 bg-white transition-all',
-          selectedThreadId ? 'w-96' : 'flex-1'
-        )}>
-          {/* Search Bar */}
-          <div className="p-4 border-b">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-              <Input
-                placeholder="Search emails..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10"
-              />
-            </div>
+        {/* Thread List or Drafts List */}
+        {selectedFolder === 'drafts' ? (
+          <div className="flex-1 bg-white">
+            <DraftsList
+              isAdminInbox={true}
+              adminAccountId={selectedAccountFilter || accountsData?.accounts?.[0]?.id}
+            />
           </div>
+        ) : (
+          <div className={cn(
+            'border-r border-gray-200 bg-white transition-all',
+            selectedThreadId ? 'w-96' : 'flex-1'
+          )}>
+            {/* Search Bar */}
+            <div className="p-4 border-b">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                <Input
+                  placeholder="Search emails..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+            </div>
 
-          {/* Thread List */}
-          <ScrollArea className="h-[calc(100%-5rem)]">
+            {/* Thread List */}
+            <ScrollArea className="h-[calc(100%-5rem)]">
             {isLoadingThreads ? (
               <div className="flex items-center justify-center h-32">
                 <RefreshCw className="w-6 h-6 animate-spin text-gray-400" />
@@ -713,9 +841,10 @@ export default function AdminInbox() {
             </div>
           )}
         </div>
+        )}
 
         {/* Thread View */}
-        {selectedThreadId && (
+        {selectedThreadId && selectedFolder !== 'drafts' && (
           <div className="flex-1 flex flex-col bg-white">
             {isLoadingDetails ? (
               <div className="flex-1 flex items-center justify-center">
@@ -955,6 +1084,24 @@ export default function AdminInbox() {
                     className="mb-3"
                   />
 
+                  {/* Draft Status Indicator */}
+                  <div className="flex items-center justify-between mb-3 text-xs">
+                    <div className="flex items-center gap-2">
+                      {isSaving && (
+                        <span className="flex items-center gap-1 text-gray-500">
+                          <Loader2 className="w-3 h-3 animate-spin" />
+                          Saving draft...
+                        </span>
+                      )}
+                      {!isSaving && draftId && (
+                        <span className="flex items-center gap-1 text-green-600">
+                          <Check className="w-3 h-3" />
+                          Draft saved {lastSavedAt && `at ${format(lastSavedAt, 'h:mm a')}`}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
                   <div className="flex justify-between items-center">
                     <div className="flex gap-2">
                       <Button variant="ghost" size="sm">
@@ -974,11 +1121,19 @@ export default function AdminInbox() {
                         Cancel
                       </Button>
                       <Button
+                        variant="outline"
+                        onClick={() => setShowScheduleModal(true)}
+                        disabled={!replyContent.trim()}
+                      >
+                        <Calendar className="w-4 h-4 mr-2" />
+                        Schedule
+                      </Button>
+                      <Button
                         onClick={handleSendReply}
                         disabled={!replyContent.trim() || sendReplyMutation.isPending}
                       >
                         {sendReplyMutation.isPending ? (
-                          <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                         ) : (
                           <Send className="w-4 h-4 mr-2" />
                         )}
@@ -1001,6 +1156,33 @@ export default function AdminInbox() {
         )}
       </div>
     )}
+
+    {/* Schedule Modal */}
+    <ScheduleModal
+      isOpen={showScheduleModal}
+      onClose={() => setShowScheduleModal(false)}
+      draftId={draftId}
+      emailData={{
+        to: emailMetadata.to,
+        subject: emailMetadata.subject,
+        body: replyContent,
+        reply_to_message_id: emailMetadata.reply_to_message_id,
+      }}
+      threadId={selectedThreadId || ''}
+      isAdminInbox={true}
+      onScheduled={() => {
+        setShowScheduleModal(false);
+        setReplyMode(null);
+        setReplyContent('');
+        setDraftBody('');
+        setDraftId(null);
+        toast({
+          title: 'Email Scheduled',
+          description: 'Your email has been scheduled successfully.',
+        });
+        queryClient.invalidateQueries({ queryKey: ['drafts'] });
+      }}
+    />
   </div>
 </div>
 );

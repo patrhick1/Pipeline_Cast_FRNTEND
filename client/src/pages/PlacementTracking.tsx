@@ -16,9 +16,9 @@ import { z } from "zod";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient as appQueryClient } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/useAuth";
-import { 
-  TrendingUp, Calendar, Users, PlayCircle, BarChart3, Download, ExternalLink, Podcast as PodcastIcon, 
-  Eye, Share2, MessageSquare, Search, Filter, Plus, Edit, CheckCircle, Clock, AlertCircle, Check, X, Trash2, AlertTriangle, ChevronLeft, ChevronRight, History, Timeline, LayoutGrid, List, Target, Award, FileText
+import {
+  TrendingUp, Calendar, Users, PlayCircle, BarChart3, Download, ExternalLink, Podcast as PodcastIcon,
+  Eye, Share2, MessageSquare, Search, Filter, Plus, Edit, CheckCircle, Clock, AlertCircle, Check, X, Trash2, AlertTriangle, ChevronLeft, ChevronRight, History, LayoutGrid, List, Target, Award, FileText
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -46,6 +46,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import PlacementAnalyticsDashboard from "@/components/analytics/PlacementAnalyticsDashboard";
 import PitchAnalyticsDashboard from "@/components/analytics/PitchAnalyticsDashboard";
 import PlacementStatusAnalytics from "@/components/analytics/PlacementStatusAnalytics";
+import { PodcastDetailsModal } from "@/components/modals/PodcastDetailsModal";
 
 // --- Interfaces (align with backend schemas) ---
 interface Placement { // Matches PlacementInDB from backend
@@ -402,20 +403,22 @@ function StatusChangeDialog({
 }
 
 // --- Placement Table with Inline Editing ---
-function PlacementTable({ 
-  placements, 
-  onEdit, 
-  onDelete, 
+function PlacementTable({
+  placements,
+  onEdit,
+  onDelete,
   onStatusChange,
   userRole,
-  onBatchUpdate
-}: { 
-  placements: Placement[]; 
+  onBatchUpdate,
+  onViewDetails
+}: {
+  placements: Placement[];
   onEdit: (placement: Placement) => void;
   onDelete: (placementId: number) => void;
   onStatusChange: (placement: Placement) => void;
   userRole?: string | null;
   onBatchUpdate?: (updates: Map<number, Partial<Placement>>) => void;
+  onViewDetails?: (mediaId: number) => void;
 }) {
   const [editedPlacements, setEditedPlacements] = useState<Map<number, Partial<Placement>>>(new Map());
   const [hasChanges, setHasChanges] = useState(false);
@@ -512,16 +515,18 @@ function PlacementTable({
                   <div className="font-medium text-gray-900">
                     {placement.media_name || `Media ID: ${placement.media_id}`}
                   </div>
-                  {placement.media_website && (
-                    <a 
-                      href={placement.media_website} 
-                      target="_blank" 
-                      rel="noopener noreferrer" 
-                      className="text-xs text-primary hover:underline"
-                    >
-                      Website <ExternalLink className="inline h-3 w-3"/>
-                    </a>
-                  )}
+                  <Button
+                    variant="link"
+                    size="sm"
+                    className="h-auto p-0 text-xs text-primary hover:underline"
+                    onClick={() => {
+                      if (onViewDetails && placement.media_id) {
+                        onViewDetails(placement.media_id);
+                      }
+                    }}
+                  >
+                    View Details <ExternalLink className="inline h-3 w-3 ml-1"/>
+                  </Button>
                 </TableCell>
                 <TableCell>
                   <div className="text-sm">
@@ -642,6 +647,8 @@ export default function PlacementTracking() {
   const [currentPage, setCurrentPage] = useState(1);
   const [viewMode, setViewMode] = useState<"table" | "cards">("table");
   const [selectedDays, setSelectedDays] = useState<number>(30);
+  const [selectedMediaId, setSelectedMediaId] = useState<number | null>(null);
+  const [isPodcastModalOpen, setIsPodcastModalOpen] = useState(false);
   const pageSize = 20;
 
   const { toast } = useToast();
@@ -1021,13 +1028,17 @@ export default function PlacementTracking() {
               ))}
             </div>
           ) : (
-            <PlacementTable 
-              placements={filteredPlacements} 
-              onEdit={handleEdit} 
+            <PlacementTable
+              placements={filteredPlacements}
+              onEdit={handleEdit}
               onDelete={handleDelete}
               onStatusChange={handleStatusChange}
               userRole={user?.role}
               onBatchUpdate={handleBatchUpdate}
+              onViewDetails={(mediaId) => {
+                setSelectedMediaId(mediaId);
+                setIsPodcastModalOpen(true);
+              }}
             />
           )}
           {totalPages > 1 && (
@@ -1170,6 +1181,18 @@ export default function PlacementTracking() {
           setPlacementForStatusChange(null);
         }}
       />
+
+      {/* Podcast Details Modal */}
+      {selectedMediaId && (
+        <PodcastDetailsModal
+          isOpen={isPodcastModalOpen}
+          onClose={() => {
+            setIsPodcastModalOpen(false);
+            setSelectedMediaId(null);
+          }}
+          mediaId={selectedMediaId}
+        />
+      )}
     </div>
   );
 }

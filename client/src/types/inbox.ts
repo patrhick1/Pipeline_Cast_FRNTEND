@@ -131,6 +131,7 @@ export interface PlacementMetrics {
 export interface PlacementEvent {
   id: string;
   podcast_name: string;
+  media_id?: number;
   date: string;
   status: 'scheduled' | 'completed' | 'cancelled';
   recording_link?: string;

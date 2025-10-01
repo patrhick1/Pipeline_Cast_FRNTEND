@@ -164,9 +164,8 @@ class AdminInboxService {
    */
   async markThreadRead(threadId: string, isRead: boolean): Promise<void> {
     const response = await apiRequest(
-      'PATCH',
-      `${this.baseUrl}/threads/${threadId}/read`,
-      { is_read: isRead }
+      'POST',
+      `${this.baseUrl}/threads/${threadId}/mark-read`
     );
     if (!response.ok) {
       throw new Error('Failed to update thread read status');
@@ -178,9 +177,9 @@ class AdminInboxService {
    */
   async toggleThreadStar(threadId: string, isStarred: boolean): Promise<void> {
     const response = await apiRequest(
-      'PATCH',
+      'POST',
       `${this.baseUrl}/threads/${threadId}/star`,
-      { is_starred: isStarred }
+      { starred: isStarred }
     );
     if (!response.ok) {
       throw new Error('Failed to update thread star status');

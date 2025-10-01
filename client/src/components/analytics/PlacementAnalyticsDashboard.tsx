@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -19,7 +20,7 @@ import {
   Pie,
   Cell
 } from 'recharts';
-import { 
+import {
   Calendar as CalendarIcon,
   CheckCircle,
   XCircle,
@@ -29,10 +30,12 @@ import {
   ExternalLink,
   TrendingUp,
   Target,
-  Award
+  Award,
+  Info
 } from 'lucide-react';
 import { format, isAfter, isBefore, addDays } from 'date-fns';
 import type { PlacementMetrics, PlacementEvent } from '@/types/inbox';
+import { PodcastDetailsModal } from '@/components/modals/PodcastDetailsModal';
 
 interface PlacementAnalyticsDashboardProps {
   campaignId?: string;
@@ -40,6 +43,9 @@ interface PlacementAnalyticsDashboardProps {
 }
 
 export default function PlacementAnalyticsDashboard({ campaignId, days = 30 }: PlacementAnalyticsDashboardProps) {
+  const [selectedMediaId, setSelectedMediaId] = useState<number | null>(null);
+  const [isPodcastModalOpen, setIsPodcastModalOpen] = useState(false);
+
   // Fetch placement metrics - using the correct backend endpoints with days parameter
   const { data: metrics, isLoading } = useQuery<PlacementMetrics>({
     queryKey: ['/placements/metrics', { campaign_id: campaignId, days }], // Single endpoint with optional filters
@@ -283,7 +289,22 @@ export default function PlacementAnalyticsDashboard({ campaignId, days = 30 }: P
                           <Mic className="w-5 h-5 text-blue-600" />
                         </div>
                         <div>
-                          <h4 className="font-medium">{placement.podcast_name}</h4>
+                          <div className="flex items-center gap-2">
+                            <h4 className="font-medium">{placement.podcast_name}</h4>
+                            {placement.media_id && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-6 w-6 p-0"
+                                onClick={() => {
+                                  setSelectedMediaId(placement.media_id);
+                                  setIsPodcastModalOpen(true);
+                                }}
+                              >
+                                <Info className="w-4 h-4 text-gray-500 hover:text-primary" />
+                              </Button>
+                            )}
+                          </div>
                           <p className="text-sm text-gray-600 mt-1">
                             {format(new Date(placement.date), 'EEEE, MMMM d, yyyy')}
                           </p>
@@ -347,7 +368,22 @@ export default function PlacementAnalyticsDashboard({ campaignId, days = 30 }: P
                           <CheckCircle className="w-5 h-5 text-green-600" />
                         </div>
                         <div>
-                          <h4 className="font-medium">{placement.podcast_name}</h4>
+                          <div className="flex items-center gap-2">
+                            <h4 className="font-medium">{placement.podcast_name}</h4>
+                            {placement.media_id && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-6 w-6 p-0"
+                                onClick={() => {
+                                  setSelectedMediaId(placement.media_id);
+                                  setIsPodcastModalOpen(true);
+                                }}
+                              >
+                                <Info className="w-4 h-4 text-gray-500 hover:text-primary" />
+                              </Button>
+                            )}
+                          </div>
                           <p className="text-sm text-gray-600 mt-1">
                             Completed on {format(new Date(placement.date), 'MMMM d, yyyy')}
                           </p>
@@ -418,6 +454,18 @@ export default function PlacementAnalyticsDashboard({ campaignId, days = 30 }: P
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Podcast Details Modal */}
+      {selectedMediaId && (
+        <PodcastDetailsModal
+          isOpen={isPodcastModalOpen}
+          onClose={() => {
+            setIsPodcastModalOpen(false);
+            setSelectedMediaId(null);
+          }}
+          mediaId={selectedMediaId}
+        />
+      )}
     </div>
   );
 }
