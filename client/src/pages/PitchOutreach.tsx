@@ -651,10 +651,40 @@ function ReadyToSendTab({
     const [updatingEmailForGroup, setUpdatingEmailForGroup] = useState<string | null>(null);
     const [editingGroupEmail, setEditingGroupEmail] = useState<string | null>(null);
     const [tempGroupEmail, setTempGroupEmail] = useState("");
+    const [isConnecting, setIsConnecting] = useState(false);
     const { isFreePlan } = usePitchCapabilities();
     const { toast } = useToast();
     const { user } = useAuth();
-    const { nylasStatus, isNylasConnected, connectNylas } = useNylas();
+    const { nylasStatus, isNylasConnected } = useNylas();
+
+    // Create local connection mutation (same as NylasConnect component)
+    const connectNylasMutation = useMutation({
+        mutationFn: async () => {
+            const res = await apiRequest('POST', '/inbox/nylas/connect');
+            if (!res.ok) throw new Error('Failed to initialize Nylas connection');
+            return res.json();
+        },
+        onSuccess: (data) => {
+            if (data.oauth_url) {
+                window.location.href = data.oauth_url;
+            } else if (data.auth_url) {
+                window.location.href = data.auth_url;
+            }
+        },
+        onError: () => {
+            toast({
+                title: 'Connection failed',
+                description: 'Failed to connect to email service. Please try again.',
+                variant: 'destructive',
+            });
+            setIsConnecting(false);
+        }
+    });
+
+    const handleConnect = () => {
+        setIsConnecting(true);
+        connectNylasMutation.mutate();
+    };
 
     // Function to check if a campaign's client has premium subscription
     const getCampaignSubscription = (campaignId: string) => {
@@ -663,6 +693,9 @@ function ReadyToSendTab({
     };
 
     const isStaffOrAdmin = user?.role?.toLowerCase() === 'staff' || user?.role?.toLowerCase() === 'admin';
+
+    // Only clients need Nylas connection, admins/staff use shared sending accounts
+    const needsEmailConnection = !isStaffOrAdmin && !isNylasConnected;
 
     // Group pitches by campaign_id and media_id
     const groupedPitches = useMemo(() => {
@@ -805,8 +838,8 @@ function ReadyToSendTab({
 
     return (
         <div className="space-y-4 relative">
-            {/* Email Connection Overlay */}
-            {!isNylasConnected && (
+            {/* Email Connection Overlay - Only for client users, not admins/staff */}
+            {needsEmailConnection && (
                 <div className="absolute inset-0 z-10 bg-white/95 backdrop-blur-sm flex items-center justify-center">
                     <Card className="max-w-2xl mx-auto border-2 shadow-lg">
                         <CardHeader className="text-center pb-4">
@@ -860,11 +893,11 @@ function ReadyToSendTab({
                             <div className="pt-4">
                                 <Button
                                     size="lg"
-                                    onClick={() => connectNylas.mutate()}
-                                    disabled={connectNylas.isPending}
+                                    onClick={handleConnect}
+                                    disabled={isConnecting || connectNylasMutation.isPending}
                                     className="min-w-[200px]"
                                 >
-                                    {connectNylas.isPending ? (
+                                    {isConnecting || connectNylasMutation.isPending ? (
                                         <>
                                             <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
                                             Connecting...
