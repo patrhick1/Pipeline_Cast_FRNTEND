@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   ArrowLeft, Edit, ExternalLink, Lightbulb, Search, CheckCircle, Send, TrendingUp,
-  ClipboardList, AlertTriangle, Info, Users, FileText, MessageSquare, PlayCircle, ThumbsUp, ThumbsDown, RefreshCw, Eye
+  ClipboardList, AlertTriangle, Info, Users, FileText, MessageSquare, PlayCircle, ThumbsUp, ThumbsDown, RefreshCw, Eye, Edit2
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { apiRequest } from "@/lib/queryClient";
@@ -19,6 +19,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { CampaignFunnel } from "@/components/CampaignFunnel";
+import EditCampaignDialogClient from "@/components/dialogs/EditCampaignDialogClient";
 
 // --- Interfaces (Ensure these match your actual backend responses) ---
 interface CampaignDetailData {
@@ -29,8 +30,12 @@ interface CampaignDetailData {
   campaign_bio?: string | null; // Raw text content
   campaign_angles?: string | null; // Raw text content
   campaign_keywords?: string[] | null;
+  ideal_podcast_description?: string | null;
   mock_interview_trancript?: string | null; // Text or GDoc Link
   media_kit_url?: string | null;
+  goal_note?: string | null;
+  start_date?: string | null;
+  end_date?: string | null;
   questionnaire_responses?: object | null; // To check if questionnaire is filled
   created_at: string;
   client_full_name?: string; // Populated if needed
@@ -146,9 +151,15 @@ function CampaignOverviewTab({ campaign, onReprocess, stats }: { campaign: Campa
                 {isAdminOrStaff && (
                   <div>
                       <span className="font-semibold">Keywords: </span>
-                      {campaign.campaign_keywords && campaign.campaign_keywords.length > 0 ? 
-                          campaign.campaign_keywords.map(kw => <Badge key={kw} variant="secondary" className="mr-1 mb-1">{kw}</Badge>) : 
+                      {campaign.campaign_keywords && campaign.campaign_keywords.length > 0 ?
+                          campaign.campaign_keywords.map(kw => <Badge key={kw} variant="secondary" className="mr-1 mb-1">{kw}</Badge>) :
                           <span className="text-gray-500">Not set</span>}
+                  </div>
+                )}
+                {campaign.ideal_podcast_description && (
+                  <div className="md:col-span-2">
+                      <p><strong>Target Podcast Criteria:</strong></p>
+                      <p className="text-gray-700 mt-1 pl-4 border-l-2 border-indigo-400">{campaign.ideal_podcast_description}</p>
                   </div>
                 )}
                 <div className="md:col-span-2">
@@ -585,6 +596,7 @@ export default function CampaignDetail({ campaignIdParam, embedded = false }: Ca
   const { user, isLoading: authLoading } = useAuth();
   const tanstackQueryClient = useTanstackQueryClient();
   const { toast } = useToast(); // Added toast for reprocess button
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
   
   // Get tab from URL query parameter
   const [, setLocation] = useLocation();
@@ -757,9 +769,21 @@ export default function CampaignDetail({ campaignIdParam, embedded = false }: Ca
       )}
 
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl lg:text-3xl font-bold text-gray-900">{campaign.campaign_name}</h1>
-          <p className="text-gray-600">Client: {campaign.client_full_name || `Person ID: ${campaign.person_id}`}</p>
+        <div className="flex items-center gap-3 flex-1">
+          <div>
+            <h1 className="text-2xl lg:text-3xl font-bold text-gray-900">{campaign.campaign_name}</h1>
+            <p className="text-gray-600">Client: {campaign.client_full_name || `Person ID: ${campaign.person_id}`}</p>
+          </div>
+          {user?.role === 'client' && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setEditDialogOpen(true)}
+              className="flex-shrink-0"
+            >
+              <Edit2 className="h-4 w-4" />
+            </Button>
+          )}
         </div>
         {(user?.role === 'staff' || user?.role === 'admin') && (
             <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2 w-full sm:w-auto">
@@ -795,6 +819,22 @@ export default function CampaignDetail({ campaignIdParam, embedded = false }: Ca
           <PlacementsTab campaignId={campaign.campaign_id} userRole={user?.role || null} />
         </TabsContent>
       </Tabs>
+
+      {/* Edit Campaign Dialog for Clients */}
+      {user?.role === 'client' && campaign && (
+        <EditCampaignDialogClient
+          campaign={{
+            campaign_id: campaign.campaign_id,
+            campaign_name: campaign.campaign_name,
+            goal_note: campaign.goal_note,
+            ideal_podcast_description: campaign.ideal_podcast_description,
+            start_date: campaign.start_date,
+            end_date: campaign.end_date,
+          }}
+          open={editDialogOpen}
+          onOpenChange={setEditDialogOpen}
+        />
+      )}
     </div>
   );
 }

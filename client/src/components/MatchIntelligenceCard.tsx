@@ -55,18 +55,22 @@ interface MatchIntelligenceCardProps {
   isSelectable?: boolean; // Whether this card can be selected for bulk actions
   isSelected?: boolean; // Whether this card is currently selected
   onSelect?: (matchId: number) => void; // Callback when selection checkbox is clicked
+  campaignName?: string; // Campaign name for context
+  idealPodcastDescription?: string | null; // Campaign's ideal podcast description
 }
 
 
-export const MatchIntelligenceCard = ({ 
-  match, 
-  onApprove, 
-  onReject, 
-  isActionPending, 
+export const MatchIntelligenceCard = ({
+  match,
+  onApprove,
+  onReject,
+  isActionPending,
   rejectReason,
   isSelectable = false,
   isSelected = false,
-  onSelect
+  onSelect,
+  campaignName,
+  idealPodcastDescription
 }: MatchIntelligenceCardProps) => {
   const [showRejectDialog, setShowRejectDialog] = useState(false);
   const [showPodcastDetails, setShowPodcastDetails] = useState(false);
@@ -317,6 +321,15 @@ export const MatchIntelligenceCard = ({
           </strong>
           <p className="reasoning text-xs text-purple-900 italic mt-1 pl-6">"{match.vetting_reasoning || 'This podcast is a good fit based on content alignment.'}"</p>
         </div>
+
+        {idealPodcastDescription && (
+          <div className="intelligence-item p-3 bg-indigo-50 border border-indigo-200 rounded-md">
+            <strong className="flex items-center text-indigo-800">
+              <Check className="h-4 w-4 mr-2 text-indigo-600"/> Campaign Target{campaignName && ` (${campaignName})`}
+            </strong>
+            <p className="text-xs text-indigo-900 mt-1 pl-6">{idealPodcastDescription}</p>
+          </div>
+        )}
 
       </div>
 

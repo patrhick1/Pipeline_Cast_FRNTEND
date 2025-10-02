@@ -36,6 +36,7 @@ export interface ReviewTask {
 
   // --- Enhanced endpoint fields ---
   campaign_name?: string;
+  ideal_podcast_description?: string | null;
   client_name?: string | null;
   media_id?: number;
   media_name?: string;
@@ -149,6 +150,7 @@ export interface Campaign { // CampaignInDB
   podcast_transcript_link?: string | null;
   compiled_articles_link?: string | null;
   mock_interview_trancript?: string | null;
+  ideal_podcast_description?: string | null;
   // embedding is omitted
   start_date?: string | null; // ISO date string
   end_date?: string | null; // ISO date string
@@ -384,6 +386,8 @@ function ReviewTaskItem({
         isSelectable={isSelectable && task.status === 'pending'}
         isSelected={isSelected}
         onSelect={() => onSelect?.(task.review_task_id)}
+        campaignName={task.campaign_name}
+        idealPodcastDescription={task.ideal_podcast_description}
       />
     );
   }

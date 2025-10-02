@@ -31,6 +31,7 @@ export interface CampaignForEdit { // Based on Campaign interface in AdminPanel
   media_kit_url?: string | null;
   goal_note?: string | null;
   instantly_campaign_id?: string | null;
+  ideal_podcast_description?: string | null;
   // Add any other fields the form might interact with or display
 }
 
@@ -40,6 +41,7 @@ const campaignUpdateSchemaContents = {
   campaign_name: z.string().min(1, "Campaign name is required").optional(),
   campaign_type: z.string().optional().nullable(),
   campaign_keywords_str: z.string().optional().nullable().describe("Comma-separated keywords"),
+  ideal_podcast_description: z.string().optional().nullable(),
   mock_interview_trancript: z.string().optional().nullable(),
   media_kit_url: z.string().url("Invalid URL").optional().or(z.literal("")).nullable(),
   goal_note: z.string().optional().nullable(),
@@ -79,6 +81,7 @@ export default function EditCampaignDialog({ campaign, people, open, onOpenChang
         campaign_name: campaign.campaign_name,
         campaign_type: campaign.campaign_type || "",
         campaign_keywords_str: (campaign.campaign_keywords || []).join(', '),
+        ideal_podcast_description: campaign.ideal_podcast_description || "",
         mock_interview_trancript: campaign.mock_interview_trancript || "",
         media_kit_url: campaign.media_kit_url || "",
         goal_note: campaign.goal_note || "",
@@ -141,6 +144,9 @@ export default function EditCampaignDialog({ campaign, people, open, onOpenChang
               )} />
               <FormField control={form.control} name="campaign_keywords_str" render={({ field }) => (
                 <FormItem><FormLabel>Keywords (comma-separated)</FormLabel><FormControl><Input {...field} value={field.value ?? ""} /></FormControl><FormMessage /></FormItem>
+              )} />
+              <FormField control={form.control} name="ideal_podcast_description" render={({ field }) => (
+                <FormItem><FormLabel>Ideal Podcast Description</FormLabel><FormControl><Textarea {...field} value={field.value ?? ""} placeholder="Describe the type of podcasts that would be a good fit for this campaign..." className="min-h-[100px]" /></FormControl><FormMessage /></FormItem>
               )} />
               <FormField control={form.control} name="mock_interview_trancript" render={({ field }) => (
                 <FormItem><FormLabel>Mock Interview Transcript/Link</FormLabel><FormControl><Textarea {...field} value={field.value ?? ""} className="min-h-[80px]" /></FormControl><FormMessage /></FormItem>

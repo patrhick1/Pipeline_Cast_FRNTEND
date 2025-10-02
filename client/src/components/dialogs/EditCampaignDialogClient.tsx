@@ -21,6 +21,7 @@ export interface CampaignForClientEdit {
   campaign_id: string;
   campaign_name: string;
   goal_note?: string | null;
+  ideal_podcast_description?: string | null;
   start_date?: string | null;
   end_date?: string | null;
 }
@@ -29,6 +30,7 @@ export interface CampaignForClientEdit {
 const clientCampaignUpdateSchema = z.object({
   campaign_name: z.string().min(1, "Campaign name is required"),
   goal_note: z.string().optional().nullable(),
+  ideal_podcast_description: z.string().optional().nullable(),
   start_date: z.date().optional().nullable(),
   end_date: z.date().optional().nullable(),
 }).refine(
@@ -61,6 +63,7 @@ export default function EditCampaignDialogClient({ campaign, open, onOpenChange 
     defaultValues: {
       campaign_name: "",
       goal_note: "",
+      ideal_podcast_description: "",
       start_date: null,
       end_date: null,
     },
@@ -71,6 +74,7 @@ export default function EditCampaignDialogClient({ campaign, open, onOpenChange 
       form.reset({
         campaign_name: campaign.campaign_name,
         goal_note: campaign.goal_note || "",
+        ideal_podcast_description: campaign.ideal_podcast_description || "",
         start_date: campaign.start_date ? new Date(campaign.start_date) : null,
         end_date: campaign.end_date ? new Date(campaign.end_date) : null,
       });
@@ -154,15 +158,15 @@ export default function EditCampaignDialogClient({ campaign, open, onOpenChange 
               )} 
             />
             
-            <FormField 
-              control={form.control} 
-              name="goal_note" 
+            <FormField
+              control={form.control}
+              name="goal_note"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Campaign Goals & Notes</FormLabel>
                   <FormControl>
-                    <Textarea 
-                      {...field} 
+                    <Textarea
+                      {...field}
                       value={field.value || ""}
                       placeholder="What would you like to achieve with this campaign? Any specific topics, target audiences, or objectives?"
                       className="min-h-[100px]"
@@ -173,9 +177,31 @@ export default function EditCampaignDialogClient({ campaign, open, onOpenChange 
                   </FormDescription>
                   <FormMessage />
                 </FormItem>
-              )} 
+              )}
             />
-            
+
+            <FormField
+              control={form.control}
+              name="ideal_podcast_description"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Ideal Podcast Match</FormLabel>
+                  <FormControl>
+                    <Textarea
+                      {...field}
+                      value={field.value || ""}
+                      placeholder="Describe your ideal podcast match (e.g., topics, audience, format)..."
+                      className="min-h-[100px]"
+                    />
+                  </FormControl>
+                  <FormDescription>
+                    What kind of podcasts are you hoping to be featured on?
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
             <div className="grid grid-cols-2 gap-4">
               <FormField
                 control={form.control}

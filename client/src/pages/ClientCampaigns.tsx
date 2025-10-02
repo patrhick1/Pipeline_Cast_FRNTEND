@@ -25,6 +25,7 @@ interface ClientCampaignSummary {
   active_placements_count?: number;
   pending_approvals_count?: number; // Number of match_suggestions or pitch_reviews pending client approval
   goal_note?: string | null;
+  ideal_podcast_description?: string | null;
   start_date?: string | null;
   end_date?: string | null;
 }
