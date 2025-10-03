@@ -65,13 +65,29 @@ export const draftsApi = {
    * Create a new draft
    */
   async createDraft(draftData: DraftData): Promise<CreateDraftResponse> {
-    // Ensure reply_to_message_id is a string if provided
-    const payload = {
-      ...draftData,
-      reply_to_message_id: draftData.reply_to_message_id !== undefined
-        ? String(draftData.reply_to_message_id)
-        : undefined
+    // Build payload and ensure reply_to_message_id is a string if provided
+    const payload: any = {
+      to: draftData.to,
+      subject: draftData.subject,
+      body: draftData.body,
     };
+
+    // Add optional fields only if they have values
+    if (draftData.cc && draftData.cc.length > 0) {
+      payload.cc = draftData.cc;
+    }
+    if (draftData.bcc && draftData.bcc.length > 0) {
+      payload.bcc = draftData.bcc;
+    }
+    if (draftData.thread_id) {
+      payload.thread_id = draftData.thread_id;
+    }
+    if (draftData.reply_to_message_id !== undefined && draftData.reply_to_message_id !== null) {
+      payload.reply_to_message_id = String(draftData.reply_to_message_id);
+    }
+    if (draftData.scheduled_send_at) {
+      payload.scheduled_send_at = draftData.scheduled_send_at;
+    }
 
     const response = await apiRequest('POST', '/inbox/drafts', payload);
     if (!response.ok) {
@@ -84,13 +100,21 @@ export const draftsApi = {
    * Update an existing draft
    */
   async updateDraft(draftId: number, updates: Partial<DraftData>): Promise<UpdateDraftResponse> {
-    // Ensure reply_to_message_id is a string if provided
-    const payload = {
-      ...updates,
-      reply_to_message_id: updates.reply_to_message_id !== undefined
-        ? String(updates.reply_to_message_id)
-        : undefined
-    };
+    // Build payload with only provided fields
+    const payload: any = {};
+
+    if (updates.to) payload.to = updates.to;
+    if (updates.subject) payload.subject = updates.subject;
+    if (updates.body !== undefined) payload.body = updates.body;
+    if (updates.cc && updates.cc.length > 0) payload.cc = updates.cc;
+    if (updates.bcc && updates.bcc.length > 0) payload.bcc = updates.bcc;
+    if (updates.thread_id) payload.thread_id = updates.thread_id;
+    if (updates.reply_to_message_id !== undefined && updates.reply_to_message_id !== null) {
+      payload.reply_to_message_id = String(updates.reply_to_message_id);
+    }
+    if (updates.scheduled_send_at !== undefined) {
+      payload.scheduled_send_at = updates.scheduled_send_at;
+    }
 
     const response = await apiRequest('PATCH', `/inbox/drafts/${draftId}`, payload);
     if (!response.ok) {
@@ -157,13 +181,29 @@ export const adminDraftsApi = {
    * Create a new draft for an admin account
    */
   async createDraft(accountId: number, draftData: DraftData): Promise<CreateDraftResponse> {
-    // Ensure reply_to_message_id is a string if provided
-    const payload = {
-      ...draftData,
-      reply_to_message_id: draftData.reply_to_message_id !== undefined
-        ? String(draftData.reply_to_message_id)
-        : undefined
+    // Build payload and ensure reply_to_message_id is a string if provided
+    const payload: any = {
+      to: draftData.to,
+      subject: draftData.subject,
+      body: draftData.body,
     };
+
+    // Add optional fields only if they have values
+    if (draftData.cc && draftData.cc.length > 0) {
+      payload.cc = draftData.cc;
+    }
+    if (draftData.bcc && draftData.bcc.length > 0) {
+      payload.bcc = draftData.bcc;
+    }
+    if (draftData.thread_id) {
+      payload.thread_id = draftData.thread_id;
+    }
+    if (draftData.reply_to_message_id !== undefined && draftData.reply_to_message_id !== null) {
+      payload.reply_to_message_id = String(draftData.reply_to_message_id);
+    }
+    if (draftData.scheduled_send_at) {
+      payload.scheduled_send_at = draftData.scheduled_send_at;
+    }
 
     const response = await apiRequest('POST', `/api/admin/inbox/drafts?account_id=${accountId}`, payload);
     if (!response.ok) {
@@ -176,13 +216,21 @@ export const adminDraftsApi = {
    * Update an existing draft
    */
   async updateDraft(accountId: number, draftId: number, updates: Partial<DraftData>): Promise<UpdateDraftResponse> {
-    // Ensure reply_to_message_id is a string if provided
-    const payload = {
-      ...updates,
-      reply_to_message_id: updates.reply_to_message_id !== undefined
-        ? String(updates.reply_to_message_id)
-        : undefined
-    };
+    // Build payload with only provided fields
+    const payload: any = {};
+
+    if (updates.to) payload.to = updates.to;
+    if (updates.subject) payload.subject = updates.subject;
+    if (updates.body !== undefined) payload.body = updates.body;
+    if (updates.cc && updates.cc.length > 0) payload.cc = updates.cc;
+    if (updates.bcc && updates.bcc.length > 0) payload.bcc = updates.bcc;
+    if (updates.thread_id) payload.thread_id = updates.thread_id;
+    if (updates.reply_to_message_id !== undefined && updates.reply_to_message_id !== null) {
+      payload.reply_to_message_id = String(updates.reply_to_message_id);
+    }
+    if (updates.scheduled_send_at !== undefined) {
+      payload.scheduled_send_at = updates.scheduled_send_at;
+    }
 
     const response = await apiRequest('PATCH', `/api/admin/inbox/drafts/${draftId}?account_id=${accountId}`, payload);
     if (!response.ok) {
