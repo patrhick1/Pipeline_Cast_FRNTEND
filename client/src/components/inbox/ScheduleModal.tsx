@@ -68,6 +68,22 @@ export function ScheduleModal({
     await handleSchedule(scheduledTime);
   };
 
+  // Validate scheduled time
+  const validateScheduledTime = (scheduledDate: Date): { valid: boolean; error?: string } => {
+    const now = new Date();
+    const minFutureTime = new Date(now.getTime() + 60 * 1000); // 1 minute from now
+
+    if (scheduledDate <= now) {
+      return { valid: false, error: 'Scheduled time must be in the future' };
+    }
+
+    if (scheduledDate < minFutureTime) {
+      return { valid: false, error: 'Please schedule at least 1 minute in the future' };
+    }
+
+    return { valid: true };
+  };
+
   // Handle custom schedule
   const handleCustomSchedule = async () => {
     if (!selectedDate || !selectedTime) {
@@ -79,7 +95,22 @@ export function ScheduleModal({
       return;
     }
 
-    const scheduledTime = new Date(`${selectedDate}T${selectedTime}`).toISOString();
+    // Create date object in user's local timezone
+    const scheduledDate = new Date(`${selectedDate}T${selectedTime}`);
+
+    // Validate the scheduled time
+    const validation = validateScheduledTime(scheduledDate);
+    if (!validation.valid) {
+      toast({
+        title: 'Invalid Schedule Time',
+        description: validation.error,
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    // Convert to ISO string (UTC) for API
+    const scheduledTime = scheduledDate.toISOString();
     await handleSchedule(scheduledTime);
   };
 
@@ -149,7 +180,49 @@ export function ScheduleModal({
           {/* Quick Schedule Options */}
           <div>
             <h3 className="text-sm font-medium mb-3">Quick Schedule</h3>
-            <div className="grid grid-cols-1 gap-2">
+            <div className="grid grid-cols-2 gap-2">
+              {/* Relative time options */}
+              <Button
+                type="button"
+                variant="outline"
+                onClick={async () => {
+                  const scheduledDate = new Date(Date.now() + 30 * 60 * 1000);
+                  await handleSchedule(scheduledDate.toISOString());
+                }}
+                disabled={isScheduling}
+                className="justify-start"
+              >
+                <Clock className="mr-2 h-4 w-4" />
+                In 30 minutes
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={async () => {
+                  const scheduledDate = new Date(Date.now() + 60 * 60 * 1000);
+                  await handleSchedule(scheduledDate.toISOString());
+                }}
+                disabled={isScheduling}
+                className="justify-start"
+              >
+                <Clock className="mr-2 h-4 w-4" />
+                In 1 hour
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={async () => {
+                  const scheduledDate = new Date(Date.now() + 2 * 60 * 60 * 1000);
+                  await handleSchedule(scheduledDate.toISOString());
+                }}
+                disabled={isScheduling}
+                className="justify-start"
+              >
+                <Clock className="mr-2 h-4 w-4" />
+                In 2 hours
+              </Button>
+
+              {/* Specific time options */}
               <Button
                 type="button"
                 variant="outline"
@@ -158,7 +231,7 @@ export function ScheduleModal({
                 className="justify-start"
               >
                 <Calendar className="mr-2 h-4 w-4" />
-                Tomorrow at 9:00 AM
+                Tomorrow 9 AM
               </Button>
               <Button
                 type="button"
@@ -168,7 +241,7 @@ export function ScheduleModal({
                 className="justify-start"
               >
                 <Calendar className="mr-2 h-4 w-4" />
-                Tomorrow at 2:00 PM
+                Tomorrow 2 PM
               </Button>
               <Button
                 type="button"
@@ -178,7 +251,7 @@ export function ScheduleModal({
                 className="justify-start"
               >
                 <Calendar className="mr-2 h-4 w-4" />
-                Next Monday at 9:00 AM
+                Next Monday 9 AM
               </Button>
             </div>
           </div>
@@ -202,7 +275,7 @@ export function ScheduleModal({
               </div>
               <div>
                 <label htmlFor="schedule-time" className="text-sm text-gray-600 mb-1 block">
-                  Time
+                  Time (your local timezone)
                 </label>
                 <Input
                   id="schedule-time"
@@ -212,6 +285,9 @@ export function ScheduleModal({
                   className="w-full"
                 />
               </div>
+              <p className="text-xs text-gray-500">
+                Times are in your local timezone and will be converted for sending
+              </p>
               <Button
                 type="button"
                 onClick={handleCustomSchedule}
