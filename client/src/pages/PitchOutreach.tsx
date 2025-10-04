@@ -43,8 +43,6 @@ import { BatchAIGenerateButton } from "@/components/pitch/BatchAIGenerateButton"
 import { BulkFollowUpButton } from "@/components/pitch/BulkFollowUpButton";
 import { formatUTCToLocal } from "@/lib/timezone";
 import { ModernPitchReview } from "@/components/pitch/ModernPitchReview";
-import { useNylas } from "@/hooks/useNylas";
-import { Mail, Shield, Zap } from "lucide-react";
 
 // --- Interfaces (Aligned with expected enriched backend responses) ---
 
@@ -651,40 +649,9 @@ function ReadyToSendTab({
     const [updatingEmailForGroup, setUpdatingEmailForGroup] = useState<string | null>(null);
     const [editingGroupEmail, setEditingGroupEmail] = useState<string | null>(null);
     const [tempGroupEmail, setTempGroupEmail] = useState("");
-    const [isConnecting, setIsConnecting] = useState(false);
     const { isFreePlan } = usePitchCapabilities();
     const { toast } = useToast();
     const { user } = useAuth();
-    const { nylasStatus, isNylasConnected } = useNylas();
-
-    // Create local connection mutation (same as NylasConnect component)
-    const connectNylasMutation = useMutation({
-        mutationFn: async () => {
-            const res = await apiRequest('POST', '/inbox/nylas/connect');
-            if (!res.ok) throw new Error('Failed to initialize Nylas connection');
-            return res.json();
-        },
-        onSuccess: (data) => {
-            if (data.oauth_url) {
-                window.location.href = data.oauth_url;
-            } else if (data.auth_url) {
-                window.location.href = data.auth_url;
-            }
-        },
-        onError: () => {
-            toast({
-                title: 'Connection failed',
-                description: 'Failed to connect to email service. Please try again.',
-                variant: 'destructive',
-            });
-            setIsConnecting(false);
-        }
-    });
-
-    const handleConnect = () => {
-        setIsConnecting(true);
-        connectNylasMutation.mutate();
-    };
 
     // Function to check if a campaign's client has premium subscription
     const getCampaignSubscription = (campaignId: string) => {
@@ -693,9 +660,6 @@ function ReadyToSendTab({
     };
 
     const isStaffOrAdmin = user?.role?.toLowerCase() === 'staff' || user?.role?.toLowerCase() === 'admin';
-
-    // Only clients need Nylas connection, admins/staff use shared sending accounts
-    const needsEmailConnection = !isStaffOrAdmin && !isNylasConnected;
 
     // Group pitches by campaign_id and media_id
     const groupedPitches = useMemo(() => {
@@ -838,85 +802,6 @@ function ReadyToSendTab({
 
     return (
         <div className="space-y-4 relative">
-            {/* Email Connection Overlay - Only for client users, not admins/staff */}
-            {needsEmailConnection && (
-                <div className="absolute inset-0 z-10 bg-white/95 backdrop-blur-sm flex items-center justify-center">
-                    <Card className="max-w-2xl mx-auto border-2 shadow-lg">
-                        <CardHeader className="text-center pb-4">
-                            <div className="mx-auto p-4 bg-blue-100 rounded-full w-fit mb-4">
-                                <Mail className="w-8 h-8 text-blue-600" />
-                            </div>
-                            <CardTitle className="text-2xl">Connect Your Email to Send Pitches</CardTitle>
-                            <CardDescription className="text-base mt-2">
-                                Connect your email account to send pitches directly from the platform
-                            </CardDescription>
-                        </CardHeader>
-                        <CardContent className="text-center space-y-6">
-                            {/* Features */}
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-left">
-                                <div className="flex gap-3">
-                                    <div className="p-2 bg-blue-100 rounded-lg h-fit">
-                                        <Zap className="w-5 h-5 text-blue-600" />
-                                    </div>
-                                    <div>
-                                        <p className="font-medium text-sm">Direct Sending</p>
-                                        <p className="text-xs text-gray-600">
-                                            Send pitches from your own email address
-                                        </p>
-                                    </div>
-                                </div>
-                                <div className="flex gap-3">
-                                    <div className="p-2 bg-green-100 rounded-lg h-fit">
-                                        <Mail className="w-5 h-5 text-green-600" />
-                                    </div>
-                                    <div>
-                                        <p className="font-medium text-sm">Track Responses</p>
-                                        <p className="text-xs text-gray-600">
-                                            See replies in your unified inbox
-                                        </p>
-                                    </div>
-                                </div>
-                                <div className="flex gap-3">
-                                    <div className="p-2 bg-purple-100 rounded-lg h-fit">
-                                        <Shield className="w-5 h-5 text-purple-600" />
-                                    </div>
-                                    <div>
-                                        <p className="font-medium text-sm">Secure & Private</p>
-                                        <p className="text-xs text-gray-600">
-                                            OAuth 2.0 authentication
-                                        </p>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Connection button */}
-                            <div className="pt-4">
-                                <Button
-                                    size="lg"
-                                    onClick={handleConnect}
-                                    disabled={isConnecting || connectNylasMutation.isPending}
-                                    className="min-w-[200px]"
-                                >
-                                    {isConnecting || connectNylasMutation.isPending ? (
-                                        <>
-                                            <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-                                            Connecting...
-                                        </>
-                                    ) : (
-                                        <>
-                                            <Mail className="w-4 h-4 mr-2" />
-                                            Connect Email Account
-                                        </>
-                                    )}
-                                </Button>
-                                <p className="text-xs text-gray-500 mt-3">
-                                    Supports Gmail, Outlook, and other major email providers
-                                </p>
-                            </div>
-                        </CardContent>
-                    </Card>
-                </div>
-            )}
             {/* Bulk Actions Bar */}
             <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border">
                 <div className="flex items-center space-x-3">
