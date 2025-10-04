@@ -11,13 +11,14 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Card } from '@/components/ui/card';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import RichTextEditor from './RichTextEditor';
 import { ScheduleModal } from './ScheduleModal';
 import {
   X,
   Reply,
   ReplyAll,
-  Forward,
   Trash2,
   Archive,
   Star,
@@ -56,7 +57,7 @@ interface ThreadViewProps {
 }
 
 export default function ThreadView({ threadId, onClose, onReply }: ThreadViewProps) {
-  const [replyMode, setReplyMode] = useState<'reply' | 'replyAll' | 'forward' | null>(null);
+  const [replyMode, setReplyMode] = useState<'reply' | 'replyAll' | null>(null);
   const [expandedMessages, setExpandedMessages] = useState<Set<string>>(new Set());
   const [selectedSmartReply, setSelectedSmartReply] = useState<string | null>(null);
   const [viewModes, setViewModes] = useState<Record<string, 'auto' | 'html' | 'text'>>({});
@@ -64,6 +65,15 @@ export default function ThreadView({ threadId, onClose, onReply }: ThreadViewPro
   const [showScheduleModal, setShowScheduleModal] = useState(false);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
+
+  // Recipient fields state
+  const [replyTo, setReplyTo] = useState<string[]>([]);
+  const [replyCc, setReplyCc] = useState<string[]>([]);
+  const [replyBcc, setReplyBcc] = useState<string[]>([]);
+  const [replyToInput, setReplyToInput] = useState('');
+  const [replyCcInput, setReplyCcInput] = useState('');
+  const [replyBccInput, setReplyBccInput] = useState('');
+  const [showCcBcc, setShowCcBcc] = useState(false);
 
   // Use hybrid approach - try stored thread first, fallback to Nylas
   const { useStoredThread } = useEmailThreads();
@@ -75,10 +85,12 @@ export default function ThreadView({ threadId, onClose, onReply }: ThreadViewPro
     enabled: !!thread,
   });
 
-  // Get email metadata for auto-save
+  // Get email metadata for auto-save - use custom recipients if reply mode is active
   const emailMetadata = thread?.messages && thread.messages.length > 0
     ? {
-        to: [('from_email' in thread ? thread.from_email : null) || thread.messages[0]?.sender_email || ''],
+        to: replyMode ? replyTo : [('from_email' in thread ? thread.from_email : null) || thread.messages[0]?.sender_email || ''],
+        cc: replyMode && replyCc.length > 0 ? replyCc : undefined,
+        bcc: replyMode && replyBcc.length > 0 ? replyBcc : undefined,
         subject: ('subject' in thread ? thread.subject : 'thread' in thread ? thread.thread.subject : '') || '',
         reply_to_message_id: (() => {
           const lastMsg = thread.messages[thread.messages.length - 1] as any;
@@ -123,12 +135,28 @@ export default function ThreadView({ threadId, onClose, onReply }: ThreadViewPro
   const sendReplyMutation = useMutation({
     mutationFn: async (data: {
       content: string;
+      to: string[];
+      cc?: string[];
+      bcc?: string[];
       replyAll: boolean;
     }) => {
-      const res = await apiRequest('POST', `/inbox/reply?thread_id=${threadId}`, {
+      const payload: any = {
         body: data.content,
         reply_all: data.replyAll
-      });
+      };
+
+      // Add custom recipients if provided
+      if (data.to.length > 0) {
+        payload.to = data.to;
+      }
+      if (data.cc && data.cc.length > 0) {
+        payload.cc = data.cc;
+      }
+      if (data.bcc && data.bcc.length > 0) {
+        payload.bcc = data.bcc;
+      }
+
+      const res = await apiRequest('POST', `/inbox/reply?thread_id=${threadId}`, payload);
       if (!res.ok) throw new Error('Failed to send reply');
       return res.json();
     },
@@ -246,6 +274,90 @@ export default function ThreadView({ threadId, onClose, onReply }: ThreadViewPro
     return '';
   };
 
+  // Recipient management helpers
+  const handleAddEmail = (
+    input: string,
+    emails: string[],
+    setEmails: (emails: string[]) => void,
+    setInput: (input: string) => void
+  ) => {
+    const email = input.trim();
+    if (email && email.includes('@') && !emails.includes(email)) {
+      setEmails([...emails, email]);
+      setInput('');
+    }
+  };
+
+  const handleRemoveEmail = (
+    email: string,
+    emails: string[],
+    setEmails: (emails: string[]) => void
+  ) => {
+    setEmails(emails.filter(e => e !== email));
+  };
+
+  const handleKeyDown = (
+    e: React.KeyboardEvent<HTMLInputElement>,
+    input: string,
+    emails: string[],
+    setEmails: (emails: string[]) => void,
+    setInput: (input: string) => void
+  ) => {
+    if (e.key === 'Enter' || e.key === ',') {
+      e.preventDefault();
+      handleAddEmail(input, emails, setEmails, setInput);
+    }
+  };
+
+  // Calculate default recipients based on reply mode
+  const getReplyRecipients = (mode: 'reply' | 'replyAll') => {
+    if (!thread?.messages || thread.messages.length === 0) {
+      return { to: [], cc: [], bcc: [] };
+    }
+
+    const lastMessage = thread.messages[thread.messages.length - 1] as any;
+
+    // Determine who to reply to based on message direction
+    let replyToEmail: string | null = null;
+
+    if (lastMessage.direction === 'inbound') {
+      // If inbound, reply to the sender (from_email)
+      replyToEmail = lastMessage.from_email || lastMessage.sender_email ||
+                     (lastMessage.from && lastMessage.from[0]?.email);
+    } else if (lastMessage.direction === 'outbound') {
+      // If outbound, reply to the original recipients (to_emails)
+      const toEmails = lastMessage.to_emails || lastMessage.recipient_emails || [];
+      replyToEmail = toEmails.length > 0 ? toEmails[0] : null;
+    } else {
+      // Fallback: try from_email first
+      replyToEmail = lastMessage.from_email || lastMessage.sender_email ||
+                     (lastMessage.from && lastMessage.from[0]?.email);
+    }
+
+    if (mode === 'reply') {
+      return {
+        to: replyToEmail ? [replyToEmail] : [],
+        cc: [],
+        bcc: []
+      };
+    } else {
+      // replyAll mode
+      const toEmails = lastMessage.to_emails || lastMessage.recipient_emails || [];
+      const ccEmails = lastMessage.cc_emails || [];
+
+      // Build comprehensive recipient list for reply all
+      const allRecipients = new Set<string>();
+      if (replyToEmail) allRecipients.add(replyToEmail);
+      toEmails.forEach((email: string) => allRecipients.add(email));
+
+      return {
+        to: Array.from(allRecipients),
+        cc: ccEmails,
+        bcc: []
+      };
+    }
+  };
+
   const handleSmartReplySelect = (reply: SmartReply) => {
     setReplyContent(reply.draft);
     setSelectedSmartReply(reply.id);
@@ -261,9 +373,18 @@ export default function ThreadView({ threadId, onClose, onReply }: ThreadViewPro
   const handleSendReply = async () => {
     if (!thread?.messages || thread.messages.length === 0) return;
 
-    // If we have a draft, send it using the drafts API
+    // If we have a draft, update recipients first, then send it using the drafts API
     if (draftId) {
       try {
+        // Update draft with custom recipients before sending
+        await draftsApi.updateDraft(draftId, {
+          to: replyTo.length > 0 ? replyTo : emailMetadata.to,
+          cc: replyCc.length > 0 ? replyCc : undefined,
+          bcc: replyBcc.length > 0 ? replyBcc : undefined,
+          body: replyContent,
+        });
+
+        // Now send the draft
         await draftsApi.sendDraft(draftId);
         toast({
           title: 'Reply sent',
@@ -283,9 +404,12 @@ export default function ThreadView({ threadId, onClose, onReply }: ThreadViewPro
         });
       }
     } else {
-      // Send as regular reply (non-draft)
+      // Send as regular reply (non-draft) with custom recipients
       sendReplyMutation.mutate({
         content: replyContent,
+        to: replyTo.length > 0 ? replyTo : emailMetadata.to,
+        cc: replyCc.length > 0 ? replyCc : undefined,
+        bcc: replyBcc.length > 0 ? replyBcc : undefined,
         replyAll: replyMode === 'replyAll',
       });
     }
@@ -641,6 +765,11 @@ export default function ThreadView({ threadId, onClose, onReply }: ThreadViewPro
                             variant="outline"
                             size="sm"
                             onClick={() => {
+                              const recipients = getReplyRecipients('reply');
+                              setReplyTo(recipients.to);
+                              setReplyCc(recipients.cc);
+                              setReplyBcc(recipients.bcc);
+                              setShowCcBcc(false);
                               setReplyMode('reply');
                               setReplyContent('');
                             }}
@@ -652,23 +781,17 @@ export default function ThreadView({ threadId, onClose, onReply }: ThreadViewPro
                             variant="outline"
                             size="sm"
                             onClick={() => {
+                              const recipients = getReplyRecipients('replyAll');
+                              setReplyTo(recipients.to);
+                              setReplyCc(recipients.cc);
+                              setReplyBcc(recipients.bcc);
+                              setShowCcBcc(recipients.cc.length > 0);
                               setReplyMode('replyAll');
                               setReplyContent('');
                             }}
                           >
                             <ReplyAll className="w-4 h-4 mr-2" />
                             Reply All
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => {
-                              setReplyMode('forward');
-                              setReplyContent(getQuotedText(message));
-                            }}
-                          >
-                            <Forward className="w-4 h-4 mr-2" />
-                            Forward
                           </Button>
                         </div>
                       )}
@@ -739,7 +862,6 @@ export default function ThreadView({ threadId, onClose, onReply }: ThreadViewPro
               <h3 className="text-sm font-medium">
                 {replyMode === 'reply' && 'Reply'}
                 {replyMode === 'replyAll' && 'Reply All'}
-                {replyMode === 'forward' && 'Forward'}
               </h3>
               <Button
                 variant="ghost"
@@ -753,7 +875,106 @@ export default function ThreadView({ threadId, onClose, onReply }: ThreadViewPro
                 <X className="w-4 h-4" />
               </Button>
             </div>
-            
+
+            {/* Recipient Fields */}
+            <div className="space-y-2 mb-4 border-b pb-3">
+              {/* To Field */}
+              <div className="flex items-start gap-2">
+                <Label className="w-12 pt-2 text-sm text-gray-600">To</Label>
+                <div className="flex-1 flex items-center gap-2">
+                  <div className="flex-1 flex flex-wrap gap-1 items-center border rounded-md p-2 min-h-[38px]">
+                    {replyTo.map(email => (
+                      <Badge key={email} variant="secondary" className="gap-1">
+                        {email}
+                        <button
+                          onClick={() => handleRemoveEmail(email, replyTo, setReplyTo)}
+                          className="ml-1 hover:text-red-500"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </Badge>
+                    ))}
+                    <Input
+                      value={replyToInput}
+                      onChange={(e) => setReplyToInput(e.target.value)}
+                      onKeyDown={(e) => handleKeyDown(e, replyToInput, replyTo, setReplyTo, setReplyToInput)}
+                      onBlur={() => handleAddEmail(replyToInput, replyTo, setReplyTo, setReplyToInput)}
+                      placeholder="Add recipients..."
+                      className="flex-1 min-w-[150px] border-0 shadow-none px-0 focus-visible:ring-0"
+                    />
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShowCcBcc(!showCcBcc)}
+                  >
+                    {showCcBcc ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                    <span className="ml-1 text-xs">Cc/Bcc</span>
+                  </Button>
+                </div>
+              </div>
+
+              {/* CC Field */}
+              {showCcBcc && (
+                <>
+                  <div className="flex items-start gap-2">
+                    <Label className="w-12 pt-2 text-sm text-gray-600">Cc</Label>
+                    <div className="flex-1">
+                      <div className="flex flex-wrap gap-1 items-center border rounded-md p-2 min-h-[38px]">
+                        {replyCc.map(email => (
+                          <Badge key={email} variant="secondary" className="gap-1">
+                            {email}
+                            <button
+                              onClick={() => handleRemoveEmail(email, replyCc, setReplyCc)}
+                              className="ml-1 hover:text-red-500"
+                            >
+                              <X className="w-3 h-3" />
+                            </button>
+                          </Badge>
+                        ))}
+                        <Input
+                          value={replyCcInput}
+                          onChange={(e) => setReplyCcInput(e.target.value)}
+                          onKeyDown={(e) => handleKeyDown(e, replyCcInput, replyCc, setReplyCc, setReplyCcInput)}
+                          onBlur={() => handleAddEmail(replyCcInput, replyCc, setReplyCc, setReplyCcInput)}
+                          placeholder="Add Cc recipients..."
+                          className="flex-1 min-w-[150px] border-0 shadow-none px-0 focus-visible:ring-0"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* BCC Field */}
+                  <div className="flex items-start gap-2">
+                    <Label className="w-12 pt-2 text-sm text-gray-600">Bcc</Label>
+                    <div className="flex-1">
+                      <div className="flex flex-wrap gap-1 items-center border rounded-md p-2 min-h-[38px]">
+                        {replyBcc.map(email => (
+                          <Badge key={email} variant="secondary" className="gap-1">
+                            {email}
+                            <button
+                              onClick={() => handleRemoveEmail(email, replyBcc, setReplyBcc)}
+                              className="ml-1 hover:text-red-500"
+                            >
+                              <X className="w-3 h-3" />
+                            </button>
+                          </Badge>
+                        ))}
+                        <Input
+                          value={replyBccInput}
+                          onChange={(e) => setReplyBccInput(e.target.value)}
+                          onKeyDown={(e) => handleKeyDown(e, replyBccInput, replyBcc, setReplyBcc, setReplyBccInput)}
+                          onBlur={() => handleAddEmail(replyBccInput, replyBcc, setReplyBcc, setReplyBccInput)}
+                          placeholder="Add Bcc recipients..."
+                          className="flex-1 min-w-[150px] border-0 shadow-none px-0 focus-visible:ring-0"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+
             <RichTextEditor
               value={replyContent}
               onChange={setReplyContent}

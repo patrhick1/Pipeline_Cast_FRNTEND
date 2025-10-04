@@ -13,6 +13,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { useToast } from '@/hooks/use-toast';
@@ -36,7 +37,6 @@ import {
   Loader2,
   Reply,
   ReplyAll,
-  Forward,
   ArrowLeft,
   ArrowDownLeft,
   ArrowUpRight,
@@ -78,7 +78,7 @@ export default function AdminInbox() {
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedFolder, setSelectedFolder] = useState<string>('inbox');
   const [expandedMessages, setExpandedMessages] = useState<Set<string>>(new Set());
-  const [replyMode, setReplyMode] = useState<'reply' | 'replyAll' | 'forward' | null>(null);
+  const [replyMode, setReplyMode] = useState<'reply' | 'replyAll' | null>(null);
   const [replyContent, setReplyContent] = useState('');
   const [replySubject, setReplySubject] = useState('');
   const [showSmartReplies, setShowSmartReplies] = useState(false);
@@ -87,6 +87,15 @@ export default function AdminInbox() {
   const [groupByCampaign, setGroupByCampaign] = useState(true);
   const [showScheduleModal, setShowScheduleModal] = useState(false);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
+
+  // Recipient fields state
+  const [replyTo, setReplyTo] = useState<string[]>([]);
+  const [replyCc, setReplyCc] = useState<string[]>([]);
+  const [replyBcc, setReplyBcc] = useState<string[]>([]);
+  const [replyToInput, setReplyToInput] = useState('');
+  const [replyCcInput, setReplyCcInput] = useState('');
+  const [replyBccInput, setReplyBccInput] = useState('');
+  const [showCcBcc, setShowCcBcc] = useState(false);
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -185,9 +194,12 @@ export default function AdminInbox() {
   });
 
   // Get email metadata for auto-save
+  // Get email metadata for auto-save - use custom recipients if reply mode is active
   const emailMetadata = threadDetails?.messages && threadDetails.messages.length > 0
     ? {
-        to: [(threadDetails as any).from_email || threadDetails.messages[0]?.from_email || ''],
+        to: replyMode ? replyTo : [(threadDetails as any).from_email || threadDetails.messages[0]?.from_email || ''],
+        cc: replyMode && replyCc.length > 0 ? replyCc : undefined,
+        bcc: replyMode && replyBcc.length > 0 ? replyBcc : undefined,
         subject: (threadDetails as any).subject || threadDetails.thread?.subject || '',
         reply_to_message_id: threadDetails.messages[threadDetails.messages.length - 1]?.message_id || undefined,
       }
@@ -337,10 +349,19 @@ export default function AdminInbox() {
   const handleSendReply = async () => {
     if (!threadDetails || !replyContent.trim()) return;
 
-    // If we have a draft, send it using the drafts API
-    if (draftId) {
+    // If we have a draft, update recipients first, then send it using the drafts API
+    if (draftId && adminAccountId) {
       try {
-        await draftsApi.sendDraft(draftId);
+        // Update draft with custom recipients before sending
+        await adminDraftsApi.updateDraft(adminAccountId, draftId, {
+          to: replyTo.length > 0 ? replyTo : emailMetadata.to,
+          cc: replyCc.length > 0 ? replyCc : undefined,
+          bcc: replyBcc.length > 0 ? replyBcc : undefined,
+          body: replyContent,
+        });
+
+        // Now send the draft
+        await adminDraftsApi.sendDraft(adminAccountId, draftId);
         toast({
           title: 'Reply sent',
           description: 'Your reply has been sent successfully.',
@@ -361,17 +382,14 @@ export default function AdminInbox() {
         });
       }
     } else {
-      // Send as regular reply (non-draft)
-      const lastMessage = threadDetails.messages[threadDetails.messages.length - 1];
-      const replyTo = lastMessage.direction === 'inbound'
-        ? [lastMessage.from_email]
-        : lastMessage.to_emails || [];
-
+      // Send as regular reply (non-draft) - use state recipients
       // Content is already in HTML format from RichTextEditor
       sendReplyMutation.mutate({
         threadId: threadDetails.thread.thread_id,
         replyData: {
-          to: replyTo,
+          to: replyTo.length > 0 ? replyTo : emailMetadata.to,
+          cc: replyCc.length > 0 ? replyCc : undefined,
+          bcc: replyBcc.length > 0 ? replyBcc : undefined,
           subject: replySubject || `Re: ${threadDetails.thread.subject}`,
           body: replyContent,
           reply_all: replyMode === 'replyAll'
@@ -490,6 +508,88 @@ export default function AdminInbox() {
       return email.substring(0, 2).toUpperCase();
     }
     return '??';
+  };
+
+  // Recipient management helpers
+  const handleAddEmail = (
+    input: string,
+    emails: string[],
+    setEmails: (emails: string[]) => void,
+    setInput: (input: string) => void
+  ) => {
+    const email = input.trim();
+    if (email && email.includes('@') && !emails.includes(email)) {
+      setEmails([...emails, email]);
+      setInput('');
+    }
+  };
+
+  const handleRemoveEmail = (
+    email: string,
+    emails: string[],
+    setEmails: (emails: string[]) => void
+  ) => {
+    setEmails(emails.filter(e => e !== email));
+  };
+
+  const handleKeyDown = (
+    e: React.KeyboardEvent<HTMLInputElement>,
+    input: string,
+    emails: string[],
+    setEmails: (emails: string[]) => void,
+    setInput: (input: string) => void
+  ) => {
+    if (e.key === 'Enter' || e.key === ',') {
+      e.preventDefault();
+      handleAddEmail(input, emails, setEmails, setInput);
+    }
+  };
+
+  // Calculate default recipients based on reply mode
+  const getReplyRecipients = (mode: 'reply' | 'replyAll') => {
+    if (!threadDetails?.messages || threadDetails.messages.length === 0) {
+      return { to: [], cc: [], bcc: [] };
+    }
+
+    const lastMessage = threadDetails.messages[threadDetails.messages.length - 1];
+
+    // Determine who to reply to based on message direction
+    let replyToEmail: string | null = null;
+
+    if (lastMessage.direction === 'inbound') {
+      // If inbound, reply to the sender (from_email)
+      replyToEmail = lastMessage.from_email || lastMessage.sender_email;
+    } else if (lastMessage.direction === 'outbound') {
+      // If outbound, reply to the original recipients (to_emails)
+      const toEmails = lastMessage.to_emails || [];
+      replyToEmail = toEmails.length > 0 ? toEmails[0] : null;
+    } else {
+      // Fallback: try from_email first
+      replyToEmail = lastMessage.from_email || lastMessage.sender_email;
+    }
+
+    if (mode === 'reply') {
+      return {
+        to: replyToEmail ? [replyToEmail] : [],
+        cc: [],
+        bcc: []
+      };
+    } else {
+      // replyAll mode
+      const toEmails = lastMessage.to_emails || [];
+      const ccEmails = lastMessage.cc_emails || [];
+
+      // Build comprehensive recipient list for reply all
+      const allRecipients = new Set<string>();
+      if (replyToEmail) allRecipients.add(replyToEmail);
+      toEmails.forEach((email: string) => allRecipients.add(email));
+
+      return {
+        to: Array.from(allRecipients),
+        cc: ccEmails,
+        bcc: []
+      };
+    }
   };
 
   const folders = [
@@ -1113,6 +1213,11 @@ export default function AdminInbox() {
                                   variant="outline"
                                   size="sm"
                                   onClick={() => {
+                                    const recipients = getReplyRecipients('reply');
+                                    setReplyTo(recipients.to);
+                                    setReplyCc(recipients.cc);
+                                    setReplyBcc(recipients.bcc);
+                                    setShowCcBcc(false);
                                     setReplyMode('reply');
                                     setReplyContent('');
                                   }}
@@ -1124,23 +1229,17 @@ export default function AdminInbox() {
                                   variant="outline"
                                   size="sm"
                                   onClick={() => {
+                                    const recipients = getReplyRecipients('replyAll');
+                                    setReplyTo(recipients.to);
+                                    setReplyCc(recipients.cc);
+                                    setReplyBcc(recipients.bcc);
+                                    setShowCcBcc(recipients.cc.length > 0);
                                     setReplyMode('replyAll');
                                     setReplyContent('');
                                   }}
                                 >
                                   <ReplyAll className="w-4 h-4 mr-2" />
                                   Reply All
-                                </Button>
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => {
-                                    setReplyMode('forward');
-                                    setReplyContent(getQuotedText(message));
-                                  }}
-                                >
-                                  <Forward className="w-4 h-4 mr-2" />
-                                  Forward
                                 </Button>
                               </div>
                             )}
@@ -1187,7 +1286,6 @@ export default function AdminInbox() {
                     <h3 className="text-sm font-medium">
                       {replyMode === 'reply' && 'Reply'}
                       {replyMode === 'replyAll' && 'Reply All'}
-                      {replyMode === 'forward' && 'Forward'}
                     </h3>
                     <Button
                       variant="ghost"
@@ -1200,6 +1298,105 @@ export default function AdminInbox() {
                     >
                       <X className="w-4 h-4" />
                     </Button>
+                  </div>
+
+                  {/* Recipient Fields */}
+                  <div className="space-y-2 mb-4 border-b pb-3">
+                    {/* To Field */}
+                    <div className="flex items-start gap-2">
+                      <Label className="w-12 pt-2 text-sm text-gray-600">To</Label>
+                      <div className="flex-1 flex items-center gap-2">
+                        <div className="flex-1 flex flex-wrap gap-1 items-center border rounded-md p-2 min-h-[38px]">
+                          {replyTo.map(email => (
+                            <Badge key={email} variant="secondary" className="gap-1">
+                              {email}
+                              <button
+                                onClick={() => handleRemoveEmail(email, replyTo, setReplyTo)}
+                                className="ml-1 hover:text-red-500"
+                              >
+                                <X className="w-3 h-3" />
+                              </button>
+                            </Badge>
+                          ))}
+                          <Input
+                            value={replyToInput}
+                            onChange={(e) => setReplyToInput(e.target.value)}
+                            onKeyDown={(e) => handleKeyDown(e, replyToInput, replyTo, setReplyTo, setReplyToInput)}
+                            onBlur={() => handleAddEmail(replyToInput, replyTo, setReplyTo, setReplyToInput)}
+                            placeholder="Add recipients..."
+                            className="flex-1 min-w-[150px] border-0 shadow-none px-0 focus-visible:ring-0"
+                          />
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setShowCcBcc(!showCcBcc)}
+                        >
+                          {showCcBcc ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                          <span className="ml-1 text-xs">Cc/Bcc</span>
+                        </Button>
+                      </div>
+                    </div>
+
+                    {/* CC Field */}
+                    {showCcBcc && (
+                      <>
+                        <div className="flex items-start gap-2">
+                          <Label className="w-12 pt-2 text-sm text-gray-600">Cc</Label>
+                          <div className="flex-1">
+                            <div className="flex flex-wrap gap-1 items-center border rounded-md p-2 min-h-[38px]">
+                              {replyCc.map(email => (
+                                <Badge key={email} variant="secondary" className="gap-1">
+                                  {email}
+                                  <button
+                                    onClick={() => handleRemoveEmail(email, replyCc, setReplyCc)}
+                                    className="ml-1 hover:text-red-500"
+                                  >
+                                    <X className="w-3 h-3" />
+                                  </button>
+                                </Badge>
+                              ))}
+                              <Input
+                                value={replyCcInput}
+                                onChange={(e) => setReplyCcInput(e.target.value)}
+                                onKeyDown={(e) => handleKeyDown(e, replyCcInput, replyCc, setReplyCc, setReplyCcInput)}
+                                onBlur={() => handleAddEmail(replyCcInput, replyCc, setReplyCc, setReplyCcInput)}
+                                placeholder="Add Cc recipients..."
+                                className="flex-1 min-w-[150px] border-0 shadow-none px-0 focus-visible:ring-0"
+                              />
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* BCC Field */}
+                        <div className="flex items-start gap-2">
+                          <Label className="w-12 pt-2 text-sm text-gray-600">Bcc</Label>
+                          <div className="flex-1">
+                            <div className="flex flex-wrap gap-1 items-center border rounded-md p-2 min-h-[38px]">
+                              {replyBcc.map(email => (
+                                <Badge key={email} variant="secondary" className="gap-1">
+                                  {email}
+                                  <button
+                                    onClick={() => handleRemoveEmail(email, replyBcc, setReplyBcc)}
+                                    className="ml-1 hover:text-red-500"
+                                  >
+                                    <X className="w-3 h-3" />
+                                  </button>
+                                </Badge>
+                              ))}
+                              <Input
+                                value={replyBccInput}
+                                onChange={(e) => setReplyBccInput(e.target.value)}
+                                onKeyDown={(e) => handleKeyDown(e, replyBccInput, replyBcc, setReplyBcc, setReplyBccInput)}
+                                onBlur={() => handleAddEmail(replyBccInput, replyBcc, setReplyBcc, setReplyBccInput)}
+                                placeholder="Add Bcc recipients..."
+                                className="flex-1 min-w-[150px] border-0 shadow-none px-0 focus-visible:ring-0"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      </>
+                    )}
                   </div>
 
                   <RichTextEditor
