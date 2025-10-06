@@ -106,6 +106,7 @@ const statusColors: Record<string, string> = {
   'declined': '#f87171',
   'cancelled': '#ef4444',
   'rejected': '#dc2626',
+  'client_rejected': '#f97316',
   'default': '#9ca3af'
 };
 
@@ -125,7 +126,8 @@ const statusLabels: Record<string, string> = {
   'needs_info': 'Needs Info',
   'declined': 'Declined',
   'cancelled': 'Cancelled',
-  'rejected': 'Rejected'
+  'rejected': 'Rejected',
+  'client_rejected': 'Client Rejected'
 };
 
 export default function PlacementStatusAnalytics({ campaignId, days = 30 }: PlacementStatusAnalyticsProps) {

@@ -24,7 +24,8 @@ import { useAuth } from "@/hooks/useAuth";
 import RecentReplies from "@/components/dashboard/RecentReplies";
 import { EmailVerificationBanner } from "@/components/EmailVerificationBanner";
 import { OnboardingPrompt } from "@/components/OnboardingPrompt";
-import { getRelativeTime } from "@/lib/timezone"; 
+import { getRelativeTime } from "@/lib/timezone";
+import { statusConfig, type PlacementStatus } from "@/constants/placementStatus"; 
 
 // --- Interfaces to match backend dashboard_schemas.py ---
 interface DashboardStatsOverview {
@@ -132,39 +133,9 @@ function QuickActionButton({
   );
 }
 
-// Status config for RecentBookingCard - matches backend placement statuses
-const placementStatusConfig: Record<string, { label: string; color: string }> = {
-  // Initial stages
-  initial_reply: { label: "Initial Reply", color: "bg-blue-100 text-blue-700" },
-  in_discussion: { label: "In Discussion", color: "bg-yellow-100 text-yellow-700" },
-  
-  // Interest/Confirmation stages
-  confirmed_interest: { label: "Confirmed Interest", color: "bg-teal-100 text-teal-700" },
-  confirmed: { label: "Confirmed", color: "bg-cyan-100 text-cyan-700" },
-  
-  // Scheduling stages
-  scheduling: { label: "Scheduling", color: "bg-purple-100 text-purple-700" },
-  scheduled: { label: "Scheduled", color: "bg-indigo-100 text-indigo-700" },
-  recording_booked: { label: "Recording Booked", color: "bg-indigo-100 text-indigo-700" },
-  
-  // Production stages
-  recorded: { label: "Recorded", color: "bg-pink-100 text-pink-700" },
-  live: { label: "Live", color: "bg-green-100 text-green-700" },
-  paid: { label: "Paid", color: "bg-emerald-100 text-emerald-700" },
-  
-  // Other statuses
-  needs_info: { label: "Needs Info", color: "bg-orange-100 text-orange-700" },
-  declined: { label: "Declined", color: "bg-red-100 text-red-700" },
-  cancelled: { label: "Cancelled", color: "bg-gray-100 text-gray-700" },
-  rejected: { label: "Rejected", color: "bg-red-100 text-red-700" },
-  
-  default: { label: "Unknown", color: "bg-gray-100 text-gray-700" },
-};
-
-
 function RecentBookingCard({ booking }: { booking: RecentPlacementItem }) {
-  const statusKey = booking.current_status || 'default';
-  const currentStatusConfig = placementStatusConfig[statusKey] || placementStatusConfig.default;
+  const statusKey = (booking.current_status || 'default') as PlacementStatus | 'default';
+  const currentStatusConfig = statusConfig[statusKey] || statusConfig.default;
 
   const formatDate = (dateString: string) => {
     return getRelativeTime(dateString);

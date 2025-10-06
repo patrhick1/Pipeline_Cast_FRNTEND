@@ -110,6 +110,16 @@ export const PlacementTimeline: React.FC<PlacementTimelineProps> = ({ placement 
     });
   }
 
+  // Add client rejection if applicable
+  if (placement.current_status === 'client_rejected') {
+    events.push({
+      date: new Date().toISOString(),
+      label: 'Client Rejected',
+      icon: <X className="w-4 h-4" />,
+      status: 'completed'
+    });
+  }
+
   if (events.length === 0) {
     return (
       <div className="text-center text-gray-500 py-4">

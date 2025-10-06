@@ -20,6 +20,7 @@ export type PlacementStatus =
   | 'published'
   | 'paid'
   | 'rejected'
+  | 'client_rejected'
   | 'cancelled';
 
 /**
@@ -46,6 +47,7 @@ export const PLACEMENT_STATUSES = {
   PUBLISHED: 'published',
   PAID: 'paid',
   REJECTED: 'rejected',
+  CLIENT_REJECTED: 'client_rejected',
   CANCELLED: 'cancelled',
 } as const;
 
@@ -63,6 +65,7 @@ export const STATUS_LABELS: Record<PlacementStatus, string> = {
   published: 'Published',
   paid: 'Paid',
   rejected: 'Rejected',
+  client_rejected: 'Client Rejected',
   cancelled: 'Cancelled',
 };
 
@@ -80,6 +83,7 @@ export const STATUS_COLORS: Record<PlacementStatus, string> = {
   published: 'bg-teal-100 text-teal-800',
   paid: 'bg-emerald-100 text-emerald-800',
   rejected: 'bg-red-100 text-red-800',
+  client_rejected: 'bg-orange-100 text-orange-800',
   cancelled: 'bg-gray-100 text-gray-700',
 };
 
@@ -97,6 +101,7 @@ export const STATUS_DOT_COLORS: Record<PlacementStatus, string> = {
   published: 'bg-teal-500',
   paid: 'bg-emerald-500',
   rejected: 'bg-red-500',
+  client_rejected: 'bg-orange-500',
   cancelled: 'bg-gray-500',
 };
 
@@ -114,6 +119,7 @@ export const STATUS_ICONS: Record<PlacementStatus, LucideIcon> = {
   published: ExternalLink,
   paid: CheckCircle,
   rejected: X,
+  client_rejected: X,
   cancelled: X,
 };
 
@@ -181,6 +187,12 @@ export const statusConfig: Record<PlacementStatus | 'default', StatusConfig> = {
     color: 'bg-red-100 text-red-800',
     dotColor: 'bg-red-500'
   },
+  client_rejected: {
+    label: 'Client Rejected',
+    icon: X,
+    color: 'bg-orange-100 text-orange-800',
+    dotColor: 'bg-orange-500'
+  },
   cancelled: {
     label: 'Cancelled',
     icon: X,
@@ -214,6 +226,7 @@ export const STATUS_PROGRESSION: PlacementStatus[] = [
  */
 export const TERMINAL_STATUSES: PlacementStatus[] = [
   'rejected',
+  'client_rejected',
   'cancelled',
   'paid',
 ];
