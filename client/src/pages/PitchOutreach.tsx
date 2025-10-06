@@ -1677,12 +1677,13 @@ export default function PitchOutreach() {
           )}
           {capabilities && (
             <Badge variant={isFreePlan ? "secondary" : "default"} className="text-sm">
-              {capabilities.plan_type === 'admin' ? 'Admin' : 
+              {capabilities.plan_type === 'admin' ? 'Admin' :
                capabilities.plan_type === 'paid_premium' ? 'Premium' :
                capabilities.plan_type === 'paid_basic' ? 'Basic' : 'Free'} Plan
             </Badge>
           )}
-          <EmailStatusBadge showConnectButton={true} showDisconnect={true} />
+          {/* Only show email connection for clients, not for staff/admin who use shared sending accounts */}
+          {isClient && <EmailStatusBadge showConnectButton={true} showDisconnect={true} />}
         </div>
       </div>
 

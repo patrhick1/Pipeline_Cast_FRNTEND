@@ -1,6 +1,7 @@
 import React from 'react';
 import { format } from 'date-fns';
-import { Calendar, Phone, Mic, Radio, DollarSign, FileText, Check, X } from 'lucide-react';
+import { Calendar, Phone, Mic, Radio, DollarSign, FileText, Check, X, Bell } from 'lucide-react';
+import { formatDateTime, fromAPIDateTime, isUpcoming, getDateTimeDescription } from '@/lib/timezone';
 
 interface TimelineEvent {
   date: string | null;
@@ -12,10 +13,11 @@ interface TimelineEvent {
 interface Placement {
   placement_id: number;
   created_at: string;
-  meeting_date?: string | null;
-  call_date?: string | null;
-  recording_date?: string | null;
-  go_live_date?: string | null;
+  meeting_date?: string | null; // ISO 8601 DateTime
+  call_date?: string | null; // ISO 8601 DateTime
+  recording_date?: string | null; // ISO 8601 DateTime
+  go_live_date?: string | null; // ISO 8601 DateTime
+  follow_up_date?: string | null; // ISO 8601 DateTime - NEW
   current_status?: string | null;
   episode_link?: string | null;
 }
@@ -25,27 +27,27 @@ interface PlacementTimelineProps {
 }
 
 export const PlacementTimeline: React.FC<PlacementTimelineProps> = ({ placement }) => {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
+  const now = new Date();
 
-  const getEventStatus = (date: string | null, isCompleted: boolean): 'completed' | 'upcoming' | 'missed' => {
-    if (!date) return 'upcoming';
+  const getEventStatus = (isoDate: string | null, isCompleted: boolean): 'completed' | 'upcoming' | 'missed' => {
+    if (!isoDate) return 'upcoming';
     if (isCompleted) return 'completed';
-    
-    const eventDate = new Date(date);
-    eventDate.setHours(0, 0, 0, 0);
-    
-    if (eventDate < today && !isCompleted) return 'missed';
+
+    const eventDate = fromAPIDateTime(isoDate);
+    if (!eventDate) return 'upcoming';
+
+    if (eventDate < now && !isCompleted) return 'missed';
     return 'upcoming';
   };
 
   // Determine which events are completed based on status
   const statusProgress = {
     created: true,
-    meeting: ['meeting_booked', 'recording_booked', 'recorded', 'live', 'paid'].includes(placement.current_status || ''),
-    call: ['recording_booked', 'recorded', 'live', 'paid'].includes(placement.current_status || ''),
-    recording: ['recorded', 'live', 'paid'].includes(placement.current_status || ''),
-    live: ['live', 'paid'].includes(placement.current_status || ''),
+    follow_up: ['interested', 'scheduling', 'scheduled', 'recorded', 'published', 'paid'].includes(placement.current_status || ''),
+    meeting: ['scheduling', 'scheduled', 'recorded', 'published', 'paid'].includes(placement.current_status || ''),
+    call: ['scheduled', 'recorded', 'published', 'paid'].includes(placement.current_status || ''),
+    recording: ['recorded', 'published', 'paid'].includes(placement.current_status || ''),
+    live: ['published', 'paid'].includes(placement.current_status || ''),
     paid: placement.current_status === 'paid'
   };
 
@@ -55,6 +57,12 @@ export const PlacementTimeline: React.FC<PlacementTimelineProps> = ({ placement 
       label: 'Placement Created',
       icon: <FileText className="w-4 h-4" />,
       status: 'completed'
+    },
+    {
+      date: placement.follow_up_date,
+      label: 'Follow-up Scheduled',
+      icon: <Bell className="w-4 h-4" />,
+      status: getEventStatus(placement.follow_up_date, statusProgress.follow_up)
     },
     {
       date: placement.meeting_date,
@@ -178,15 +186,17 @@ export const PlacementTimeline: React.FC<PlacementTimelineProps> = ({ placement 
                       </h4>
                     </div>
                     {event.date && (
-                      <p className="text-sm text-gray-600 mt-1">
-                        {format(new Date(event.date), 'MMM dd, yyyy')}
-                        {event.status === 'upcoming' && (
-                          <span className="ml-2 text-blue-600">(Upcoming)</span>
+                      <div className="mt-1">
+                        <p className="text-sm font-medium text-gray-900">
+                          {getDateTimeDescription(event.date)}
+                        </p>
+                        {event.status === 'upcoming' && isUpcoming(event.date, 7) && (
+                          <span className="text-xs text-blue-600 font-medium">(Upcoming)</span>
                         )}
                         {event.status === 'missed' && (
-                          <span className="ml-2 text-orange-600">(Overdue)</span>
+                          <span className="text-xs text-orange-600 font-medium">(Overdue)</span>
                         )}
-                      </p>
+                      </div>
                     )}
                   </div>
                   

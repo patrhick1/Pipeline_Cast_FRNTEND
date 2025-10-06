@@ -47,6 +47,9 @@ import PlacementAnalyticsDashboard from "@/components/analytics/PlacementAnalyti
 import PitchAnalyticsDashboard from "@/components/analytics/PitchAnalyticsDashboard";
 import PlacementStatusAnalytics from "@/components/analytics/PlacementStatusAnalytics";
 import { PodcastDetailsModal } from "@/components/modals/PodcastDetailsModal";
+import { statusConfig, type PlacementStatus } from "@/constants/placementStatus";
+import { DateTimePicker } from "@/components/DateTimePicker";
+import { formatDateTime, isUpcoming } from "@/lib/timezone";
 
 // --- Interfaces (align with backend schemas) ---
 interface Placement { // Matches PlacementInDB from backend
@@ -55,11 +58,12 @@ interface Placement { // Matches PlacementInDB from backend
   media_id: number;
   current_status?: string | null;
   status_ts?: string | null;
-  meeting_date?: string | null; // Expect ISO date string YYYY-MM-DD from API
-  call_date?: string | null;    // Expect ISO date string YYYY-MM-DD from API
+  meeting_date?: string | null; // ISO 8601 DateTime string
+  call_date?: string | null; // ISO 8601 DateTime string
+  recording_date?: string | null; // ISO 8601 DateTime string
+  go_live_date?: string | null; // ISO 8601 DateTime string
+  follow_up_date?: string | null; // ISO 8601 DateTime string - NEW
   outreach_topic?: string | null;
-  recording_date?: string | null; // Expect ISO date string YYYY-MM-DD from API
-  go_live_date?: string | null;   // Expect ISO date string YYYY-MM-DD from API
   episode_link?: string | null;
   notes?: string | null;
   pitch_id?: number | null;
@@ -85,23 +89,13 @@ const placementFormSchema = z.object({
   campaign_id: z.string().uuid({ message: "Please select a valid campaign." }),
   media_id: z.coerce.number({invalid_type_error: "Please select a valid podcast."}).int().positive("Media ID is required"),
   current_status: z.string().optional().default("pending"),
-  meeting_date: z.string().optional().nullable().refine(val => {
-    if (val === "" || val === null || val === undefined) return true; 
-    return /^\d{4}-\d{2}-\d{2}$/.test(val); 
-  }, { message: "Invalid date format (YYYY-MM-DD)" }),
-  call_date: z.string().optional().nullable().refine(val => {
-    if (val === "" || val === null || val === undefined) return true;
-    return /^\d{4}-\d{2}-\d{2}$/.test(val);
-  }, { message: "Invalid date format (YYYY-MM-DD)" }),
+  // DateTime fields - ISO 8601 format
+  meeting_date: z.string().nullable().optional(),
+  call_date: z.string().nullable().optional(),
+  recording_date: z.string().nullable().optional(),
+  go_live_date: z.string().nullable().optional(),
+  follow_up_date: z.string().nullable().optional(), // NEW
   outreach_topic: z.string().optional(),
-  recording_date: z.string().optional().nullable().refine(val => {
-    if (val === "" || val === null || val === undefined) return true;
-    return /^\d{4}-\d{2}-\d{2}$/.test(val);
-  }, { message: "Invalid date format (YYYY-MM-DD)" }),
-  go_live_date: z.string().optional().nullable().refine(val => {
-    if (val === "" || val === null || val === undefined) return true;
-    return /^\d{4}-\d{2}-\d{2}$/.test(val);
-  }, { message: "Invalid date format (YYYY-MM-DD)" }),
   episode_link: z.string().url("Invalid URL").optional().or(z.literal("")).nullable(),
   notes: z.string().optional(),
   pitch_id: z.coerce.number().int().positive().optional().nullable(),
@@ -109,24 +103,7 @@ const placementFormSchema = z.object({
 type PlacementFormData = z.infer<typeof placementFormSchema>;
 
 
-const statusConfig: Record<string, { label: string; icon: React.ElementType; color: string; dotColor: string }> = {
-  // Main flow (7 statuses)
-  pending: { label: "Pending", icon: Clock, color: "bg-gray-100 text-gray-800", dotColor: "bg-gray-500" },
-  responded: { label: "Responded", icon: MessageSquare, color: "bg-blue-100 text-blue-800", dotColor: "bg-blue-500" },
-  interested: { label: "Interested", icon: Eye, color: "bg-yellow-100 text-yellow-800", dotColor: "bg-yellow-500" },
-  scheduling: { label: "Scheduling", icon: Calendar, color: "bg-purple-100 text-purple-800", dotColor: "bg-purple-500" },
-  scheduled: { label: "Scheduled", icon: Calendar, color: "bg-indigo-100 text-indigo-800", dotColor: "bg-indigo-500" },
-  recorded: { label: "Recorded", icon: PlayCircle, color: "bg-pink-100 text-pink-800", dotColor: "bg-pink-500" },
-  published: { label: "Published", icon: ExternalLink, color: "bg-green-100 text-green-800", dotColor: "bg-green-500" },
-  paid: { label: "Paid", icon: CheckCircle, color: "bg-emerald-100 text-emerald-800", dotColor: "bg-emerald-500" },
-  
-  // Branch statuses (2 statuses)
-  rejected: { label: "Rejected", icon: X, color: "bg-red-100 text-red-800", dotColor: "bg-red-500" },
-  cancelled: { label: "Cancelled", icon: X, color: "bg-gray-100 text-gray-700", dotColor: "bg-gray-500" },
-  
-  // Default fallback
-  default: { label: "Unknown", icon: AlertCircle, color: "bg-gray-100 text-gray-700", dotColor: "bg-gray-400" },
-};
+// statusConfig is now imported from @/constants/placementStatus
 
 
 // --- Placement Form Dialog (Create/Edit) ---
@@ -143,15 +120,16 @@ function PlacementFormDialog({
   const { toast } = useToast();
   const form = useForm<PlacementFormData>({
     resolver: zodResolver(placementFormSchema),
-    defaultValues: { 
-      campaign_id: undefined, 
-      media_id: undefined,    
+    defaultValues: {
+      campaign_id: undefined,
+      media_id: undefined,
       current_status: "pending",
-      meeting_date: "", 
-      call_date: "",
+      meeting_date: null,
+      call_date: null,
+      recording_date: null,
+      go_live_date: null,
+      follow_up_date: null,
       outreach_topic: "",
-      recording_date: "",
-      go_live_date: "",
       episode_link: "",
       notes: "",
       pitch_id: undefined,
@@ -159,34 +137,36 @@ function PlacementFormDialog({
   });
 
   useEffect(() => {
-    if (open) { 
-      if (placement) { 
+    if (open) {
+      if (placement) {
         form.reset({
-          campaign_id: placement.campaign_id, 
-          media_id: placement.media_id,       
+          campaign_id: placement.campaign_id,
+          media_id: placement.media_id,
           current_status: placement.current_status || "pending",
-          meeting_date: placement.meeting_date ? placement.meeting_date.split('T')[0] : "",
-          call_date: placement.call_date ? placement.call_date.split('T')[0] : "",
+          meeting_date: placement.meeting_date || null,
+          call_date: placement.call_date || null,
+          recording_date: placement.recording_date || null,
+          go_live_date: placement.go_live_date || null,
+          follow_up_date: placement.follow_up_date || null,
           outreach_topic: placement.outreach_topic || "",
-          recording_date: placement.recording_date ? placement.recording_date.split('T')[0] : "",
-          go_live_date: placement.go_live_date ? placement.go_live_date.split('T')[0] : "",
           episode_link: placement.episode_link || "",
           notes: placement.notes || "",
           pitch_id: placement.pitch_id ?? undefined,
         });
-      } else { 
+      } else {
         form.reset({
-          campaign_id: campaigns.length > 0 ? (campaigns[0].campaign_id || "") : "", 
-          media_id: mediaItems.length > 0 ? (mediaItems[0].media_id || 0) : 0,    
+          campaign_id: campaigns.length > 0 ? (campaigns[0].campaign_id || "") : "",
+          media_id: mediaItems.length > 0 ? (mediaItems[0].media_id || 0) : 0,
           current_status: "pending",
-          meeting_date: "", 
-          call_date: "", 
-          outreach_topic: "", 
-          recording_date: "",
-          go_live_date: "", 
-          episode_link: "", 
-          notes: "", 
-          pitch_id: undefined, 
+          meeting_date: null,
+          call_date: null,
+          recording_date: null,
+          go_live_date: null,
+          follow_up_date: null,
+          outreach_topic: "",
+          episode_link: "",
+          notes: "",
+          pitch_id: undefined,
         });
       }
     }
@@ -200,8 +180,9 @@ function PlacementFormDialog({
         call_date: data.call_date || null,
         recording_date: data.recording_date || null,
         go_live_date: data.go_live_date || null,
+        follow_up_date: data.follow_up_date || null,
         episode_link: data.episode_link || null,
-        pitch_id: data.pitch_id || null, 
+        pitch_id: data.pitch_id || null,
       };
       if (placement?.placement_id) {
         return apiRequest("PUT", `/placements/${placement.placement_id}`, payload);
@@ -270,13 +251,48 @@ function PlacementFormDialog({
             )} />
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <FormField control={form.control} name="meeting_date" render={({ field }) => (
-                <FormItem><FormLabel>Meeting Date</FormLabel><FormControl><Input type="date" {...field} value={field.value || ""} /></FormControl><FormMessage /></FormItem>
+                <FormItem>
+                  <DateTimePicker
+                    label="Meeting Date"
+                    value={field.value}
+                    onChange={field.onChange}
+                    helpText="Pre-interview or prep call"
+                  />
+                  <FormMessage />
+                </FormItem>
+                )} />
+                <FormField control={form.control} name="follow_up_date" render={({ field }) => (
+                <FormItem>
+                  <DateTimePicker
+                    label="Follow-up Date"
+                    value={field.value}
+                    onChange={field.onChange}
+                    helpText="When to check in about status"
+                  />
+                  <FormMessage />
+                </FormItem>
                 )} />
                 <FormField control={form.control} name="recording_date" render={({ field }) => (
-                <FormItem><FormLabel>Recording Date</FormLabel><FormControl><Input type="date" {...field} value={field.value || ""} /></FormControl><FormMessage /></FormItem>
+                <FormItem>
+                  <DateTimePicker
+                    label="Recording Date"
+                    value={field.value}
+                    onChange={field.onChange}
+                    helpText="Actual podcast recording"
+                  />
+                  <FormMessage />
+                </FormItem>
                 )} />
                 <FormField control={form.control} name="go_live_date" render={({ field }) => (
-                <FormItem><FormLabel>Go Live Date</FormLabel><FormControl><Input type="date" {...field} value={field.value || ""} /></FormControl><FormMessage /></FormItem>
+                <FormItem>
+                  <DateTimePicker
+                    label="Go Live Date"
+                    value={field.value}
+                    onChange={field.onChange}
+                    helpText="Episode publication date"
+                  />
+                  <FormMessage />
+                </FormItem>
                 )} />
                  <FormField control={form.control} name="pitch_id" render={({ field }) => (
                 <FormItem><FormLabel>Associated Pitch ID</FormLabel><FormControl><Input type="number" placeholder="Enter Pitch ID" {...field} value={field.value ?? ""} onChange={e => field.onChange(e.target.value === '' ? null : Number(e.target.value))} /></FormControl><FormMessage /></FormItem>
@@ -449,10 +465,22 @@ function PlacementTable({
     if (edits && field in edits) {
       return edits[field];
     }
-    // For date fields, ensure we return just the date part (YYYY-MM-DD)
-    if ((field === 'meeting_date' || field === 'recording_date' || field === 'go_live_date') && placement[field]) {
+    // For DateTime fields, convert to datetime-local format (YYYY-MM-DDTHH:mm)
+    const dateTimeFields: Array<keyof Placement> = ['meeting_date', 'call_date', 'recording_date', 'go_live_date', 'follow_up_date'];
+    if (dateTimeFields.includes(field) && placement[field]) {
       const dateValue = placement[field] as string;
-      return dateValue.split('T')[0];
+      // ISO 8601 format: YYYY-MM-DDTHH:mm:ss.sssZ -> YYYY-MM-DDTHH:mm for datetime-local input
+      try {
+        const date = new Date(dateValue);
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        const hours = String(date.getHours()).padStart(2, '0');
+        const minutes = String(date.getMinutes()).padStart(2, '0');
+        return `${year}-${month}-${day}T${hours}:${minutes}`;
+      } catch {
+        return '';
+      }
     }
     return placement[field];
   };
@@ -490,6 +518,7 @@ function PlacementTable({
             <TableHead>Podcast</TableHead>
             <TableHead>Client/Campaign</TableHead>
             <TableHead>Status</TableHead>
+            <TableHead>Follow-up</TableHead>
             <TableHead>Meeting</TableHead>
             <TableHead>Recording</TableHead>
             <TableHead>Go Live</TableHead>
@@ -500,7 +529,7 @@ function PlacementTable({
         <TableBody>
           {placements.length === 0 && (
             <TableRow>
-              <TableCell colSpan={8} className="text-center text-gray-500 py-8">
+              <TableCell colSpan={9} className="text-center text-gray-500 py-8">
                 No placements found.
               </TableCell>
             </TableRow>
@@ -558,26 +587,34 @@ function PlacementTable({
                 </TableCell>
                 <TableCell>
                   <Input
-                    type="date"
-                    className="w-[120px] h-8 text-xs"
+                    type="datetime-local"
+                    className="w-[160px] h-8 text-xs"
+                    value={getFieldValue(placement, 'follow_up_date') as string || ''}
+                    onChange={(e) => handleFieldChange(placement.placement_id, 'follow_up_date', e.target.value ? new Date(e.target.value).toISOString() : null)}
+                  />
+                </TableCell>
+                <TableCell>
+                  <Input
+                    type="datetime-local"
+                    className="w-[160px] h-8 text-xs"
                     value={getFieldValue(placement, 'meeting_date') as string || ''}
-                    onChange={(e) => handleFieldChange(placement.placement_id, 'meeting_date', e.target.value || null)}
+                    onChange={(e) => handleFieldChange(placement.placement_id, 'meeting_date', e.target.value ? new Date(e.target.value).toISOString() : null)}
                   />
                 </TableCell>
                 <TableCell>
                   <Input
-                    type="date"
-                    className="w-[120px] h-8 text-xs"
+                    type="datetime-local"
+                    className="w-[160px] h-8 text-xs"
                     value={getFieldValue(placement, 'recording_date') as string || ''}
-                    onChange={(e) => handleFieldChange(placement.placement_id, 'recording_date', e.target.value || null)}
+                    onChange={(e) => handleFieldChange(placement.placement_id, 'recording_date', e.target.value ? new Date(e.target.value).toISOString() : null)}
                   />
                 </TableCell>
                 <TableCell>
                   <Input
-                    type="date"
-                    className="w-[120px] h-8 text-xs"
+                    type="datetime-local"
+                    className="w-[160px] h-8 text-xs"
                     value={getFieldValue(placement, 'go_live_date') as string || ''}
-                    onChange={(e) => handleFieldChange(placement.placement_id, 'go_live_date', e.target.value || null)}
+                    onChange={(e) => handleFieldChange(placement.placement_id, 'go_live_date', e.target.value ? new Date(e.target.value).toISOString() : null)}
                   />
                 </TableCell>
                 <TableCell>
@@ -750,18 +787,28 @@ export default function PlacementTracking() {
   const batchUpdateMutation = useMutation({
     mutationFn: async (updates: Map<number, Partial<Placement>>) => {
       const updatePromises = Array.from(updates.entries()).map(([placementId, changes]) => {
-        // Clean up date fields to ensure proper format
-        const payload = {
-          ...changes,
-          meeting_date: changes.meeting_date === '' ? null : changes.meeting_date,
-          call_date: changes.call_date === '' ? null : changes.call_date,
-          recording_date: changes.recording_date === '' ? null : changes.recording_date,
-          go_live_date: changes.go_live_date === '' ? null : changes.go_live_date,
-          episode_link: changes.episode_link === '' ? null : changes.episode_link,
-        };
+        // Clean up DateTime fields to ensure proper format
+        // Inline editing now uses datetime-local inputs or sends ISO strings directly
+        const payload: any = { ...changes };
+
+        const dateFields = ['meeting_date', 'call_date', 'recording_date', 'go_live_date', 'follow_up_date'];
+        dateFields.forEach(field => {
+          if (field in changes) {
+            const value = changes[field as keyof Placement];
+            if (value === '' || value === null || value === undefined) {
+              payload[field] = null;
+            }
+            // Value is already in ISO format from handleFieldChange, so pass through
+          }
+        });
+
+        if ('episode_link' in payload) {
+          payload.episode_link = payload.episode_link === '' ? null : payload.episode_link;
+        }
+
         return apiRequest("PATCH", `/placements/${placementId}`, payload);
       });
-      
+
       return Promise.all(updatePromises);
     },
     onSuccess: () => {

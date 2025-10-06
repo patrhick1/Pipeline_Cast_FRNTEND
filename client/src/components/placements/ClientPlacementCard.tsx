@@ -3,13 +3,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { 
-  Calendar, Clock, ExternalLink, Edit, MessageSquare, 
-  CheckCircle, PlayCircle, Mic, Phone, FileText 
+import {
+  Calendar, Clock, ExternalLink, Edit, MessageSquare,
+  CheckCircle, PlayCircle, Mic, Phone, FileText, Bell
 } from "lucide-react";
 import { PlacementTimeline } from "./PlacementTimeline";
 import { PlacementEditDialog } from "./PlacementEditDialog";
-import { format } from "date-fns";
+import { formatDateTime, fromAPIDateTime, isUpcoming } from "@/lib/timezone";
+import { statusConfig, type PlacementStatus } from "@/constants/placementStatus";
 
 interface Placement {
   placement_id: number;
@@ -17,11 +18,12 @@ interface Placement {
   media_id: number;
   current_status?: string | null;
   status_ts?: string | null;
-  meeting_date?: string | null;
-  call_date?: string | null;
+  meeting_date?: string | null; // ISO 8601 DateTime
+  call_date?: string | null; // ISO 8601 DateTime
+  recording_date?: string | null; // ISO 8601 DateTime
+  go_live_date?: string | null; // ISO 8601 DateTime
+  follow_up_date?: string | null; // ISO 8601 DateTime - NEW
   outreach_topic?: string | null;
-  recording_date?: string | null;
-  go_live_date?: string | null;
   episode_link?: string | null;
   notes?: string | null;
   pitch_id?: number | null;
@@ -38,43 +40,28 @@ interface ClientPlacementCardProps {
   onUpdate?: () => void;
 }
 
-const statusConfig: Record<string, { label: string; icon: React.ElementType; color: string }> = {
-  pending: { label: "Pending", icon: Clock, color: "bg-gray-100 text-gray-800" },
-  responded: { label: "Responded", icon: MessageSquare, color: "bg-blue-100 text-blue-800" },
-  interested: { label: "Interested", icon: CheckCircle, color: "bg-green-100 text-green-800" },
-  form_submitted: { label: "Form Submitted", icon: FileText, color: "bg-purple-100 text-purple-800" },
-  meeting_booked: { label: "Meeting Booked", icon: Calendar, color: "bg-indigo-100 text-indigo-800" },
-  recording_booked: { label: "Recording Booked", icon: Mic, color: "bg-pink-100 text-pink-800" },
-  recorded: { label: "Recorded", icon: Mic, color: "bg-orange-100 text-orange-800" },
-  live: { label: "Live", icon: PlayCircle, color: "bg-green-100 text-green-800" },
-  paid: { label: "Paid", icon: CheckCircle, color: "bg-emerald-100 text-emerald-800" },
-  rejected: { label: "Rejected", icon: Clock, color: "bg-red-100 text-red-800" },
-};
+// statusConfig is now imported from @/constants/placementStatus
 
-export const ClientPlacementCard: React.FC<ClientPlacementCardProps> = ({ 
-  placement, 
-  onUpdate 
+export const ClientPlacementCard: React.FC<ClientPlacementCardProps> = ({
+  placement,
+  onUpdate
 }) => {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-  
-  const status = placement.current_status || 'pending';
-  const statusInfo = statusConfig[status] || statusConfig.pending;
+
+  const status = (placement.current_status || 'pending') as PlacementStatus;
+  const statusInfo = statusConfig[status] || statusConfig.default;
   const StatusIcon = statusInfo.icon;
 
-  const formatDate = (dateString: string | null | undefined) => {
-    if (!dateString) return "Not set";
-    try {
-      return format(new Date(dateString), 'MMM dd, yyyy');
-    } catch {
-      return "Invalid date";
-    }
-  };
-
   const upcomingDates = [
+    { label: "Follow-up", date: placement.follow_up_date, icon: Bell },
     { label: "Meeting", date: placement.meeting_date, icon: Calendar },
     { label: "Recording", date: placement.recording_date, icon: Mic },
     { label: "Go Live", date: placement.go_live_date, icon: PlayCircle }
-  ].filter(item => item.date && new Date(item.date) >= new Date());
+  ].filter(item => {
+    if (!item.date) return false;
+    const date = fromAPIDateTime(item.date);
+    return date && date >= new Date();
+  });
 
   return (
     <>
@@ -134,8 +121,11 @@ export const ClientPlacementCard: React.FC<ClientPlacementCardProps> = ({
                           <span className="text-gray-700">{item.label}</span>
                         </div>
                         <span className="font-medium text-gray-900">
-                          {formatDate(item.date)}
+                          {formatDateTime(item.date, 'PPp')}
                         </span>
+                        {isUpcoming(item.date, 7) && (
+                          <span className="ml-1 text-xs text-blue-600">(Soon)</span>
+                        )}
                       </div>
                     ))}
                   </div>
@@ -153,7 +143,7 @@ export const ClientPlacementCard: React.FC<ClientPlacementCardProps> = ({
                 <div className="bg-gray-50 p-3 rounded-lg">
                   <p className="text-xs text-gray-500 mb-1">Created</p>
                   <p className="text-sm font-medium">
-                    {formatDate(placement.created_at)}
+                    {formatDateTime(placement.created_at, 'PP')}
                   </p>
                 </div>
               </div>
@@ -192,20 +182,20 @@ export const ClientPlacementCard: React.FC<ClientPlacementCardProps> = ({
             <TabsContent value="details" className="space-y-3 mt-4">
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <p className="text-xs text-gray-500 mb-1">Meeting Date</p>
-                  <p className="text-sm font-medium">{formatDate(placement.meeting_date)}</p>
+                  <p className="text-xs text-gray-500 mb-1">Follow-up Date</p>
+                  <p className="text-sm font-medium">{formatDateTime(placement.follow_up_date, 'PPp') || '—'}</p>
                 </div>
                 <div>
-                  <p className="text-xs text-gray-500 mb-1">Call Date</p>
-                  <p className="text-sm font-medium">{formatDate(placement.call_date)}</p>
+                  <p className="text-xs text-gray-500 mb-1">Meeting Date</p>
+                  <p className="text-sm font-medium">{formatDateTime(placement.meeting_date, 'PPp') || '—'}</p>
                 </div>
                 <div>
                   <p className="text-xs text-gray-500 mb-1">Recording Date</p>
-                  <p className="text-sm font-medium">{formatDate(placement.recording_date)}</p>
+                  <p className="text-sm font-medium">{formatDateTime(placement.recording_date, 'PPp') || '—'}</p>
                 </div>
                 <div>
                   <p className="text-xs text-gray-500 mb-1">Go Live Date</p>
-                  <p className="text-sm font-medium">{formatDate(placement.go_live_date)}</p>
+                  <p className="text-sm font-medium">{formatDateTime(placement.go_live_date, 'PPp') || '—'}</p>
                 </div>
               </div>
 

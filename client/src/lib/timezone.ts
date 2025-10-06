@@ -1,6 +1,12 @@
 /**
  * Timezone utility functions for converting between UTC and user's local timezone
+ *
+ * This module provides comprehensive DateTime handling with timezone conversion
+ * for the Placements API which uses ISO 8601 DateTime strings (YYYY-MM-DDTHH:mm:ss.sssZ)
  */
+
+import { format, parseISO, formatISO, isValid, addDays, differenceInDays } from 'date-fns';
+import { formatInTimeZone, toZonedTime } from 'date-fns-tz';
 
 /**
  * Get the user's current timezone
@@ -228,13 +234,224 @@ export const datetimeLocalToUTC = (datetimeLocal: string): string | null => {
 export const utcToDatetimeLocal = (utcDate: string | Date | null | undefined): string => {
   const localDate = utcToLocal(utcDate);
   if (!localDate) return '';
-  
+
   // Format as "YYYY-MM-DDTHH:mm" for datetime-local input
   const year = localDate.getFullYear();
   const month = String(localDate.getMonth() + 1).padStart(2, '0');
   const day = String(localDate.getDate()).padStart(2, '0');
   const hours = String(localDate.getHours()).padStart(2, '0');
   const minutes = String(localDate.getMinutes()).padStart(2, '0');
-  
+
   return `${year}-${month}-${day}T${hours}:${minutes}`;
 };
+
+// ============================================================================
+// NEW DateTime API Functions (for Placements API with DateTime support)
+// ============================================================================
+
+/**
+ * Convert a Date object to ISO 8601 DateTime string for API submission
+ * @param date - Date object to convert
+ * @returns ISO 8601 string in UTC (YYYY-MM-DDTHH:mm:ss.sssZ) or null
+ */
+export function toAPIDateTime(date: Date | null | undefined): string | null {
+  if (!date || !isValid(date)) return null;
+  return formatISO(date); // Returns: "2025-10-06T14:30:00.000Z"
+}
+
+/**
+ * Parse ISO 8601 DateTime string from API to Date object
+ * @param isoString - ISO 8601 DateTime string from API
+ * @returns Date object in local timezone or null
+ */
+export function fromAPIDateTime(isoString: string | null | undefined): Date | null {
+  if (!isoString) return null;
+  try {
+    const date = parseISO(isoString);
+    return isValid(date) ? date : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Format DateTime for display in user's timezone
+ * @param isoString - ISO 8601 DateTime string from API
+ * @param formatStr - date-fns format string (default: "PPp" = "Oct 6, 2025, 2:30 PM")
+ * @returns Formatted DateTime string in user's local timezone
+ */
+export function formatDateTime(
+  isoString: string | null | undefined,
+  formatStr: string = 'PPp' // "Oct 6, 2025, 2:30 PM"
+): string {
+  if (!isoString) return '—';
+  try {
+    const date = parseISO(isoString);
+    return isValid(date) ? format(date, formatStr) : '—';
+  } catch {
+    return '—';
+  }
+}
+
+/**
+ * Format DateTime for specific timezone
+ * @param isoString - ISO 8601 DateTime string from API
+ * @param timeZone - IANA timezone string (e.g., "America/New_York")
+ * @param formatStr - date-fns format string
+ * @returns Formatted DateTime string in specified timezone
+ */
+export function formatDateTimeInZone(
+  isoString: string | null | undefined,
+  timeZone: string,
+  formatStr: string = 'PPp'
+): string {
+  if (!isoString) return '—';
+  try {
+    return formatInTimeZone(parseISO(isoString), timeZone, formatStr);
+  } catch {
+    return '—';
+  }
+}
+
+/**
+ * Format DateTime with full timezone context
+ * @param isoString - ISO 8601 DateTime string from API
+ * @returns Formatted string like "Oct 6, 2025, 2:30 PM EDT"
+ */
+export function formatDateTimeWithTimezone(isoString: string | null | undefined): string {
+  if (!isoString) return '—';
+  try {
+    const date = parseISO(isoString);
+    if (!isValid(date)) return '—';
+
+    return formatInTimeZone(
+      date,
+      getUserTimezone(),
+      'PPp zzz' // "Oct 6, 2025, 2:30 PM EDT"
+    );
+  } catch {
+    return '—';
+  }
+}
+
+/**
+ * Check if a DateTime is in the past
+ * @param isoString - ISO 8601 DateTime string from API
+ * @returns true if the DateTime is in the past
+ */
+export function isPast(isoString: string | null | undefined): boolean {
+  if (!isoString) return false;
+  const date = fromAPIDateTime(isoString);
+  return date ? date < new Date() : false;
+}
+
+/**
+ * Check if a DateTime is upcoming (within next N days)
+ * @param isoString - ISO 8601 DateTime string from API
+ * @param days - Number of days to check ahead (default: 7)
+ * @returns true if the DateTime is between now and N days from now
+ */
+export function isUpcoming(isoString: string | null | undefined, days: number = 7): boolean {
+  if (!isoString) return false;
+  const date = fromAPIDateTime(isoString);
+  if (!date) return false;
+
+  const now = new Date();
+  const future = addDays(now, days);
+
+  return date >= now && date <= future;
+}
+
+/**
+ * Get the number of days between now and a DateTime
+ * @param isoString - ISO 8601 DateTime string from API
+ * @returns Number of days (positive for future, negative for past)
+ */
+export function daysUntil(isoString: string | null | undefined): number | null {
+  if (!isoString) return null;
+  const date = fromAPIDateTime(isoString);
+  if (!date) return null;
+
+  return differenceInDays(date, new Date());
+}
+
+/**
+ * Format DateTime relative to now (e.g., "in 3 days", "2 hours ago")
+ * @param isoString - ISO 8601 DateTime string from API
+ * @returns Human-readable relative time string
+ */
+export function formatRelativeDateTime(isoString: string | null | undefined): string {
+  if (!isoString) return '';
+
+  const date = fromAPIDateTime(isoString);
+  if (!date) return '';
+
+  const now = new Date();
+  const diffMs = date.getTime() - now.getTime();
+  const diffSecs = Math.floor(Math.abs(diffMs) / 1000);
+  const diffMins = Math.floor(diffSecs / 60);
+  const diffHours = Math.floor(diffMins / 60);
+  const diffDaysCalc = Math.floor(diffHours / 24);
+
+  const isPastDate = diffMs < 0;
+
+  if (diffSecs < 60) {
+    return isPastDate ? 'just now' : 'in a moment';
+  } else if (diffMins < 60) {
+    const unit = diffMins === 1 ? 'minute' : 'minutes';
+    return isPastDate ? `${diffMins} ${unit} ago` : `in ${diffMins} ${unit}`;
+  } else if (diffHours < 24) {
+    const unit = diffHours === 1 ? 'hour' : 'hours';
+    return isPastDate ? `${diffHours} ${unit} ago` : `in ${diffHours} ${unit}`;
+  } else if (diffDaysCalc < 30) {
+    const unit = diffDaysCalc === 1 ? 'day' : 'days';
+    return isPastDate ? `${diffDaysCalc} ${unit} ago` : `in ${diffDaysCalc} ${unit}`;
+  } else {
+    return formatDateTime(isoString, 'PP'); // Fallback to date only
+  }
+}
+
+/**
+ * Check if a DateTime is today in user's timezone
+ * @param isoString - ISO 8601 DateTime string from API
+ * @returns true if the DateTime is today
+ */
+export function isDateTimeToday(isoString: string | null | undefined): boolean {
+  if (!isoString) return false;
+  const date = fromAPIDateTime(isoString);
+  if (!date) return false;
+
+  const now = new Date();
+  return (
+    date.getDate() === now.getDate() &&
+    date.getMonth() === now.getMonth() &&
+    date.getFullYear() === now.getFullYear()
+  );
+}
+
+/**
+ * Get a user-friendly description of when a DateTime occurs
+ * @param isoString - ISO 8601 DateTime string from API
+ * @returns String like "Today at 2:30 PM", "Tomorrow at 10:00 AM", or full date
+ */
+export function getDateTimeDescription(isoString: string | null | undefined): string {
+  if (!isoString) return '';
+
+  const date = fromAPIDateTime(isoString);
+  if (!date) return '';
+
+  const now = new Date();
+  const daysDiff = differenceInDays(date, now);
+
+  if (daysDiff === 0) {
+    return `Today at ${format(date, 'p')}`;
+  } else if (daysDiff === 1) {
+    return `Tomorrow at ${format(date, 'p')}`;
+  } else if (daysDiff === -1) {
+    return `Yesterday at ${format(date, 'p')}`;
+  } else if (daysDiff > 1 && daysDiff < 7) {
+    return format(date, 'EEEE \'at\' p'); // "Monday at 2:30 PM"
+  } else {
+    return formatDateTime(isoString); // Full date and time
+  }
+}

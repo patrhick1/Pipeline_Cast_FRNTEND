@@ -6,11 +6,13 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Calendar, Clock, Link, MessageSquare, AlertCircle, Save } from "lucide-react";
+import { Calendar, Clock, Link, MessageSquare, AlertCircle, Save, Phone } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
-import { utcToLocal, localToUTC } from "@/lib/timezone";
+import { DateTimePicker } from "@/components/DateTimePicker";
+import { statusConfig, type PlacementStatus } from "@/constants/placementStatus";
+import { fromAPIDateTime, formatDateTime } from "@/lib/timezone";
 
 interface Placement {
   placement_id: number;
@@ -18,11 +20,12 @@ interface Placement {
   media_id: number;
   current_status?: string | null;
   status_ts?: string | null;
-  meeting_date?: string | null;
-  call_date?: string | null;
+  meeting_date?: string | null; // ISO 8601 DateTime string
+  call_date?: string | null; // ISO 8601 DateTime string
+  recording_date?: string | null; // ISO 8601 DateTime string
+  go_live_date?: string | null; // ISO 8601 DateTime string
+  follow_up_date?: string | null; // ISO 8601 DateTime string - NEW
   outreach_topic?: string | null;
-  recording_date?: string | null;
-  go_live_date?: string | null;
   episode_link?: string | null;
   notes?: string | null;
   pitch_id?: number | null;
@@ -42,19 +45,7 @@ interface PlacementEditDialogProps {
   userRole?: string | null;
 }
 
-// Status options with logical progression
-const statusOptions = [
-  { value: 'pending', label: 'Pending', color: 'text-gray-600' },
-  { value: 'responded', label: 'Responded', color: 'text-blue-600' },
-  { value: 'interested', label: 'Interested', color: 'text-green-600' },
-  { value: 'form_submitted', label: 'Form Submitted', color: 'text-purple-600' },
-  { value: 'meeting_booked', label: 'Meeting Booked', color: 'text-indigo-600' },
-  { value: 'recording_booked', label: 'Recording Booked', color: 'text-pink-600' },
-  { value: 'recorded', label: 'Recorded', color: 'text-orange-600' },
-  { value: 'live', label: 'Live', color: 'text-green-600' },
-  { value: 'paid', label: 'Paid', color: 'text-emerald-600' },
-  { value: 'rejected', label: 'Rejected', color: 'text-red-600' }
-];
+// Status options come from statusConfig constant
 
 export const PlacementEditDialog: React.FC<PlacementEditDialogProps> = ({
   placement,
@@ -67,10 +58,11 @@ export const PlacementEditDialog: React.FC<PlacementEditDialogProps> = ({
   const queryClient = useQueryClient();
   const [formData, setFormData] = useState({
     current_status: placement.current_status || 'pending',
-    meeting_date: placement.meeting_date || '',
-    call_date: placement.call_date || '',
-    recording_date: placement.recording_date || '',
-    go_live_date: placement.go_live_date || '',
+    meeting_date: placement.meeting_date || null,
+    call_date: placement.call_date || null,
+    recording_date: placement.recording_date || null,
+    go_live_date: placement.go_live_date || null,
+    follow_up_date: placement.follow_up_date || null, // NEW
     episode_link: placement.episode_link || '',
     outreach_topic: placement.outreach_topic || '',
     notes: placement.notes || ''
@@ -83,10 +75,11 @@ export const PlacementEditDialog: React.FC<PlacementEditDialogProps> = ({
     if (placement && open) {
       setFormData({
         current_status: placement.current_status || 'pending',
-        meeting_date: placement.meeting_date ? utcToLocal(placement.meeting_date)?.toISOString().split('T')[0] || '' : '',
-        call_date: placement.call_date ? utcToLocal(placement.call_date)?.toISOString().split('T')[0] || '' : '',
-        recording_date: placement.recording_date ? utcToLocal(placement.recording_date)?.toISOString().split('T')[0] || '' : '',
-        go_live_date: placement.go_live_date ? utcToLocal(placement.go_live_date)?.toISOString().split('T')[0] || '' : '',
+        meeting_date: placement.meeting_date || null,
+        call_date: placement.call_date || null,
+        recording_date: placement.recording_date || null,
+        go_live_date: placement.go_live_date || null,
+        follow_up_date: placement.follow_up_date || null,
         episode_link: placement.episode_link || '',
         outreach_topic: placement.outreach_topic || '',
         notes: placement.notes || ''
@@ -99,10 +92,11 @@ export const PlacementEditDialog: React.FC<PlacementEditDialogProps> = ({
   useEffect(() => {
     const originalData = {
       current_status: placement.current_status || 'pending',
-      meeting_date: placement.meeting_date ? utcToLocal(placement.meeting_date)?.toISOString().split('T')[0] || '' : '',
-      call_date: placement.call_date ? utcToLocal(placement.call_date)?.toISOString().split('T')[0] || '' : '',
-      recording_date: placement.recording_date ? utcToLocal(placement.recording_date)?.toISOString().split('T')[0] || '' : '',
-      go_live_date: placement.go_live_date ? utcToLocal(placement.go_live_date)?.toISOString().split('T')[0] || '' : '',
+      meeting_date: placement.meeting_date || null,
+      call_date: placement.call_date || null,
+      recording_date: placement.recording_date || null,
+      go_live_date: placement.go_live_date || null,
+      follow_up_date: placement.follow_up_date || null,
       episode_link: placement.episode_link || '',
       outreach_topic: placement.outreach_topic || '',
       notes: placement.notes || ''
@@ -120,10 +114,11 @@ export const PlacementEditDialog: React.FC<PlacementEditDialogProps> = ({
       const changedFields: any = {};
       const originalData = {
         current_status: placement.current_status || 'pending',
-        meeting_date: placement.meeting_date ? utcToLocal(placement.meeting_date)?.toISOString().split('T')[0] || '' : '',
-        call_date: placement.call_date ? utcToLocal(placement.call_date)?.toISOString().split('T')[0] || '' : '',
-        recording_date: placement.recording_date ? utcToLocal(placement.recording_date)?.toISOString().split('T')[0] || '' : '',
-        go_live_date: placement.go_live_date ? utcToLocal(placement.go_live_date)?.toISOString().split('T')[0] || '' : '',
+        meeting_date: placement.meeting_date || null,
+        call_date: placement.call_date || null,
+        recording_date: placement.recording_date || null,
+        go_live_date: placement.go_live_date || null,
+        follow_up_date: placement.follow_up_date || null,
         episode_link: placement.episode_link || '',
         outreach_topic: placement.outreach_topic || '',
         notes: placement.notes || ''
@@ -131,14 +126,9 @@ export const PlacementEditDialog: React.FC<PlacementEditDialogProps> = ({
 
       Object.keys(data).forEach(key => {
         if (data[key] !== originalData[key as keyof typeof originalData]) {
-          // Convert date fields to UTC before sending to backend
-          if (['meeting_date', 'call_date', 'recording_date', 'go_live_date'].includes(key) && data[key]) {
-            // Date input gives us YYYY-MM-DD, we need to convert to UTC ISO string
-            const localDate = new Date(data[key] + 'T00:00:00');
-            changedFields[key] = localToUTC(localDate);
-          } else {
-            changedFields[key] = data[key] || null;
-          }
+          // DateTime fields are already in ISO 8601 format from DateTimePicker
+          // Just send them directly (or null if empty)
+          changedFields[key] = data[key] || null;
         }
       });
 
@@ -176,10 +166,14 @@ export const PlacementEditDialog: React.FC<PlacementEditDialogProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
-    // Validate dates logic
-    if (formData.recording_date && formData.meeting_date) {
-      if (new Date(formData.recording_date) < new Date(formData.meeting_date)) {
+
+    // Validate date sequence logic
+    const meetingDate = fromAPIDateTime(formData.meeting_date);
+    const recordingDate = fromAPIDateTime(formData.recording_date);
+    const goLiveDate = fromAPIDateTime(formData.go_live_date);
+
+    if (recordingDate && meetingDate) {
+      if (recordingDate < meetingDate) {
         toast({
           title: "Invalid dates",
           description: "Recording date cannot be before meeting date",
@@ -189,8 +183,8 @@ export const PlacementEditDialog: React.FC<PlacementEditDialogProps> = ({
       }
     }
 
-    if (formData.go_live_date && formData.recording_date) {
-      if (new Date(formData.go_live_date) < new Date(formData.recording_date)) {
+    if (goLiveDate && recordingDate) {
+      if (goLiveDate < recordingDate) {
         toast({
           title: "Invalid dates",
           description: "Go live date cannot be before recording date",
@@ -210,8 +204,16 @@ export const PlacementEditDialog: React.FC<PlacementEditDialogProps> = ({
     }));
   };
 
+  const handleDateTimeChange = (field: string, value: string | null) => {
+    setFormData(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
   // Get current status config for display
-  const currentStatusConfig = statusOptions.find(opt => opt.value === formData.current_status);
+  const currentStatusKey = formData.current_status as PlacementStatus;
+  const currentStatusConfig = statusConfig[currentStatusKey] || statusConfig.pending;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -251,71 +253,70 @@ export const PlacementEditDialog: React.FC<PlacementEditDialogProps> = ({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {statusOptions.map(option => (
-                  <SelectItem key={option.value} value={option.value}>
-                    <span className={option.color}>{option.label}</span>
-                  </SelectItem>
-                ))}
+                {Object.entries(statusConfig)
+                  .filter(([key]) => key !== 'default')
+                  .map(([value, config]) => {
+                    const StatusIcon = config.icon;
+                    return (
+                      <SelectItem key={value} value={value}>
+                        <div className="flex items-center gap-2">
+                          <StatusIcon className="w-4 h-4" />
+                          <span>{config.label}</span>
+                        </div>
+                      </SelectItem>
+                    );
+                  })}
               </SelectContent>
             </Select>
-            <p className="text-xs text-gray-500">
-              Current: <span className={currentStatusConfig?.color}>{currentStatusConfig?.label}</span>
+            <p className="text-xs text-gray-500 flex items-center gap-1.5">
+              Current:
+              <span className={`${currentStatusConfig.color} px-2 py-0.5 rounded text-xs font-medium`}>
+                {currentStatusConfig.label}
+              </span>
             </p>
           </div>
 
-          {/* Date Fields */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="meeting_date">
-                <Calendar className="inline w-4 h-4 mr-1" />
-                Meeting Date
-              </Label>
-              <Input
-                id="meeting_date"
-                type="date"
-                value={formData.meeting_date}
-                onChange={(e) => handleInputChange('meeting_date', e.target.value)}
-              />
-            </div>
+          {/* DateTime Fields */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <DateTimePicker
+              label="Meeting Date"
+              value={formData.meeting_date}
+              onChange={(value) => handleDateTimeChange('meeting_date', value)}
+              helpText="Pre-interview or prep call"
+              placeholder="Select meeting date and time"
+            />
 
-            <div className="space-y-2">
-              <Label htmlFor="call_date">
-                <Clock className="inline w-4 h-4 mr-1" />
-                Call Date
-              </Label>
-              <Input
-                id="call_date"
-                type="date"
-                value={formData.call_date}
-                onChange={(e) => handleInputChange('call_date', e.target.value)}
-              />
-            </div>
+            <DateTimePicker
+              label="Follow-up Date"
+              value={formData.follow_up_date}
+              onChange={(value) => handleDateTimeChange('follow_up_date', value)}
+              helpText="When to check in about status"
+              placeholder="Select follow-up date and time"
+            />
 
-            <div className="space-y-2">
-              <Label htmlFor="recording_date">
-                <Clock className="inline w-4 h-4 mr-1" />
-                Recording Date
-              </Label>
-              <Input
-                id="recording_date"
-                type="date"
-                value={formData.recording_date}
-                onChange={(e) => handleInputChange('recording_date', e.target.value)}
-              />
-            </div>
+            <DateTimePicker
+              label="Call Date"
+              value={formData.call_date}
+              onChange={(value) => handleDateTimeChange('call_date', value)}
+              helpText="Separate call if needed"
+              placeholder="Select call date and time"
+            />
 
-            <div className="space-y-2">
-              <Label htmlFor="go_live_date">
-                <Calendar className="inline w-4 h-4 mr-1" />
-                Go Live Date
-              </Label>
-              <Input
-                id="go_live_date"
-                type="date"
-                value={formData.go_live_date}
-                onChange={(e) => handleInputChange('go_live_date', e.target.value)}
-              />
-            </div>
+            <DateTimePicker
+              label="Recording Date"
+              value={formData.recording_date}
+              onChange={(value) => handleDateTimeChange('recording_date', value)}
+              helpText="Actual podcast recording"
+              placeholder="Select recording date and time"
+            />
+
+            <DateTimePicker
+              label="Go Live Date"
+              value={formData.go_live_date}
+              onChange={(value) => handleDateTimeChange('go_live_date', value)}
+              helpText="Episode publication date"
+              placeholder="Select go live date and time"
+            />
           </div>
 
           {/* Episode Link */}
