@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ThumbsUp, ThumbsDown, Eye, Check, Globe, Twitter, Linkedin, Instagram, Facebook, Youtube, Edit, Save, X } from "lucide-react";
+import { ThumbsUp, ThumbsDown, Eye, Check, Globe, Twitter, Linkedin, Instagram, Facebook, Youtube, Edit, Save, X, CheckCircle, XCircle } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { RejectReasonDialog } from "./RejectReasonDialog";
@@ -206,23 +207,42 @@ export const PitchReviewCard = ({ task, onApprove, onReject, isActionPending }: 
 
         {/* Action Buttons */}
         <div className="approval-actions p-4 bg-gray-50 border-t flex gap-3">
-          <Button 
-            className="flex-1 bg-green-600 hover:bg-green-700 text-white" 
-            onClick={onApprove}
-            disabled={isActionPending}
-          >
-            <ThumbsUp className="h-4 w-4 mr-2"/>
-            Approve
-          </Button>
-          <Button 
-            className="flex-1" 
-            variant="destructive"
-            onClick={handleRejectClick}
-            disabled={isActionPending}
-          >
-            <ThumbsDown className="h-4 w-4 mr-2"/>
-            Reject
-          </Button>
+          {task.status === 'pending' ? (
+            <>
+              <Button
+                className="flex-1 bg-green-600 hover:bg-green-700 text-white"
+                onClick={onApprove}
+                disabled={isActionPending}
+              >
+                <ThumbsUp className="h-4 w-4 mr-2"/>
+                Approve
+              </Button>
+              <Button
+                className="flex-1"
+                variant="destructive"
+                onClick={handleRejectClick}
+                disabled={isActionPending}
+              >
+                <ThumbsDown className="h-4 w-4 mr-2"/>
+                Reject
+              </Button>
+            </>
+          ) : (
+            <div className="flex-1 flex items-center justify-center">
+              {task.status === 'approved' && (
+                <Badge className="bg-green-100 text-green-700 py-2 px-4">
+                  <CheckCircle className="h-4 w-4 mr-2" />
+                  Already Approved
+                </Badge>
+              )}
+              {task.status === 'rejected' && (
+                <Badge className="bg-red-100 text-red-700 py-2 px-4">
+                  <XCircle className="h-4 w-4 mr-2" />
+                  Already Rejected
+                </Badge>
+              )}
+            </div>
+          )}
         </div>
       </div>
 

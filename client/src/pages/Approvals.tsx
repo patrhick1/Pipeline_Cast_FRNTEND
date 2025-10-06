@@ -200,7 +200,6 @@ const reviewTaskStatusConfig = {
   pending: { label: "Pending", icon: Clock, color: "bg-yellow-100 text-yellow-700", dotColor: "bg-yellow-500" },
   approved: { label: "Approved", icon: CheckCircle, color: "bg-green-100 text-green-700", dotColor: "bg-green-500" },
   rejected: { label: "Rejected", icon: XCircle, color: "bg-red-100 text-red-700", dotColor: "bg-red-500" },
-  completed: { label: "Completed", icon: CheckCircle, color: "bg-blue-100 text-blue-700", dotColor: "bg-blue-500" },
   default: { label: "Unknown", icon: Clock, color: "bg-gray-100 text-gray-700", dotColor: "bg-gray-500" },
 };
 
@@ -388,6 +387,7 @@ function ReviewTaskItem({
         onSelect={() => onSelect?.(task.review_task_id)}
         campaignName={task.campaign_name}
         idealPodcastDescription={task.ideal_podcast_description}
+        taskStatus={task.status}
       />
     );
   }
@@ -687,11 +687,10 @@ export default function Approvals() {
     total: statsData.length,
     pending: statsData.filter((task: ReviewTask) => task.status === 'pending').length,
     approved: statsData.filter((task: ReviewTask) => task.status === 'approved').length,
-    completed: statsData.filter((task: ReviewTask) => task.status === 'completed').length,
     rejected: statsData.filter((task: ReviewTask) => task.status === 'rejected').length,
   };
   // Define which keys from stats map to reviewTaskStatusConfig
-  const statusKeysForStats: Array<keyof Omit<typeof stats, 'total'>> = ['pending', 'approved', 'completed', 'rejected'];
+  const statusKeysForStats: Array<keyof Omit<typeof stats, 'total'>> = ['pending', 'approved', 'rejected'];
 
 
   useEffect(() => {
@@ -899,7 +898,6 @@ export default function Approvals() {
                   <SelectItem value="pending">Pending</SelectItem>
                   <SelectItem value="approved">Approved</SelectItem>
                   <SelectItem value="rejected">Rejected</SelectItem>
-                  <SelectItem value="completed">Completed</SelectItem>
                 </SelectContent>
               </Select>
 

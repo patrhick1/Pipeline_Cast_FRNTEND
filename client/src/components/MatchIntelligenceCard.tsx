@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Badge } from "@/components/ui/badge";
-import { ThumbsUp, ThumbsDown, Check, Globe, Twitter, Linkedin, Instagram, Facebook, Youtube, Info, CheckSquare, Square } from "lucide-react";
+import { ThumbsUp, ThumbsDown, Check, Globe, Twitter, Linkedin, Instagram, Facebook, Youtube, Info, CheckSquare, Square, CheckCircle, XCircle } from "lucide-react";
 import { Button } from './ui/button';
 import { RejectReasonDialog } from './RejectReasonDialog';
 import { PodcastDetailsModal } from './modals/PodcastDetailsModal';
@@ -57,6 +57,7 @@ interface MatchIntelligenceCardProps {
   onSelect?: (matchId: number) => void; // Callback when selection checkbox is clicked
   campaignName?: string; // Campaign name for context
   idealPodcastDescription?: string | null; // Campaign's ideal podcast description
+  taskStatus?: string; // Task status: 'pending', 'approved', 'rejected', etc.
 }
 
 
@@ -70,7 +71,8 @@ export const MatchIntelligenceCard = ({
   isSelected = false,
   onSelect,
   campaignName,
-  idealPodcastDescription
+  idealPodcastDescription,
+  taskStatus = 'pending'
 }: MatchIntelligenceCardProps) => {
   const [showRejectDialog, setShowRejectDialog] = useState(false);
   const [showPodcastDetails, setShowPodcastDetails] = useState(false);
@@ -147,23 +149,42 @@ export const MatchIntelligenceCard = ({
           )}
         </div>
         <div className="p-4 bg-gray-50 border-t flex gap-3">
-          <Button 
-              className="flex-1 bg-green-600 hover:bg-green-700 text-white" 
-              onClick={() => onApprove(match.match_id)}
-              disabled={isActionPending}
-          >
-            <ThumbsUp className="h-4 w-4 mr-2"/>
-            Approve
-          </Button>
-          <Button 
-              className="flex-1" 
-              variant="destructive"
-              onClick={handleRejectClick}
-              disabled={isActionPending}
-          >
-            <ThumbsDown className="h-4 w-4 mr-2"/>
-            Reject
-          </Button>
+          {taskStatus === 'pending' ? (
+            <>
+              <Button
+                  className="flex-1 bg-green-600 hover:bg-green-700 text-white"
+                  onClick={() => onApprove(match.match_id)}
+                  disabled={isActionPending}
+              >
+                <ThumbsUp className="h-4 w-4 mr-2"/>
+                Approve
+              </Button>
+              <Button
+                  className="flex-1"
+                  variant="destructive"
+                  onClick={handleRejectClick}
+                  disabled={isActionPending}
+              >
+                <ThumbsDown className="h-4 w-4 mr-2"/>
+                Reject
+              </Button>
+            </>
+          ) : (
+            <div className="flex-1 flex items-center justify-center">
+              {taskStatus === 'approved' && (
+                <Badge className="bg-green-100 text-green-700 py-2 px-4">
+                  <CheckCircle className="h-4 w-4 mr-2" />
+                  Already Approved
+                </Badge>
+              )}
+              {taskStatus === 'rejected' && (
+                <Badge className="bg-red-100 text-red-700 py-2 px-4">
+                  <XCircle className="h-4 w-4 mr-2" />
+                  Already Rejected
+                </Badge>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Reject Reason Dialog for fallback card */}
@@ -334,23 +355,42 @@ export const MatchIntelligenceCard = ({
       </div>
 
       <div className="approval-actions p-4 bg-gray-50 border-t flex gap-3">
-        <Button 
-            className="flex-1 bg-green-600 hover:bg-green-700 text-white" 
-            onClick={() => onApprove(match.match_id)}
-            disabled={isActionPending}
-        >
-          <ThumbsUp className="h-4 w-4 mr-2"/>
-          Approve
-        </Button>
-        <Button 
-            className="flex-1" 
-            variant="destructive"
-            onClick={handleRejectClick}
-            disabled={isActionPending}
-        >
-          <ThumbsDown className="h-4 w-4 mr-2"/>
-          Reject
-        </Button>
+        {taskStatus === 'pending' ? (
+          <>
+            <Button
+                className="flex-1 bg-green-600 hover:bg-green-700 text-white"
+                onClick={() => onApprove(match.match_id)}
+                disabled={isActionPending}
+            >
+              <ThumbsUp className="h-4 w-4 mr-2"/>
+              Approve
+            </Button>
+            <Button
+                className="flex-1"
+                variant="destructive"
+                onClick={handleRejectClick}
+                disabled={isActionPending}
+            >
+              <ThumbsDown className="h-4 w-4 mr-2"/>
+              Reject
+            </Button>
+          </>
+        ) : (
+          <div className="flex-1 flex items-center justify-center">
+            {taskStatus === 'approved' && (
+              <Badge className="bg-green-100 text-green-700 py-2 px-4">
+                <CheckCircle className="h-4 w-4 mr-2" />
+                Already Approved
+              </Badge>
+            )}
+            {taskStatus === 'rejected' && (
+              <Badge className="bg-red-100 text-red-700 py-2 px-4">
+                <XCircle className="h-4 w-4 mr-2" />
+                Already Rejected
+              </Badge>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Reject Reason Dialog */}
