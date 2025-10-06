@@ -136,17 +136,7 @@ export const DateTimePicker: React.FC<DateTimePickerProps> = ({
             isClearable
             showPopperArrow={false}
             popperPlacement="bottom-start"
-            portalId="root-portal"
-            popperModifiers={[
-              {
-                name: 'preventOverflow',
-                options: {
-                  rootBoundary: 'viewport',
-                  tether: false,
-                  altAxis: true,
-                },
-              },
-            ]}
+            withPortal={false}
           />
         </div>
 

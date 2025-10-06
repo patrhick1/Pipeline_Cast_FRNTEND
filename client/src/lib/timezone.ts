@@ -256,7 +256,8 @@ export const utcToDatetimeLocal = (utcDate: string | Date | null | undefined): s
  */
 export function toAPIDateTime(date: Date | null | undefined): string | null {
   if (!date || !isValid(date)) return null;
-  return formatISO(date); // Returns: "2025-10-06T14:30:00.000Z"
+  // Use toISOString() to ensure UTC format with Z suffix
+  return date.toISOString(); // Returns: "2025-10-06T14:30:00.000Z"
 }
 
 /**

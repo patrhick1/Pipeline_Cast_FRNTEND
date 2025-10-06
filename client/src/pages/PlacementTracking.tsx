@@ -49,7 +49,7 @@ import PlacementStatusAnalytics from "@/components/analytics/PlacementStatusAnal
 import { PodcastDetailsModal } from "@/components/modals/PodcastDetailsModal";
 import { statusConfig, type PlacementStatus } from "@/constants/placementStatus";
 import { DateTimePicker } from "@/components/DateTimePicker";
-import { formatDateTime, isUpcoming } from "@/lib/timezone";
+import { formatDateTime, isUpcoming, utcToDatetimeLocal, datetimeLocalToUTC } from "@/lib/timezone";
 
 // --- Interfaces (align with backend schemas) ---
 interface Placement { // Matches PlacementInDB from backend
@@ -463,24 +463,22 @@ function PlacementTable({
   const getFieldValue = (placement: Placement, field: keyof Placement) => {
     const edits = editedPlacements.get(placement.placement_id);
     if (edits && field in edits) {
-      return edits[field];
+      const editedValue = edits[field];
+      // If it's a datetime-local string (not ISO 8601), return as-is
+      if (typeof editedValue === 'string' && editedValue.match(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/)) {
+        return editedValue;
+      }
+      // If it's ISO 8601, convert to datetime-local
+      if (typeof editedValue === 'string' && editedValue.includes('Z')) {
+        return utcToDatetimeLocal(editedValue);
+      }
+      return editedValue;
     }
-    // For DateTime fields, convert to datetime-local format (YYYY-MM-DDTHH:mm)
+    // For DateTime fields, convert UTC ISO 8601 to datetime-local format (YYYY-MM-DDTHH:mm)
     const dateTimeFields: Array<keyof Placement> = ['meeting_date', 'call_date', 'recording_date', 'go_live_date', 'follow_up_date'];
     if (dateTimeFields.includes(field) && placement[field]) {
       const dateValue = placement[field] as string;
-      // ISO 8601 format: YYYY-MM-DDTHH:mm:ss.sssZ -> YYYY-MM-DDTHH:mm for datetime-local input
-      try {
-        const date = new Date(dateValue);
-        const year = date.getFullYear();
-        const month = String(date.getMonth() + 1).padStart(2, '0');
-        const day = String(date.getDate()).padStart(2, '0');
-        const hours = String(date.getHours()).padStart(2, '0');
-        const minutes = String(date.getMinutes()).padStart(2, '0');
-        return `${year}-${month}-${day}T${hours}:${minutes}`;
-      } catch {
-        return '';
-      }
+      return utcToDatetimeLocal(dateValue);
     }
     return placement[field];
   };
@@ -590,7 +588,7 @@ function PlacementTable({
                     type="datetime-local"
                     className="w-[160px] h-8 text-xs"
                     value={getFieldValue(placement, 'follow_up_date') as string || ''}
-                    onChange={(e) => handleFieldChange(placement.placement_id, 'follow_up_date', e.target.value ? new Date(e.target.value).toISOString() : null)}
+                    onChange={(e) => handleFieldChange(placement.placement_id, 'follow_up_date', e.target.value || null)}
                   />
                 </TableCell>
                 <TableCell>
@@ -598,7 +596,7 @@ function PlacementTable({
                     type="datetime-local"
                     className="w-[160px] h-8 text-xs"
                     value={getFieldValue(placement, 'meeting_date') as string || ''}
-                    onChange={(e) => handleFieldChange(placement.placement_id, 'meeting_date', e.target.value ? new Date(e.target.value).toISOString() : null)}
+                    onChange={(e) => handleFieldChange(placement.placement_id, 'meeting_date', e.target.value || null)}
                   />
                 </TableCell>
                 <TableCell>
@@ -606,7 +604,7 @@ function PlacementTable({
                     type="datetime-local"
                     className="w-[160px] h-8 text-xs"
                     value={getFieldValue(placement, 'recording_date') as string || ''}
-                    onChange={(e) => handleFieldChange(placement.placement_id, 'recording_date', e.target.value ? new Date(e.target.value).toISOString() : null)}
+                    onChange={(e) => handleFieldChange(placement.placement_id, 'recording_date', e.target.value || null)}
                   />
                 </TableCell>
                 <TableCell>
@@ -614,7 +612,7 @@ function PlacementTable({
                     type="datetime-local"
                     className="w-[160px] h-8 text-xs"
                     value={getFieldValue(placement, 'go_live_date') as string || ''}
-                    onChange={(e) => handleFieldChange(placement.placement_id, 'go_live_date', e.target.value ? new Date(e.target.value).toISOString() : null)}
+                    onChange={(e) => handleFieldChange(placement.placement_id, 'go_live_date', e.target.value || null)}
                   />
                 </TableCell>
                 <TableCell>
@@ -787,18 +785,25 @@ export default function PlacementTracking() {
   const batchUpdateMutation = useMutation({
     mutationFn: async (updates: Map<number, Partial<Placement>>) => {
       const updatePromises = Array.from(updates.entries()).map(([placementId, changes]) => {
-        // Clean up DateTime fields to ensure proper format
-        // Inline editing now uses datetime-local inputs or sends ISO strings directly
         const payload: any = { ...changes };
 
+        // Convert datetime-local format to UTC ISO 8601 for API
         const dateFields = ['meeting_date', 'call_date', 'recording_date', 'go_live_date', 'follow_up_date'];
         dateFields.forEach(field => {
           if (field in changes) {
             const value = changes[field as keyof Placement];
             if (value === '' || value === null || value === undefined) {
               payload[field] = null;
+            } else if (typeof value === 'string') {
+              // If it's datetime-local format (YYYY-MM-DDTHH:mm), convert to UTC ISO 8601
+              if (value.match(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/)) {
+                payload[field] = datetimeLocalToUTC(value);
+              }
+              // If it's already ISO 8601 (contains Z), pass through
+              else if (value.includes('Z')) {
+                payload[field] = value;
+              }
             }
-            // Value is already in ISO format from handleFieldChange, so pass through
           }
         });
 
