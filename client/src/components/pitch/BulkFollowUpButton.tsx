@@ -121,7 +121,7 @@ export function BulkFollowUpButton({
     if (!canUseAI) {
       toast({
         title: "Upgrade Required",
-        description: "Bulk follow-up generation is available for Premium users.",
+        description: "Bulk follow-up generation is available for paid plan users.",
         variant: "destructive",
       });
       return;
@@ -197,8 +197,8 @@ export function BulkFollowUpButton({
         className={`${className} border-amber-200 hover:bg-amber-50`}
         onClick={() => {
           toast({
-            title: "Premium Feature",
-            description: "Upgrade to Premium to unlock bulk follow-up generation",
+            title: "Paid Feature",
+            description: "Upgrade to a paid plan to unlock bulk follow-up generation",
             action: (
               <Button
                 size="sm"
@@ -211,7 +211,7 @@ export function BulkFollowUpButton({
         }}
       >
         <Lock className="h-4 w-4 mr-2 text-amber-600" />
-        Bulk Follow-ups (Premium)
+        Bulk Follow-ups (Paid Plan)
       </Button>
     );
   }

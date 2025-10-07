@@ -41,6 +41,7 @@ import { AIGeneratePitchButton } from "@/components/pitch/AIGeneratePitchButton"
 import { AIGenerateFollowUpButton } from "@/components/pitch/AIGenerateFollowUpButton";
 import { BatchAIGenerateButton } from "@/components/pitch/BatchAIGenerateButton";
 import { BulkFollowUpButton } from "@/components/pitch/BulkFollowUpButton";
+import { BulkApproveButton } from "@/components/pitch/BulkApproveButton";
 import { formatUTCToLocal } from "@/lib/timezone";
 import { ModernPitchReview } from "@/components/pitch/ModernPitchReview";
 
@@ -824,7 +825,7 @@ function ReadyToSendTab({
                     className="bg-blue-600 hover:bg-blue-700"
                 >
                     {isLoadingBulkSend ? (
-                        <><RefreshCw className="h-4 w-4 animate-spin mr-1.5"/> Sending...</>
+                        <><RefreshCw className="h-4 w-4 animate-spin mr-1.5"/> Sending pitches and scheduling follow-ups...</>
                     ) : (
                         <><SendHorizontal className="h-4 w-4 mr-1.5"/> Send Selected ({selectedPitchGenIds.length})</>
                     )}
@@ -1236,7 +1237,7 @@ export default function PitchOutreach() {
   const [isLoadingGenerateForMatchId, setIsLoadingGenerateForMatchId] = useState<number | null>(null);
   const [isLoadingApproveForPitchGenId, setIsLoadingApproveForPitchGenId] = useState<number | null>(null);
   const [isLoadingSendForPitchId, setIsLoadingSendForPitchId] = useState<number | null>(null);
-  const [isLoadingBulkSend, setIsLoadingBulkSend] = useState(false);
+  // isLoadingBulkSend removed - now using sendBatchMutation.isPending from usePitchSending hook
   const [isLoadingBatchGenerate, setIsLoadingBatchGenerate] = useState(false);
 
   // State for pagination for "Review Drafts" tab
@@ -1259,6 +1260,13 @@ export default function PitchOutreach() {
     },
     enabled: !!user, // Only fetch when user is loaded
   });
+
+  // Auto-select campaign for clients with only one campaign
+  React.useEffect(() => {
+    if (isClient && campaignsData && campaignsData.length === 1 && !selectedCampaignFilter) {
+      setSelectedCampaignFilter(campaignsData[0].campaign_id);
+    }
+  }, [isClient, campaignsData, selectedCampaignFilter]);
 
   // Fetch pitch templates for the dropdown (only for non-clients)
   const { data: pitchTemplates = [], isLoading: isLoadingTemplates, error: templatesError } = useQuery<PitchTemplate[]>({
@@ -1441,11 +1449,12 @@ export default function PitchOutreach() {
   });
 
   // Get Nylas sending functions
-  const { 
-    sendPitch: sendPitchViaNylas, 
+  const {
+    sendPitch: sendPitchViaNylas,
     sendBatch: sendBatchViaNylas,
+    sendBatchMutation,
     isPitchSending,
-    isEmailConnected 
+    isEmailConnected
   } = usePitchSending();
 
   // OLD: Replaced with Nylas sending
@@ -1552,20 +1561,21 @@ export default function PitchOutreach() {
   });
   */
 
-  // NEW: Using Nylas for batch sending
+  // NEW: Using Nylas batch mutation with proper loading states
+  // Wrap the mutation to handle tab switching after success
   const bulkSendPitchesMutation = {
     mutate: (pitchGenIds: number[]) => {
-      setIsLoadingBulkSend(true);
-      sendBatchViaNylas(pitchGenIds);
-      // Refresh data after a short delay to show the updates
-      setTimeout(() => {
-        setIsLoadingBulkSend(false);
-        refreshAllPitchData();
-        setActiveTabState("sentPitches");
-      }, 3000);
+      sendBatchMutation.mutate(pitchGenIds);
     },
-    isPending: false
+    isPending: sendBatchMutation.isPending
   };
+
+  // Switch to sent pitches tab when batch send completes successfully
+  React.useEffect(() => {
+    if (sendBatchMutation.isSuccess) {
+      setActiveTabState("sentPitches");
+    }
+  }, [sendBatchMutation.isSuccess]);
 
 
   // Helper function to refresh all pitch-related data for better UX
@@ -1692,21 +1702,23 @@ export default function PitchOutreach() {
         <FreeUserUpgradeCard variant="compact" context="banner" />
       )}
 
-      {/* Campaign filter */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Campaign Selection</CardTitle>
-          <CardDescription>Select a campaign to manage its pitches and settings</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <CampaignSelector 
-            selectedCampaignId={selectedCampaignFilter}
-            onCampaignChange={setSelectedCampaignFilter}
-            campaigns={campaignsData}
-            isLoading={isLoadingCampaigns}
-          />
-        </CardContent>
-      </Card>
+      {/* Campaign filter - only show if admin/staff OR client with multiple campaigns */}
+      {(!isClient || (isClient && campaignsData && campaignsData.length > 1)) && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">Campaign Selection</CardTitle>
+            <CardDescription>Select a campaign to manage its pitches and settings</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <CampaignSelector
+              selectedCampaignId={selectedCampaignFilter}
+              onCampaignChange={setSelectedCampaignFilter}
+              campaigns={campaignsData}
+              isLoading={isLoadingCampaigns}
+            />
+          </CardContent>
+        </Card>
+      )}
 
       {/* Smart Send Settings - Always show for paid users */}
       {!isFreePlan && (
@@ -1760,26 +1772,55 @@ export default function PitchOutreach() {
 
         <TabsContent value="draftsReview" className="mt-6">
           <div className="space-y-4">
-            {/* Bulk Follow-up Generation */}
-            {canUseAI && selectedCampaignFilter && pitchDraftsForReview.length > 0 && (
-              <div className="bg-gradient-to-r from-blue-50 to-cyan-50 border border-blue-200 rounded-lg p-4">
-                <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
-                  <div>
-                    <h3 className="font-medium text-blue-900">Bulk Generate Follow-ups</h3>
-                    <p className="text-sm text-blue-700">
-                      Generate follow-ups for all existing pitches in this campaign.
-                    </p>
+            {/* Bulk Actions for Paid Users and Admins */}
+            {pitchDraftsForReview.length > 0 && (
+              <div className="grid gap-3">
+                {/* Bulk Follow-up Generation - requires campaign selection */}
+                {(capabilities?.plan_type === 'paid_basic' || capabilities?.plan_type === 'paid_premium' || capabilities?.plan_type === 'admin' || isAdmin) && selectedCampaignFilter && (
+                  <div className="bg-gradient-to-r from-blue-50 to-cyan-50 border border-blue-200 rounded-lg p-4">
+                    <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
+                      <div>
+                        <h3 className="font-medium text-blue-900">Bulk Generate Follow-ups</h3>
+                        <p className="text-sm text-blue-700">
+                          Generate follow-ups for all existing pitches in this campaign.
+                        </p>
+                      </div>
+                      <BulkFollowUpButton
+                        campaignId={selectedCampaignFilter}
+                        campaignName={campaignsData?.find((c: any) => c.campaign_id === selectedCampaignFilter)?.campaign_name}
+                        onComplete={() => {
+                          // Refresh all pitch-related data
+                          refreshAllPitchData();
+                        }}
+                        size="sm"
+                      />
+                    </div>
                   </div>
-                  <BulkFollowUpButton
-                    campaignId={selectedCampaignFilter}
-                    campaignName={campaignsData?.find((c: any) => c.campaign_id === selectedCampaignFilter)?.campaign_name}
-                    onComplete={() => {
-                      // Refresh all pitch-related data
-                      refreshAllPitchData();
-                    }}
-                    size="sm"
-                  />
-                </div>
+                )}
+
+                {/* Bulk Approve - works across all visible drafts */}
+                {(capabilities?.plan_type === 'paid_basic' || capabilities?.plan_type === 'paid_premium' || capabilities?.plan_type === 'admin' || isAdmin) && (
+                  <div className="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-lg p-4">
+                    <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
+                      <div>
+                        <h3 className="font-medium text-green-900">Bulk Approve Pitches</h3>
+                        <p className="text-sm text-green-700">
+                          Approve all {pitchDraftsForReview.length} draft{pitchDraftsForReview.length !== 1 ? 's' : ''} and move them to "Ready to Send".
+                        </p>
+                      </div>
+                      <BulkApproveButton
+                        pitchGenIds={pitchDraftsForReview.map(d => d.pitch_gen_id)}
+                        onComplete={() => {
+                          // Refresh all pitch-related data
+                          refreshAllPitchData();
+                          // Switch to "Ready to Send" tab
+                          setActiveTabState("readyToSend");
+                        }}
+                        size="sm"
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
@@ -1811,7 +1852,7 @@ export default function PitchOutreach() {
              onPreview={handlePreviewPitch}
              onSendSequence={handleSendSequence}
              isLoadingSendForPitchId={isLoadingSendForPitchId}
-             isLoadingBulkSend={isLoadingBulkSend}
+             isLoadingBulkSend={sendBatchMutation.isPending}
              isLoadingPitches={isLoadingReadyToSend}
              campaigns={campaignsData}
            />
