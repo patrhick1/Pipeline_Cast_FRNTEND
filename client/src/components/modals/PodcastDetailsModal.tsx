@@ -190,11 +190,6 @@ export function PodcastDetailsModal({
                       label="Audience Size"
                       value={formatNumber(podcast.audience_size) || podcast.stats?.audience_size?.toString() || 'N/A'}
                     />
-                    <StatCard
-                      icon={<TrendingUp className="w-4 h-4" />}
-                      label="Total Reach"
-                      value={formatNumber(podcast.calculated_total_reach || podcast.total_reach || podcast.stats?.total_reach)}
-                    />
                     {podcast.publishing_frequency_days && (
                       <StatCard
                         icon={<Calendar className="w-4 h-4" />}
@@ -212,17 +207,10 @@ export function PodcastDetailsModal({
                     <StatCard
                       icon={<Calendar className="w-4 h-4" />}
                       label="Latest Episode"
-                      value={(podcast.latest_episode_date || podcast.stats?.latest_episode_date) ? 
-                        new Date(podcast.latest_episode_date || podcast.stats?.latest_episode_date || '').toLocaleDateString() : 
+                      value={(podcast.latest_episode_date || podcast.stats?.latest_episode_date) ?
+                        new Date(podcast.latest_episode_date || podcast.stats?.latest_episode_date || '').toLocaleDateString() :
                         'N/A'}
                     />
-                    {podcast.listen_score && (
-                      <StatCard
-                        icon={<BarChart3 className="w-4 h-4" />}
-                        label="Listen Score"
-                        value={`${podcast.listen_score.toFixed(0)}/100`}
-                      />
-                    )}
                     {podcast.itunes_rating_average && (
                       <StatCard
                         icon={<TrendingUp className="w-4 h-4" />}
