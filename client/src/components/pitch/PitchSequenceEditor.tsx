@@ -13,6 +13,7 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { usePitchCapabilities } from '@/hooks/usePitchCapabilities';
+import { useAuth } from '@/hooks/useAuth';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Skeleton } from '@/components/ui/skeleton';
 
@@ -53,6 +54,7 @@ interface PitchSequenceEditorProps {
 export function PitchSequenceEditor({ isOpen, onClose, match, onSuccess }: PitchSequenceEditorProps) {
   const queryClient = useQueryClient();
   const { isFreePlan } = usePitchCapabilities();
+  const { user } = useAuth();
   const [creationMode, setCreationMode] = useState<'template' | 'manual'>('template');
   const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
   const [pitchDrafts, setPitchDrafts] = useState<PitchDraft[]>([
@@ -589,19 +591,21 @@ Best,
             </div>
           )}
 
-          {/* Recipient Email (Global) */}
-          <div className="space-y-2">
-            <Label htmlFor="recipient">Recipient Email (Optional)</Label>
-            <Input
-              id="recipient"
-              type="email"
-              placeholder="podcast@example.com (leave blank to use default)"
-              value={recipientEmail}
-              onChange={(e) => setRecipientEmail(e.target.value)}
-              disabled={isSubmitting}
-            />
-            <p className="text-xs text-gray-500">This email will be used for all pitches in the sequence</p>
-          </div>
+          {/* Recipient Email (Global) - Only show for admin/staff */}
+          {(user?.role === 'admin' || user?.role === 'staff') && (
+            <div className="space-y-2">
+              <Label htmlFor="recipient">Recipient Email (Optional)</Label>
+              <Input
+                id="recipient"
+                type="email"
+                placeholder="podcast@example.com (leave blank to use default)"
+                value={recipientEmail}
+                onChange={(e) => setRecipientEmail(e.target.value)}
+                disabled={isSubmitting}
+              />
+              <p className="text-xs text-gray-500">This email will be used for all pitches in the sequence</p>
+            </div>
+          )}
 
           {/* Pitch Tabs - Show only for manual mode or paid users */}
           {(!isFreePlan || creationMode === 'manual') && (

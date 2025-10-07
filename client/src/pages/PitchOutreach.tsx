@@ -33,7 +33,6 @@ import { usePitchCapabilities } from "@/hooks/usePitchCapabilities";
 import { useSubscription } from "@/hooks/useSubscription";
 // ManualPitchEditor removed - using PitchSequenceEditor for all pitch creation
 import { PitchSequenceEditor } from "@/components/pitch/PitchSequenceEditor";
-import { RecipientEmailEditor } from "@/components/pitch/RecipientEmailEditor";
 import { useAuth } from "@/hooks/useAuth";
 import PitchEmailThread from "@/components/pitch/PitchEmailThread";
 import { SmartSendSettings } from "@/components/pitch/SmartSendSettings";
@@ -876,77 +875,79 @@ function ReadyToSendTab({
                                         </Badge>
                                     </div>
 
-                                    {/* Email Address Section */}
-                                    <div className="mb-3 p-3 bg-gray-50 rounded-lg">
-                                        <div className="flex items-center justify-between mb-1">
-                                            <label className="text-xs font-medium text-gray-700">
-                                                Recipient Email {hasMultiplePitches && '(for all pitches)'}
-                                            </label>
-                                            {hasMultiplePitches && (
-                                                <Badge variant="outline" className="text-xs">
-                                                    Updates all {group.pitches.length} pitches
-                                                </Badge>
+                                    {/* Email Address Section - Only visible to admin/staff */}
+                                    {(user?.role === 'admin' || user?.role === 'staff') && (
+                                        <div className="mb-3 p-3 bg-gray-50 rounded-lg">
+                                            <div className="flex items-center justify-between mb-1">
+                                                <label className="text-xs font-medium text-gray-700">
+                                                    Recipient Email {hasMultiplePitches && '(for all pitches)'}
+                                                </label>
+                                                {hasMultiplePitches && (
+                                                    <Badge variant="outline" className="text-xs">
+                                                        Updates all {group.pitches.length} pitches
+                                                    </Badge>
+                                                )}
+                                            </div>
+                                            {isEditingEmail ? (
+                                                <div className="flex items-center gap-2">
+                                                    <Input
+                                                        type="email"
+                                                        value={tempGroupEmail}
+                                                        onChange={(e) => setTempGroupEmail(e.target.value)}
+                                                        placeholder="Enter recipient email"
+                                                        className="flex-1 h-8 text-sm"
+                                                        disabled={updatingEmailForGroup === groupKey}
+                                                    />
+                                                    <Button
+                                                        size="sm"
+                                                        className="h-8"
+                                                        onClick={() => {
+                                                            const pitchIds = group.pitches.map(p => p.pitch_gen_id);
+                                                            updateGroupEmail(groupKey, tempGroupEmail, pitchIds).then(() => {
+                                                                setEditingGroupEmail(null);
+                                                            });
+                                                        }}
+                                                        disabled={updatingEmailForGroup === groupKey}
+                                                    >
+                                                        {updatingEmailForGroup === groupKey ? (
+                                                            <Loader2 className="h-3 w-3 animate-spin" />
+                                                        ) : (
+                                                            <Check className="h-3 w-3" />
+                                                        )}
+                                                    </Button>
+                                                    <Button
+                                                        size="sm"
+                                                        variant="outline"
+                                                        className="h-8"
+                                                        onClick={() => {
+                                                            setEditingGroupEmail(null);
+                                                            setTempGroupEmail("");
+                                                        }}
+                                                        disabled={updatingEmailForGroup === groupKey}
+                                                    >
+                                                        <X className="h-3 w-3" />
+                                                    </Button>
+                                                </div>
+                                            ) : (
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-sm text-gray-800 flex-1">
+                                                        {groupEmail || "No email set"}
+                                                    </span>
+                                                    <Button
+                                                        size="sm"
+                                                        variant="ghost"
+                                                        className="h-7"
+                                                        onClick={() => {
+                                                            setEditingGroupEmail(groupKey);
+                                                            setTempGroupEmail(groupEmail || "");
+                                                        }}
+                                                    >
+                                                        <Edit3 className="h-3 w-3 mr-1" /> Edit
+                                                    </Button>
+                                                </div>
                                             )}
                                         </div>
-                                        {isEditingEmail ? (
-                                            <div className="flex items-center gap-2">
-                                                <Input
-                                                    type="email"
-                                                    value={tempGroupEmail}
-                                                    onChange={(e) => setTempGroupEmail(e.target.value)}
-                                                    placeholder="Enter recipient email"
-                                                    className="flex-1 h-8 text-sm"
-                                                    disabled={updatingEmailForGroup === groupKey}
-                                                />
-                                                <Button
-                                                    size="sm"
-                                                    className="h-8"
-                                                    onClick={() => {
-                                                        const pitchIds = group.pitches.map(p => p.pitch_gen_id);
-                                                        updateGroupEmail(groupKey, tempGroupEmail, pitchIds).then(() => {
-                                                            setEditingGroupEmail(null);
-                                                        });
-                                                    }}
-                                                    disabled={updatingEmailForGroup === groupKey}
-                                                >
-                                                    {updatingEmailForGroup === groupKey ? (
-                                                        <Loader2 className="h-3 w-3 animate-spin" />
-                                                    ) : (
-                                                        <Check className="h-3 w-3" />
-                                                    )}
-                                                </Button>
-                                                <Button
-                                                    size="sm"
-                                                    variant="outline"
-                                                    className="h-8"
-                                                    onClick={() => {
-                                                        setEditingGroupEmail(null);
-                                                        setTempGroupEmail("");
-                                                    }}
-                                                    disabled={updatingEmailForGroup === groupKey}
-                                                >
-                                                    <X className="h-3 w-3" />
-                                                </Button>
-                                            </div>
-                                        ) : (
-                                            <div className="flex items-center gap-2">
-                                                <span className="text-sm text-gray-800 flex-1">
-                                                    {groupEmail || "No email set"}
-                                                </span>
-                                                <Button
-                                                    size="sm"
-                                                    variant="ghost"
-                                                    className="h-7"
-                                                    onClick={() => {
-                                                        setEditingGroupEmail(groupKey);
-                                                        setTempGroupEmail(groupEmail || "");
-                                                    }}
-                                                >
-                                                    <Edit3 className="h-3 w-3 mr-1" /> Edit
-                                                </Button>
-                                            </div>
-                                        )}
-                                    </div>
+                                    )}
 
                                     {/* Quick Preview (when collapsed) */}
                                     {!isExpanded && (
@@ -1901,77 +1902,80 @@ export default function PitchOutreach() {
                   </a>
                 )}
               </div>
-              
-              <div>
-                <h4 className="font-semibold text-sm text-gray-700 mb-1">Recipient Email:</h4>
-                <div className="flex items-center gap-2">
-                  {editingRecipientEmail ? (
-                    <>
-                      <Input
-                        type="email"
-                        value={tempRecipientEmail}
-                        onChange={(e) => setTempRecipientEmail(e.target.value)}
-                        placeholder="Enter recipient email"
-                        className="flex-1"
-                      />
-                      <Button
-                        size="sm"
-                        onClick={async () => {
-                          if (tempRecipientEmail && tempRecipientEmail.includes('@')) {
-                            try {
-                              const response = await apiRequest('PATCH', `/pitches/generations/${previewPitch.pitch_gen_id}/content`, {
-                                recipient_email: tempRecipientEmail
-                              });
-                              if (response.ok) {
-                                setPreviewPitch({ ...previewPitch, recipient_email: tempRecipientEmail });
-                                toast({ title: "Email updated", description: "Recipient email has been updated successfully." });
-                                setEditingRecipientEmail(false);
-                              } else {
-                                throw new Error('Failed to update email');
+
+              {/* Only admin/staff can see recipient email */}
+              {(user?.role === 'admin' || user?.role === 'staff') && (
+                <div>
+                  <h4 className="font-semibold text-sm text-gray-700 mb-1">Recipient Email:</h4>
+                  <div className="flex items-center gap-2">
+                    {editingRecipientEmail ? (
+                      <>
+                        <Input
+                          type="email"
+                          value={tempRecipientEmail}
+                          onChange={(e) => setTempRecipientEmail(e.target.value)}
+                          placeholder="Enter recipient email"
+                          className="flex-1"
+                        />
+                        <Button
+                          size="sm"
+                          onClick={async () => {
+                            if (tempRecipientEmail && tempRecipientEmail.includes('@')) {
+                              try {
+                                const response = await apiRequest('PATCH', `/pitches/generations/${previewPitch.pitch_gen_id}/content`, {
+                                  recipient_email: tempRecipientEmail
+                                });
+                                if (response.ok) {
+                                  setPreviewPitch({ ...previewPitch, recipient_email: tempRecipientEmail });
+                                  toast({ title: "Email updated", description: "Recipient email has been updated successfully." });
+                                  setEditingRecipientEmail(false);
+                                } else {
+                                  throw new Error('Failed to update email');
+                                }
+                              } catch (error) {
+                                toast({
+                                  title: "Error",
+                                  description: "Failed to update recipient email. Please try again.",
+                                  variant: "destructive"
+                                });
                               }
-                            } catch (error) {
-                              toast({ 
-                                title: "Error", 
-                                description: "Failed to update recipient email. Please try again.", 
-                                variant: "destructive" 
-                              });
                             }
-                          }
-                        }}
-                      >
-                        <Check className="h-3 w-3" />
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => {
-                          setEditingRecipientEmail(false);
-                          setTempRecipientEmail(previewPitch.recipient_email || "");
-                        }}
-                      >
-                        <X className="h-3 w-3" />
-                      </Button>
-                    </>
-                  ) : (
-                    <>
-                      <p className="text-sm bg-gray-50 p-2 rounded flex-1">
-                        {previewPitch.recipient_email || "No recipient email set"}
-                      </p>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => {
-                          setEditingRecipientEmail(true);
-                          setTempRecipientEmail(previewPitch.recipient_email || "");
-                        }}
-                      >
-                        <Edit3 className="h-3 w-3 mr-1" /> Edit
-                      </Button>
-                    </>
-                  )}
+                          }}
+                        >
+                          <Check className="h-3 w-3" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
+                            setEditingRecipientEmail(false);
+                            setTempRecipientEmail(previewPitch.recipient_email || "");
+                          }}
+                        >
+                          <X className="h-3 w-3" />
+                        </Button>
+                      </>
+                    ) : (
+                      <>
+                        <p className="text-sm bg-gray-50 p-2 rounded flex-1">
+                          {previewPitch.recipient_email || "No recipient email set"}
+                        </p>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
+                            setEditingRecipientEmail(true);
+                            setTempRecipientEmail(previewPitch.recipient_email || "");
+                          }}
+                        >
+                          <Edit3 className="h-3 w-3 mr-1" /> Edit
+                        </Button>
+                      </>
+                    )}
+                  </div>
                 </div>
-              </div>
-              
+              )}
+
               <div>
                 <h4 className="font-semibold text-sm text-gray-700 mb-1">Subject:</h4>
                 <div className="flex items-center gap-2">

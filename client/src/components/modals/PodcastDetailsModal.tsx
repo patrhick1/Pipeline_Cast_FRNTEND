@@ -8,19 +8,20 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { 
-  ExternalLink, Users, Calendar, Clock, BarChart3, 
+import {
+  ExternalLink, Users, Calendar, Clock, BarChart3,
   Globe, Twitter, Instagram, Linkedin, Youtube, Facebook,
   ChevronDown, ChevronRight, Mic, Hash, User, Play,
   FileText, TrendingUp, Mail, AlertCircle
 } from 'lucide-react';
-import { 
-  getComprehensivePodcast, 
+import {
+  getComprehensivePodcast,
   getComprehensiveEpisode,
   type ComprehensivePodcast,
   type ComprehensiveEpisode,
-  type RecentEpisode 
+  type RecentEpisode
 } from '@/services/podcastApi';
+import { useAuth } from '@/hooks/useAuth';
 
 interface PodcastDetailsModalProps {
   isOpen: boolean;
@@ -29,12 +30,15 @@ interface PodcastDetailsModalProps {
   podcastName?: string;
 }
 
-export function PodcastDetailsModal({ 
-  isOpen, 
-  onClose, 
-  mediaId, 
-  podcastName 
+export function PodcastDetailsModal({
+  isOpen,
+  onClose,
+  mediaId,
+  podcastName
 }: PodcastDetailsModalProps) {
+  const { user } = useAuth();
+  const isAdminOrStaff = user?.role === 'admin' || user?.role === 'staff';
+
   const [expandedEpisodes, setExpandedEpisodes] = useState<Set<number>>(new Set());
   const [loadingEpisodes, setLoadingEpisodes] = useState<Set<number>>(new Set());
   const [episodeDetails, setEpisodeDetails] = useState<Map<number, ComprehensiveEpisode>>(new Map());
@@ -134,7 +138,7 @@ export function PodcastDetailsModal({
                         </a>
                       </Button>
                     )}
-                    {podcast.contact_email && (
+                    {podcast.contact_email && isAdminOrStaff && (
                       <Button variant="outline" size="sm" asChild>
                         <a href={`mailto:${podcast.contact_email}`}>
                           <Mail className="w-3 h-3 mr-1" />

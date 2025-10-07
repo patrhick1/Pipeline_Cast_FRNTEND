@@ -11,6 +11,7 @@ interface RecipientEmailEditorProps {
   onEmailUpdated?: (newEmail: string) => void;
   compact?: boolean;
   method?: 'PUT' | 'PATCH'; // Allow customizing the HTTP method
+  userRole?: string | null; // Add userRole to determine edit permissions
 }
 
 export function RecipientEmailEditor({
@@ -18,8 +19,10 @@ export function RecipientEmailEditor({
   currentEmail,
   onEmailUpdated,
   compact = false,
-  method = 'PUT' // Default to PUT for backward compatibility
+  method = 'PUT', // Default to PUT for backward compatibility
+  userRole = null
 }: RecipientEmailEditorProps) {
+  const isAdminOrStaff = userRole === 'admin' || userRole === 'staff';
   const { toast } = useToast();
   const [isEditing, setIsEditing] = useState(false);
   const [tempEmail, setTempEmail] = useState(currentEmail || '');
@@ -66,6 +69,29 @@ export function RecipientEmailEditor({
     setIsEditing(false);
     setTempEmail(currentEmail || '');
   };
+
+  // For clients, show read-only view
+  if (!isAdminOrStaff) {
+    if (compact) {
+      return (
+        <div className="flex items-center gap-1 text-xs">
+          <Mail className="h-3 w-3 text-gray-500" />
+          <span className="text-gray-600">
+            {currentEmail || 'Email configured'}
+          </span>
+        </div>
+      );
+    }
+    return (
+      <div className="space-y-2">
+        <label className="text-sm font-medium text-gray-700">Recipient Email</label>
+        <div className="flex items-center gap-2 text-sm text-gray-600">
+          <Mail className="h-4 w-4 text-gray-500" />
+          <span>{currentEmail || 'Email configured by admin'}</span>
+        </div>
+      </div>
+    );
+  }
 
   if (compact) {
     return (

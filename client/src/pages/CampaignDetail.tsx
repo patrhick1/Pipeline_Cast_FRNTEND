@@ -105,7 +105,14 @@ interface CampaignDetailProps {
 
 function CampaignOverviewTab({ campaign, onReprocess, stats }: { campaign: CampaignDetailData; onReprocess: () => void; stats?: CampaignStats | null; }) {
   const { user } = useAuth();
+  const { toast } = useToast();
+  const tanstackQueryClient = useTanstackQueryClient();
+  const [, navigate] = useLocation();
   const isAdminOrStaff = user?.role === 'admin' || user?.role === 'staff';
+  const userRole = user?.role || null;
+
+  const [bioModalOpen, setBioModalOpen] = useState(false);
+  const [anglesModalOpen, setAnglesModalOpen] = useState(false);
 
   const defaultStats = { discovered: 0, vetted: 0, pitched: 0, responses: 0, bookings: 0 };
 
@@ -121,7 +128,37 @@ function CampaignOverviewTab({ campaign, onReprocess, stats }: { campaign: Campa
     enabled: !!campaign.campaign_id,
   });
 
+  const triggerAnglesBioMutation = useMutation({
+    mutationFn: async (campaignId: string) => {
+      const response = await apiRequest("POST", `/campaigns/${campaignId}/generate-angles-bio`, {});
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ detail: "Failed to trigger generation."}));
+        throw new Error(errorData.detail);
+      }
+      return response.json();
+    },
+    onSuccess: (data) => {
+      toast({ title: "Generation Successful", description: data.message || "Bio & Angles are being generated." });
+      tanstackQueryClient.invalidateQueries({ queryKey: ["campaignDetail", campaign.campaign_id] });
+    },
+    onError: (error: any) => {
+      toast({ title: "Generation Failed", description: error.message || "Could not trigger generation.", variant: "destructive" });
+    },
+  });
+
+  const handleGenerateBioAngles = () => {
+    if (!campaign.mock_interview_trancript && !campaign.questionnaire_responses) {
+        toast({ title: "Missing Prerequisite", description: "Questionnaire must be completed first to provide content for AI.", variant: "destructive"});
+        if (userRole === 'client') navigate(`/profile-setup?campaignId=${campaign.campaign_id}&tab=questionnaire`);
+        return;
+    }
+    triggerAnglesBioMutation.mutate(campaign.campaign_id);
+  };
+
+  const questionnaireLink = userRole === 'client' ? `/profile-setup?campaignId=${campaign.campaign_id}&tab=questionnaire` : `/admin?tab=campaigns&action=editQuestionnaire&campaignId=${campaign.campaign_id}`;
+
   return (
+    <>
     <div className="space-y-6">
         <Card>
             <CardHeader>
@@ -188,108 +225,69 @@ function CampaignOverviewTab({ campaign, onReprocess, stats }: { campaign: Campa
             )}
           </CardContent>
         </Card>
-    </div>
-  );
-}
 
-function ProfileContentTab({ campaign, userRole }: { campaign: CampaignDetailData; userRole: string | null }) {
-  const { toast } = useToast();
-  const tanstackQueryClient = useTanstackQueryClient();
-  const [, navigate] = useLocation();
-  const [bioModalOpen, setBioModalOpen] = useState(false);
-  const [anglesModalOpen, setAnglesModalOpen] = useState(false);
+        {/* Profile & Content Section */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Client Profile & AI-Generated Content</CardTitle>
+            <CardDescription>Manage client information and AI-generated assets for this campaign.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div>
+              <h4 className="font-semibold mb-1">Questionnaire / Mock Interview</h4>
+              <div className="flex items-center space-x-2">
+                {campaign.questionnaire_responses || campaign.mock_interview_trancript ? (
+                  <Badge variant="default" className="bg-green-100 text-green-700"><CheckCircle className="h-3 w-3 mr-1"/>Completed</Badge>
+                ) : (
+                  <Badge variant="destructive"><AlertTriangle className="h-3 w-3 mr-1"/>Incomplete</Badge>
+                )}
+                <Link href={questionnaireLink}>
+                  <Button variant="link" className="p-0 h-auto text-sm">
+                    {campaign.questionnaire_responses ? "View/Edit Questionnaire" : "Complete Questionnaire"}
+                  </Button>
+                </Link>
+              </div>
+            </div>
+            <Separator />
+            <div>
+              <h4 className="font-semibold mb-1">AI-Generated Client Bio</h4>
+              {campaign.campaign_bio ? (
+                <Button
+                  variant="link"
+                  onClick={() => setBioModalOpen(true)}
+                  className="p-0 h-auto text-sm justify-start"
+                >
+                  <Eye className="h-4 w-4 mr-1"/> View Bio Content
+                </Button>
+              ) : <p className="text-sm text-gray-500">Not generated yet. Complete questionnaire and click below.</p>}
+            </div>
+             <div>
+              <h4 className="font-semibold mb-1">AI-Generated Pitch Angles</h4>
+              {campaign.campaign_angles ? (
+                <Button
+                  variant="link"
+                  onClick={() => setAnglesModalOpen(true)}
+                  className="p-0 h-auto text-sm justify-start"
+                >
+                  <Eye className="h-4 w-4 mr-1"/> View Angles Content
+                </Button>
+              ) : <p className="text-sm text-gray-500">Not generated yet. Complete questionnaire and click below.</p>}
+            </div>
 
-  const triggerAnglesBioMutation = useMutation({
-    mutationFn: async (campaignId: string) => {
-      const response = await apiRequest("POST", `/campaigns/${campaignId}/generate-angles-bio`, {});
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ detail: "Failed to trigger generation."}));
-        throw new Error(errorData.detail);
-      }
-      return response.json();
-    },
-    onSuccess: (data) => {
-      toast({ title: "Generation Successful", description: data.message || "Bio & Angles are being generated." });
-      tanstackQueryClient.invalidateQueries({ queryKey: ["campaignDetail", campaign.campaign_id] });
-    },
-    onError: (error: any) => {
-      toast({ title: "Generation Failed", description: error.message || "Could not trigger generation.", variant: "destructive" });
-    },
-  });
-
-  const handleGenerateBioAngles = () => {
-    if (!campaign.mock_interview_trancript && !campaign.questionnaire_responses) {
-        toast({ title: "Missing Prerequisite", description: "Questionnaire must be completed first to provide content for AI.", variant: "destructive"});
-        if (userRole === 'client') navigate(`/profile-setup?campaignId=${campaign.campaign_id}&tab=questionnaire`);
-        return;
-    }
-    triggerAnglesBioMutation.mutate(campaign.campaign_id);
-  };
-
-  const questionnaireLink = userRole === 'client' ? `/profile-setup?campaignId=${campaign.campaign_id}&tab=questionnaire` : `/admin?tab=campaigns&action=editQuestionnaire&campaignId=${campaign.campaign_id}`;
-
-  return (
-    <>
-    <Card>
-      <CardHeader>
-        <CardTitle>Client Profile & AI-Generated Content</CardTitle>
-        <CardDescription>Manage client information and AI-generated assets for this campaign.</CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-6">
-        <div>
-          <h4 className="font-semibold mb-1">Questionnaire / Mock Interview</h4>
-          <div className="flex items-center space-x-2">
-            {campaign.questionnaire_responses || campaign.mock_interview_trancript ? (
-              <Badge variant="default" className="bg-green-100 text-green-700"><CheckCircle className="h-3 w-3 mr-1"/>Completed</Badge>
-            ) : (
-              <Badge variant="destructive"><AlertTriangle className="h-3 w-3 mr-1"/>Incomplete</Badge>
-            )}
-            <Link href={questionnaireLink}>
-              <Button variant="link" className="p-0 h-auto text-sm">
-                {campaign.questionnaire_responses ? "View/Edit Questionnaire" : "Complete Questionnaire"}
+            {(userRole === 'staff' || userRole === 'admin') && (
+              <Button onClick={handleGenerateBioAngles} disabled={triggerAnglesBioMutation.isPending || (!campaign.questionnaire_responses && !campaign.mock_interview_trancript)}>
+                <Lightbulb className="mr-2 h-4 w-4" />
+                {triggerAnglesBioMutation.isPending ? "Generating..." : (campaign.campaign_bio ? "Re-generate Bio & Angles" : "Generate Bio & Angles")}
               </Button>
-            </Link>
-          </div>
-        </div>
-        <Separator />
-        <div>
-          <h4 className="font-semibold mb-1">AI-Generated Client Bio</h4>
-          {campaign.campaign_bio ? (
-            <Button
-              variant="link"
-              onClick={() => setBioModalOpen(true)}
-              className="p-0 h-auto text-sm justify-start"
-            >
-              <Eye className="h-4 w-4 mr-1"/> View Bio Content
-            </Button>
-          ) : <p className="text-sm text-gray-500">Not generated yet. Complete questionnaire and click below.</p>}
-        </div>
-         <div>
-          <h4 className="font-semibold mb-1">AI-Generated Pitch Angles</h4>
-          {campaign.campaign_angles ? (
-            <Button
-              variant="link"
-              onClick={() => setAnglesModalOpen(true)}
-              className="p-0 h-auto text-sm justify-start"
-            >
-              <Eye className="h-4 w-4 mr-1"/> View Angles Content
-            </Button>
-          ) : <p className="text-sm text-gray-500">Not generated yet. Complete questionnaire and click below.</p>}
-        </div>
-
-        {(userRole === 'staff' || userRole === 'admin') && (
-          <Button onClick={handleGenerateBioAngles} disabled={triggerAnglesBioMutation.isPending || (!campaign.questionnaire_responses && !campaign.mock_interview_trancript)}>
-            <Lightbulb className="mr-2 h-4 w-4" />
-            {triggerAnglesBioMutation.isPending ? "Generating..." : (campaign.campaign_bio ? "Re-generate Bio & Angles" : "Generate Bio & Angles")}
-          </Button>
-        )}
-         {userRole === 'client' && (!campaign.campaign_bio || !campaign.campaign_angles) && (
-            <p className="text-sm text-gray-500 italic">
-                Once your questionnaire is complete, our team will generate your Bio & Angles.
-            </p>
-        )}
-      </CardContent>
-    </Card>
+            )}
+             {userRole === 'client' && (!campaign.campaign_bio || !campaign.campaign_angles) && (
+                <p className="text-sm text-gray-500 italic">
+                    Once your questionnaire is complete, our team will generate your Bio & Angles.
+                </p>
+            )}
+          </CardContent>
+        </Card>
+    </div>
 
     {/* Bio Content Modal */}
     <Dialog open={bioModalOpen} onOpenChange={setBioModalOpen}>
@@ -769,51 +767,45 @@ export default function CampaignDetail({ campaignIdParam, embedded = false }: Ca
       )}
 
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-        <div className="flex items-center gap-3 flex-1">
-          <div>
-            <h1 className="text-2xl lg:text-3xl font-bold text-gray-900">{campaign.campaign_name}</h1>
-            <p className="text-gray-600">Client: {campaign.client_full_name || `Person ID: ${campaign.person_id}`}</p>
-          </div>
-          {user?.role === 'client' && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setEditDialogOpen(true)}
-              className="flex-shrink-0"
-            >
-              <Edit2 className="h-4 w-4" />
-            </Button>
-          )}
+        <div className="flex-1">
+          <h1 className="text-2xl lg:text-3xl font-bold text-gray-900">{campaign.campaign_name}</h1>
+          <p className="text-gray-600">Client: {campaign.client_full_name || `Person ID: ${campaign.person_id}`}</p>
         </div>
-        {(user?.role === 'staff' || user?.role === 'admin') && (
-            <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2 w-full sm:w-auto">
-                <Link href={`/pitch-outreach?campaignId=${campaign.campaign_id}`} className="w-full sm:w-auto">
-                    <Button className="w-full bg-primary text-primary-foreground"><Send className="mr-2 h-4 w-4"/> Manage Pitches</Button>
-                </Link>
-            </div>
+        {user?.role === 'client' && (
+          <Button
+            variant="outline"
+            size="default"
+            onClick={() => setEditDialogOpen(true)}
+            className="flex-shrink-0 border-primary text-primary hover:bg-primary hover:text-white"
+          >
+            <Edit2 className="h-4 w-4 mr-2" />
+            Edit Campaign
+          </Button>
         )}
       </div>
 
+      {(user?.role === 'staff' || user?.role === 'admin') && (
+        <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2 w-full sm:w-auto">
+          <Link href={`/pitch-outreach?campaignId=${campaign.campaign_id}`} className="w-full sm:w-auto">
+            <Button className="w-full bg-primary text-primary-foreground"><Send className="mr-2 h-4 w-4"/> Manage Pitches</Button>
+          </Link>
+        </div>
+      )}
+
       <Tabs defaultValue={tabFromUrl} className="w-full">
-        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-1">
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="profileContent">Profile & Content</TabsTrigger>
-          <TabsTrigger value="matches">Podcast Matches</TabsTrigger>
-          <TabsTrigger value="pitches">Pitches</TabsTrigger>
-          <TabsTrigger value="placements">Placements</TabsTrigger>
+        <TabsList className="grid w-full grid-cols-2 gap-2">
+          <TabsTrigger value="overview">
+            <FileText className="h-4 w-4 mr-2" />
+            Overview
+          </TabsTrigger>
+          <TabsTrigger value="placements">
+            <TrendingUp className="h-4 w-4 mr-2" />
+            Placements
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="mt-6">
           <CampaignOverviewTab campaign={campaign} onReprocess={() => reprocessCampaignMutation.mutate()} stats={campaignStats} />
-        </TabsContent>
-        <TabsContent value="profileContent" className="mt-6">
-          <ProfileContentTab campaign={campaign} userRole={user?.role || null} />
-        </TabsContent>
-        <TabsContent value="matches" className="mt-6">
-          <PodcastMatchesTab campaignId={campaign.campaign_id} userRole={user?.role || null} />
-        </TabsContent>
-        <TabsContent value="pitches" className="mt-6">
-          <PitchesTab campaignId={campaign.campaign_id} userRole={user?.role || null} />
         </TabsContent>
         <TabsContent value="placements" className="mt-6">
           <PlacementsTab campaignId={campaign.campaign_id} userRole={user?.role || null} />

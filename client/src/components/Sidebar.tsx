@@ -45,7 +45,7 @@ interface NavigationItem {
 const clientNavigationItems: NavigationItem[] = [
   { name: "Dashboard", href: "/", icon: BarChart3, roles: ['client'] },
   { name: "Guest Profile Setup", href: "/profile-setup", icon: ClipboardList, roles: ['client'] },
-  { name: "My Campaigns", href: "/my-campaigns", icon: FolderOpen, roles: ['client'] },
+  { name: "My Campaign", href: "/my-campaigns", icon: FolderOpen, roles: ['client'] },
   { name: "Approve Matches", href: "/approvals", icon: CheckCircle, roles: ['client'] }, // Approvals page will filter for clients
   { name: "Pitch Outreach", href: "/pitch-outreach", icon: Send, roles: ['client'] }, // New pitch outreach for clients
   { name: "Inbox", href: "/inbox", icon: InboxIcon, roles: ['client'] }, // Nylas inbox
