@@ -15,7 +15,6 @@ import {
   SelectTrigger,
   SelectValue
 } from "@/components/ui/select";
-import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { usePitchCapabilities } from "@/hooks/usePitchCapabilities";
@@ -84,7 +83,6 @@ export function BulkFollowUpButton({
   const [pitchTypeFilter, setPitchTypeFilter] = useState("initial");
   const [limit, setLimit] = useState("50");
   const [results, setResults] = useState<BulkFollowUpResult | null>(null);
-  const [progress, setProgress] = useState(0);
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -128,7 +126,6 @@ export function BulkFollowUpButton({
     }
 
     setIsGenerating(true);
-    setProgress(0);
     setResults(null);
 
     try {
@@ -175,7 +172,6 @@ export function BulkFollowUpButton({
       }
 
       // Keep dialog open to show results
-      setProgress(100);
     } catch (error: any) {
       toast({
         title: "Bulk Generation Failed",
@@ -294,14 +290,11 @@ export function BulkFollowUpButton({
               </AlertDescription>
             </Alert>
 
-            {/* Progress Bar */}
+            {/* Loading Spinner */}
             {isGenerating && (
-              <div className="space-y-2">
-                <div className="flex justify-between text-sm text-gray-600">
-                  <span>Generating follow-ups...</span>
-                  <span>{progress}%</span>
-                </div>
-                <Progress value={progress} className="h-2" />
+              <div className="flex items-center justify-center gap-3 py-4">
+                <Loader2 className="h-6 w-6 animate-spin text-purple-600" />
+                <p className="text-sm text-gray-700 font-medium">AI is generating follow-up pitches...</p>
               </div>
             )}
 
