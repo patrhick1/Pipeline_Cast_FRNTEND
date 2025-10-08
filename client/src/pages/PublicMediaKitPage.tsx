@@ -58,7 +58,11 @@ interface PublicMediaKitData {
     type?: 'previous_appearance' | 'speaking_clip' | string | null; // e.g., podcast, webinar, conference talk
     title?: string | null; // e.g., "The Student Success Podcast"
     outlet?: string | null; // Name of the podcast, show, or event series
-    description?: string | null; // Optional: Episode title or talk summary
+    description?: string | null; // Optional: Episode title or talk summary (can be HTML)
+    image_url?: string | null; // Podcast/show artwork
+    audio_url?: string | null; // Direct audio link
+    duration_sec?: number | null; // Duration in seconds
+    listennotes_episode_id?: string | null; // ListenNotes episode ID
   }> | null;
 
   social_media_stats?: {
@@ -569,22 +573,78 @@ export default function PublicMediaKitPage() {
           {mediaKit.previous_appearances && mediaKit.previous_appearances.length > 0 && (
             <section className="py-4">
               <h2 className="text-3xl font-bold text-slate-800 mb-6 tracking-tight">Previous Appearances</h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                 {mediaKit.previous_appearances.map((app, index) => (
-                  <Card key={index} className="hover:shadow-xl transition-shadow duration-300 border-slate-200">
+                  <Card key={index} className="hover:shadow-xl transition-shadow duration-300 border-slate-200 overflow-hidden">
+                    {app.image_url && (
+                      <div className="relative w-full h-48 bg-slate-100">
+                        <img
+                          src={app.image_url}
+                          alt={app.title || app.outlet || "Podcast artwork"}
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                    )}
                     <CardHeader>
-                      <CardTitle className="text-xl text-slate-700">{app.title || app.outlet || "Appearance"}</CardTitle>
-                      {app.outlet && app.title !== app.outlet && <CardDescription className="text-sm text-slate-500">{app.outlet}</CardDescription>}
+                      <CardTitle className="text-xl text-slate-700">
+                        {app.title || app.outlet || "Appearance"}
+                      </CardTitle>
+                      {app.outlet && app.title !== app.outlet && (
+                        <CardDescription className="text-sm text-slate-500">
+                          {app.outlet}
+                        </CardDescription>
+                      )}
+                      {app.date && (
+                        <CardDescription className="text-xs text-slate-400 mt-1">
+                          {new Date(app.date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
+                        </CardDescription>
+                      )}
                     </CardHeader>
                     <CardContent>
-                      {app.description && <p className="text-sm text-slate-600 mb-3">{app.description}</p>}
-                      {app.url && (
-                        <Button variant="outline" asChild className="text-primary border-primary hover:bg-primary/10 hover:text-primary">
-                          <a href={app.url} target="_blank" rel="noopener noreferrer">
-                            {app.type === 'speaking_clip' ? "Watch Clip" : "Listen/View"} <ExternalLink className="ml-2 h-4 w-4"/>
-                          </a>
-                        </Button>
+                      {app.description && (
+                        <div
+                          className="text-sm text-slate-600 mb-4 line-clamp-3"
+                          dangerouslySetInnerHTML={{
+                            __html: app.description.replace(/<img[^>]*>/g, '').substring(0, 300) + (app.description.length > 300 ? '...' : '')
+                          }}
+                        />
                       )}
+
+                      {/* Audio Player */}
+                      {app.audio_url && (
+                        <div className="mb-4 bg-slate-50 rounded-lg p-3 border border-slate-200">
+                          <audio
+                            controls
+                            className="w-full"
+                            preload="metadata"
+                            style={{ height: '40px' }}
+                          >
+                            <source src={app.audio_url} type="audio/mpeg" />
+                            Your browser does not support the audio element.
+                          </audio>
+                          {app.duration_sec && (
+                            <p className="text-xs text-slate-400 mt-2">
+                              Duration: {Math.floor(app.duration_sec / 60)}:{String(app.duration_sec % 60).padStart(2, '0')}
+                            </p>
+                          )}
+                        </div>
+                      )}
+
+                      <div className="flex flex-wrap gap-2">
+                        {app.url && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            asChild
+                            className="text-primary border-primary hover:bg-primary/10 hover:text-primary"
+                          >
+                            <a href={app.url} target="_blank" rel="noopener noreferrer">
+                              {app.type === 'speaking_clip' ? "Watch Clip" : "View Episode"}
+                              <ExternalLink className="ml-2 h-3 w-3"/>
+                            </a>
+                          </Button>
+                        )}
+                      </div>
                     </CardContent>
                   </Card>
                 ))}
