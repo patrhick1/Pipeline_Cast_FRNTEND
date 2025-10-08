@@ -824,7 +824,16 @@ function MediaExperienceSection({ form, addPreviousAppearance, removePreviousApp
         <FormDescription>
           Have you been a guest on any podcasts or media before? If yes, please share links to your favorite appearances.
         </FormDescription>
-        
+
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mt-2 mb-3">
+          <div className="flex items-start gap-2">
+            <Info className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
+            <p className="text-sm text-blue-700">
+              <strong>Tip:</strong> Use the exact podcast episode name (e.g., "The Marketing Show - Ep. 123: Growth Strategies with Jane Doe") for best results. This helps us fetch episode details and display them beautifully in your media kit.
+            </p>
+          </div>
+        </div>
+
         <div className="mt-3 space-y-3">
           {previousAppearances.map((_: any, index: number) => (
             <div key={index} className="flex gap-2 items-end">
@@ -832,7 +841,7 @@ function MediaExperienceSection({ form, addPreviousAppearance, removePreviousApp
                 <FormField control={form.control} name={`mediaExperience.previousAppearances.${index}.showName`} render={({ field }) => (
                   <FormItem>
                     <FormControl>
-                      <Input placeholder="Podcast/Show Name" {...field} />
+                      <Input placeholder="Episode Name (e.g., Show Name - Ep. 45: Topic)" {...field} />
                     </FormControl>
                   </FormItem>
                 )} />

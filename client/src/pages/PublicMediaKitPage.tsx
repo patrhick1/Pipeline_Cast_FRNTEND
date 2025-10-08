@@ -96,7 +96,12 @@ interface PublicMediaKitData {
   // New fields from the provided JSON
   custom_sections?: Array<{
     title: string;
-    content: any; // Can be an object or array depending on the section
+    content:
+      | { [key: string]: string | number } // Object format (old): { yearsOfExperience: "10+" }
+      | Array<
+          | { key: string; value: string | number } // Structured stat
+          | string // Plain text achievement
+        >; // Mixed array format (new)
   }> | null;
   
   person_social_links?: Array<{  // <-- ADDED THIS FIELD
@@ -230,8 +235,11 @@ export default function PublicMediaKitPage() {
   const tagline = mediaKit.tagline || mediaKit.headline || "Podcast Guest"; // Fallback for tagline
 
   // Extracting At-a-Glance stats from custom_sections
-  const atAGlanceSection = mediaKit.custom_sections?.find(section => section.title === "At a Glance Stats");
+  const atAGlanceSection = mediaKit.custom_sections?.find(
+    section => section.title === "At a Glance" || section.title === "At a Glance Stats"
+  );
   let atAGlanceStats: PublicMediaKitData['at_a_glance_stats_custom'] | undefined;
+  let atAGlanceTextItems: string[] = [];
   
      if (atAGlanceSection?.content) {
      // Debug logging to understand the data structure
@@ -249,14 +257,31 @@ export default function PublicMediaKitPage() {
        atAGlanceStats = {};
        
        statsArray.forEach((item: any) => {
-         if (typeof item === 'object' && item.label && item.value) {
-           const label = item.label.toLowerCase();
-           if (label.includes('podcast') || label.includes('appearance')) {
-             atAGlanceStats!.keynoteEngagements = item.value;
-           } else if (label.includes('year') || label.includes('experience')) {
-             atAGlanceStats!.yearsOfExperience = item.value;
-           } else if (label.includes('email') || label.includes('subscriber') || label.includes('automation')) {
-             atAGlanceStats!.emailSubscribers = item.value;
+         if (typeof item === 'string') {
+           // Plain text achievement
+           atAGlanceTextItems.push(item);
+         } else if (typeof item === 'object') {
+           // Check for new format: { key: "...", value: "..." }
+           if (item.key && item.value) {
+             const key = item.key;
+             if (key === 'yearsOfExperience' || key.includes('experience')) {
+               atAGlanceStats!.yearsOfExperience = String(item.value);
+             } else if (key === 'emailSubscribers' || key.includes('subscriber')) {
+               atAGlanceStats!.emailSubscribers = String(item.value);
+             } else if (key === 'keynoteEngagements' || key.includes('appearance') || key.includes('engagement')) {
+               atAGlanceStats!.keynoteEngagements = String(item.value);
+             }
+           }
+           // Also check for old format: { label: "...", value: "..." }
+           else if (item.label && item.value) {
+             const label = item.label.toLowerCase();
+             if (label.includes('podcast') || label.includes('appearance')) {
+               atAGlanceStats!.keynoteEngagements = String(item.value);
+             } else if (label.includes('year') || label.includes('experience')) {
+               atAGlanceStats!.yearsOfExperience = String(item.value);
+             } else if (label.includes('email') || label.includes('subscriber') || label.includes('automation')) {
+               atAGlanceStats!.emailSubscribers = String(item.value);
+             }
            }
          }
        });
@@ -278,6 +303,7 @@ export default function PublicMediaKitPage() {
      }
      
      console.log('📊 Processed At-a-Glance Stats:', atAGlanceStats);
+     console.log('📝 Text Items:', atAGlanceTextItems);
    }
 
   // Parsing contact_information_for_booking
@@ -521,7 +547,23 @@ export default function PublicMediaKitPage() {
                   )}
                 </div>
               )}
-              
+
+              {/* Display text achievements from At-a-Glance section */}
+              {atAGlanceTextItems.length > 0 && (
+                <div className="mb-8">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {atAGlanceTextItems.map((item, index) => (
+                      <Card key={index} className="bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-200 hover:shadow-lg transition-shadow duration-300">
+                        <CardContent className="p-4 flex items-start gap-3">
+                          <CheckCircle className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                          <p className="text-sm text-slate-700 leading-relaxed">{item}</p>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {mediaKit.key_achievements && mediaKit.key_achievements.length > 0 && (
                  <Card className="bg-gradient-to-br from-slate-50 to-slate-100 p-6 rounded-xl shadow-lg border border-slate-200">
                    <CardHeader>
