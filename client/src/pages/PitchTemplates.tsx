@@ -88,9 +88,9 @@ function PitchTemplateForm({
           name="prompt_body"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Prompt Body (with placeholders like {'{{podcast_name}}'}, {'{{client_name}}'}) *</FormLabel>
+              <FormLabel>Prompt Body (with placeholders like {'{podcast_name}'}, {'{client_name}'}) *</FormLabel>
               <FormControl>
-                <Textarea placeholder="Dear {host_name},nI loved your episode on {episode_title}..." {...field} rows={10} />
+                <Textarea placeholder="Dear {host_name},\n\nI loved your episode on {episode_title}..." {...field} rows={10} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -251,24 +251,79 @@ export default function PitchTemplatesPage() {
     <div className="space-y-6 p-4 md:p-6">
       {/* Using Placeholders Instructions - moved to top for better UX */}
       <Card className="bg-blue-50 border-blue-200">
-        <CardHeader><CardTitle className="text-blue-700 flex items-center gap-2"><Info className="h-5 w-5"/>Using Placeholders in Prompt Body</CardTitle></CardHeader>
-        <CardContent className="text-sm text-blue-600 space-y-1">
-            <p>In your "Prompt Body", you can use placeholders that will be dynamically filled with data from the client's campaign and the target media. Examples:</p>
-            <ul className="list-disc list-inside pl-4 space-y-0.5">
-                <li><code>{`{{podcast_name}}`}</code> - Name of the podcast/media.</li>
-                <li><code>{`{{host_name}}`}</code> - Podcast host's name (if available).</li>
-                <li><code>{`{{episode_title}}`}</code> - Title of a relevant episode (if applicable).</li>
-                <li><code>{`{{episode_summary}}`}</code> - Short summary of a relevant episode.</li>
-                <li><code>{`{{ai_summary_of_best_episode}}`}</code> - AI-generated summary of a relevant episode.</li>
-                <li><code>{`{{client_name}}`}</code> - Your client's full name.</li>
-                <li><code>{`{{client_bio_summary}}`}</code> - A summary of your client's bio (from campaign).</li>
-                <li><code>{`{{client_key_talking_point_1}}`}</code>, <code>{`{{client_key_talking_point_2}}`}</code>, etc. - Key talking points.</li>
-                <li><code>{`{{link_to_client_media_kit}}`}</code> - Public URL to the client's media kit.</li>
-                <li><code>{`{{campaign_goal}}`}</code> - The primary goal of the client's campaign.</li>
-                <li><code>{`{{specific_pitch_angle}}`}</code> - A specific angle tailored for this outreach (can be auto-suggested).</li>
-                <li><code>{`{{latest_news_from_podcast}}`}</code> - Recent updates or news about the podcast.</li>
-            </ul>
-            <p className="mt-2">The system will attempt to replace these with actual data before sending the prompt to the AI for final pitch generation. Ensure your placeholders match what the backend expects.</p>
+        <CardHeader><CardTitle className="text-blue-700 flex items-center gap-2"><Info className="h-5 w-5"/>Available Template Variables</CardTitle></CardHeader>
+        <CardContent className="text-sm text-blue-600 space-y-3">
+            <p>Use these placeholders in your "Prompt Body" - they'll be replaced with actual data. Use single curly braces: <code>{`{variable_name}`}</code></p>
+
+            <div className="space-y-3">
+              <div>
+                <p className="font-semibold text-blue-800 mb-1">📻 Podcast Information</p>
+                <ul className="list-disc list-inside pl-4 space-y-0.5">
+                  <li><code>{`{podcast_name}`}</code> - Name of the podcast</li>
+                  <li><code>{`{host_name}`}</code> - Podcast host's name (or "there" if unavailable)</li>
+                  <li><code>{`{episode_title}`}</code> - Title of the best matching episode</li>
+                  <li><code>{`{episode_summary}`}</code> - Original episode description</li>
+                  <li><code>{`{ai_summary_of_best_episode}`}</code> - AI-generated episode summary (400-600 words)</li>
+                  <li><code>{`{podcast_category}`}</code> - Podcast category (e.g., "business", "technology")</li>
+                  <li><code>{`{latest_news_from_podcast}`}</code> - Recent podcast updates</li>
+                </ul>
+              </div>
+
+              <div>
+                <p className="font-semibold text-blue-800 mb-1">👤 Client Information</p>
+                <ul className="list-disc list-inside pl-4 space-y-0.5">
+                  <li><code>{`{client_name}`}</code> - Client's full name</li>
+                  <li><code>{`{client_bio_summary}`}</code> - Full campaign bio</li>
+                  <li><code>{`{client_bio_short}`}</code> - Truncated bio (200 chars)</li>
+                  <li><code>{`{client_key_talking_point_1}`}</code> - First key talking point</li>
+                  <li><code>{`{client_key_talking_point_2}`}</code> - Second key talking point</li>
+                  <li><code>{`{client_key_talking_point_3}`}</code> - Third key talking point</li>
+                  <li><code>{`{campaign_angles}`}</code> - Full campaign angles text</li>
+                </ul>
+              </div>
+
+              <div>
+                <p className="font-semibold text-blue-800 mb-1">🎯 Pitch Details</p>
+                <ul className="list-disc list-inside pl-4 space-y-0.5">
+                  <li><code>{`{specific_pitch_angle}`}</code> - AI-matched angle most relevant to the podcast</li>
+                </ul>
+              </div>
+
+              <div>
+                <p className="font-semibold text-blue-800 mb-1">📄 Media Kit Data (if available)</p>
+                <ul className="list-disc list-inside pl-4 space-y-0.5">
+                  <li><code>{`{media_kit_url}`}</code> - Public URL to client's media kit page</li>
+                  <li><code>{`{key_achievements}`}</code> - Formatted list of top 5 achievements</li>
+                  <li><code>{`{previous_appearances}`}</code> - Top 3 previous podcast/media appearances</li>
+                  <li><code>{`{social_media_stats}`}</code> - Social media follower counts</li>
+                  <li><code>{`{structured_talking_points}`}</code> - Pre-formatted talking points from media kit</li>
+                  <li><code>{`{testimonials}`}</code> - Client testimonials section</li>
+                </ul>
+              </div>
+
+              <div>
+                <p className="font-semibold text-blue-800 mb-1">🔄 Follow-up Context (for follow-up emails)</p>
+                <ul className="list-disc list-inside pl-4 space-y-0.5">
+                  <li><code>{`{previous_context}`}</code> - Summary of previous communication</li>
+                  <li><code>{`{context_guidelines}`}</code> - Instructions for follow-up behavior</li>
+                  <li><code>{`{previous_email}`}</code> - Full content of previous email in sequence</li>
+                  <li><code>{`{days_since_last_email}`}</code> - Number of days since last email</li>
+                  <li><code>{`{follow_up_number}`}</code> - Which follow-up number this is (1, 2, 3, etc.)</li>
+                </ul>
+              </div>
+
+              <div>
+                <p className="font-semibold text-blue-800 mb-1">🔧 Legacy Variables (for backward compatibility)</p>
+                <ul className="list-disc list-inside pl-4 space-y-0.5">
+                  <li><code>{`{pitch_topics}`}</code> - Same as campaign_angles</li>
+                  <li><code>{`{client_bio}`}</code> - Same as client_bio_summary</li>
+                  <li><code>{`{ai_summary}`}</code> - Same as ai_summary_of_best_episode</li>
+                  <li><code>{`{guest_name}`}</code> - Guest name from episode (if applicable)</li>
+                </ul>
+              </div>
+            </div>
+
+            <p className="mt-3 text-xs">💡 <strong>Tip:</strong> Media kit variables return empty strings if no media kit exists. Follow-up variables are only populated for follow-up emails.</p>
         </CardContent>
       </Card>
 
@@ -282,7 +337,7 @@ export default function PitchTemplatesPage() {
               <Plus className="mr-2 h-4 w-4" /> Create New Template
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-2xl">
+          <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>{editingTemplate ? "Edit Pitch Template" : "Create New Pitch Template"}</DialogTitle>
               <DialogDescription>
