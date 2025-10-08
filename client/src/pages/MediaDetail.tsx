@@ -13,6 +13,7 @@ import { Link } from 'wouter';
 import { useAuth } from '@/hooks/useAuth'; // Assuming useAuth provides user role
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger, DialogClose } from "@/components/ui/dialog"; // For transcript modal
 import { ProvenanceField } from '@/components/ProvenanceField';
+import { HtmlDescription } from '@/components/HtmlDescription';
 
 // --- Placeholder Interfaces (align with backend schemas when available) ---
 interface MediaDetails {
@@ -274,8 +275,8 @@ export default function MediaDetail() {
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
-          {media.description && <p className="text-gray-700 whitespace-pre-wrap">{media.description}</p>}
-          
+          {media.description && <HtmlDescription content={media.description} className="text-gray-700" />}
+
           {isAdminOrStaff && (
             <Card className="bg-slate-50/50">
                 <CardHeader>

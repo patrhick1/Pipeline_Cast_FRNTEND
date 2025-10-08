@@ -65,5 +65,6 @@ export function usePitchCapabilities() {
     isBasicPlan: capabilities?.plan_type === 'paid_basic',
     isPremiumPlan: capabilities?.plan_type === 'paid_premium',
     isAdmin: capabilities?.user_role === 'admin' || capabilities?.user_role === 'staff',
+    isStaff: capabilities?.user_role === 'staff',
   };
 }

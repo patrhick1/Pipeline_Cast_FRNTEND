@@ -297,7 +297,7 @@ export default function PlacementAnalyticsDashboard({ campaignId, days = 30 }: P
                                 size="sm"
                                 className="h-6 w-6 p-0"
                                 onClick={() => {
-                                  setSelectedMediaId(placement.media_id);
+                                  setSelectedMediaId(placement.media_id ?? null);
                                   setIsPodcastModalOpen(true);
                                 }}
                               >
@@ -376,7 +376,7 @@ export default function PlacementAnalyticsDashboard({ campaignId, days = 30 }: P
                                 size="sm"
                                 className="h-6 w-6 p-0"
                                 onClick={() => {
-                                  setSelectedMediaId(placement.media_id);
+                                  setSelectedMediaId(placement.media_id ?? null);
                                   setIsPodcastModalOpen(true);
                                 }}
                               >

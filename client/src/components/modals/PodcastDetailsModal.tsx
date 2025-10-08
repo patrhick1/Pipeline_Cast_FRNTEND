@@ -22,6 +22,7 @@ import {
   type RecentEpisode
 } from '@/services/podcastApi';
 import { useAuth } from '@/hooks/useAuth';
+import { HtmlDescription } from '@/components/HtmlDescription';
 
 interface PodcastDetailsModalProps {
   isOpen: boolean;
@@ -128,7 +129,7 @@ export function PodcastDetailsModal({
                   />
                 )}
                 <div className="flex-1">
-                  <p className="text-gray-600 mb-2">{podcast.description}</p>
+                  <HtmlDescription content={podcast.description} className="mb-2" />
                   <div className="flex flex-wrap gap-2 items-center">
                     {podcast.website && (
                       <Button variant="outline" size="sm" asChild>
@@ -445,16 +446,16 @@ function StatCard({ icon, label, value }: { icon: React.ReactNode; label: string
   );
 }
 
-function SocialCard({ 
-  platform, 
-  icon, 
-  url, 
-  followers 
-}: { 
-  platform: string; 
-  icon: React.ReactNode; 
-  url?: string; 
-  followers?: number;
+function SocialCard({
+  platform,
+  icon,
+  url,
+  followers
+}: {
+  platform: string;
+  icon: React.ReactNode;
+  url?: string;
+  followers?: number | null;
 }) {
   return (
     <Card>
@@ -539,9 +540,9 @@ function EpisodeCard({
                 {(details.episode_summary || details.description) && (
                   <div>
                     <h4 className="text-sm font-medium mb-1">Description</h4>
-                    <div 
-                      className="text-sm text-gray-600" 
-                      dangerouslySetInnerHTML={{ __html: details.episode_summary || details.description || '' }}
+                    <HtmlDescription
+                      content={details.episode_summary || details.description}
+                      className="text-sm"
                     />
                   </div>
                 )}

@@ -196,9 +196,9 @@ export default function PlacementStatusAnalytics({ campaignId, days = 30 }: Plac
   });
 
   // Get unique statuses for timeline chart
-  const uniqueStatuses = [...new Set(
+  const uniqueStatuses = Array.from(new Set(
     (analytics.status_history_by_period || []).flatMap(p => Object.keys(p.statuses || {}))
-  )];
+  ));
 
   // Prepare duration data
   const durationData = (analytics.time_in_status || [])
