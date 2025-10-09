@@ -8,6 +8,8 @@ import {
   ThreadDetails,
   ReplyData
 } from '@/services/adminInbox';
+import { useAuth } from '@/hooks/useAuth';
+import { apiRequest } from '@/lib/queryClient';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -99,6 +101,11 @@ export default function AdminInbox() {
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { user } = useAuth();
+
+  // Determine if user is admin/staff
+  const userRole = user?.role?.toLowerCase();
+  const isStaffOrAdmin = userRole === 'admin' || userRole === 'staff';
 
   // Read URL query parameters to auto-select thread
   useEffect(() => {
@@ -117,16 +124,27 @@ export default function AdminInbox() {
   });
 
   // Fetch all campaigns for grouping
-  const { data: campaigns } = useQuery({
-    queryKey: ['/campaigns'],
+  const { data: allCampaignsData = [] } = useQuery({
+    queryKey: ['/campaigns/with-subscriptions'],
     queryFn: async () => {
-      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/campaigns`, {
-        credentials: 'include',
-      });
-      if (!response.ok) throw new Error('Failed to fetch campaigns');
+      const response = await apiRequest('GET', '/campaigns/with-subscriptions');
+      if (!response.ok) {
+        // Fallback to regular campaigns endpoint
+        const fallbackResponse = await apiRequest('GET', '/campaigns');
+        if (!fallbackResponse.ok) throw new Error('Failed to fetch campaigns');
+        const campaigns = await fallbackResponse.json();
+        // Return campaigns without subscription data
+        return campaigns.map((c: any) => ({ ...c, subscription_plan: 'free' }));
+      }
       return response.json();
     },
+    enabled: !!user, // Only fetch when user is loaded
   });
+
+  // Filter campaigns for admin/staff to only show paid_premium
+  const campaigns = isStaffOrAdmin
+    ? allCampaignsData.filter((c: any) => c.subscription_plan === 'paid_premium')
+    : allCampaignsData;
 
   // Fetch threads for ALL accounts or filtered account
   const { data: threadsData, isLoading: isLoadingThreads, refetch: refetchThreads } = useQuery({

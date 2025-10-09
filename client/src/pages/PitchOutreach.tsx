@@ -1251,16 +1251,28 @@ export default function PitchOutreach() {
   const isClient = userRole === 'client';
 
   // Fetch campaigns for both campaign selector and Smart Send settings
-  const { data: campaignsData = [], isLoading: isLoadingCampaigns } = useQuery({
-    queryKey: ['/campaigns', isClient ? 'client' : 'all'],
+  const { data: allCampaignsData = [], isLoading: isLoadingCampaigns } = useQuery({
+    queryKey: ['/campaigns/with-subscriptions', isClient ? 'client' : 'all'],
     queryFn: async () => {
-      const url = '/campaigns';
-      const response = await apiRequest('GET', url);
-      if (!response.ok) throw new Error('Failed to fetch campaigns');
+      const response = await apiRequest('GET', '/campaigns/with-subscriptions');
+      if (!response.ok) {
+        // Fallback to regular campaigns endpoint
+        const fallbackResponse = await apiRequest('GET', '/campaigns');
+        if (!fallbackResponse.ok) throw new Error('Failed to fetch campaigns');
+        const campaigns = await fallbackResponse.json();
+        // Return campaigns without subscription data
+        return campaigns.map((c: any) => ({ ...c, subscription_plan: 'free' }));
+      }
       return response.json();
     },
     enabled: !!user, // Only fetch when user is loaded
   });
+
+  // Filter campaigns for admin/staff to only show paid_premium
+  const isStaffOrAdmin = userRole === 'admin' || userRole === 'staff';
+  const campaignsData = isStaffOrAdmin
+    ? allCampaignsData.filter((c: any) => c.subscription_plan === 'paid_premium')
+    : allCampaignsData;
 
   // Auto-select campaign for clients with only one campaign
   React.useEffect(() => {

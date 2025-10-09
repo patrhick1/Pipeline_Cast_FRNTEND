@@ -594,15 +594,27 @@ export default function Approvals() {
   }
 
   // Fetch campaigns for filter dropdown (only for admin/staff)
-  const { data: campaignsData = [] } = useQuery({
-    queryKey: ['/campaigns'],
+  const { data: allCampaignsData = [] } = useQuery({
+    queryKey: ['/campaigns/with-subscriptions'],
     queryFn: async () => {
-      const response = await apiRequest('GET', '/campaigns');
-      if (!response.ok) throw new Error('Failed to fetch campaigns');
+      const response = await apiRequest('GET', '/campaigns/with-subscriptions');
+      if (!response.ok) {
+        // Fallback to regular campaigns endpoint
+        const fallbackResponse = await apiRequest('GET', '/campaigns');
+        if (!fallbackResponse.ok) throw new Error('Failed to fetch campaigns');
+        const campaigns = await fallbackResponse.json();
+        // Return campaigns without subscription data
+        return campaigns.map((c: any) => ({ ...c, subscription_plan: 'free' }));
+      }
       return response.json();
     },
     enabled: isStaffOrAdmin, // Only fetch for admin/staff
   });
+
+  // Filter campaigns for admin/staff to only show paid_premium
+  const campaignsData = isStaffOrAdmin
+    ? allCampaignsData.filter((c: any) => c.subscription_plan === 'paid_premium')
+    : allCampaignsData;
 
   // Always fetch ALL tasks, then filter client-side
   const { data: allTasksData, isLoading, error, isFetching } = useQuery<ReviewTask[], Error>({
