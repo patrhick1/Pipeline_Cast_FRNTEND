@@ -343,15 +343,6 @@ export const MatchIntelligenceCard = ({
           <p className="reasoning text-xs text-purple-900 italic mt-1 pl-6">"{match.vetting_reasoning || 'This podcast is a good fit based on content alignment.'}"</p>
         </div>
 
-        {idealPodcastDescription && (
-          <div className="intelligence-item p-3 bg-indigo-50 border border-indigo-200 rounded-md">
-            <strong className="flex items-center text-indigo-800">
-              <Check className="h-4 w-4 mr-2 text-indigo-600"/> Campaign Target{campaignName && ` (${campaignName})`}
-            </strong>
-            <p className="text-xs text-indigo-900 mt-1 pl-6">{idealPodcastDescription}</p>
-          </div>
-        )}
-
       </div>
 
       <div className="approval-actions p-4 bg-gray-50 border-t flex gap-3">
