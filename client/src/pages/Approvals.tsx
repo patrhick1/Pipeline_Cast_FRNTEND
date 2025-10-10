@@ -643,18 +643,36 @@ export default function Approvals() {
     filteredTasks = filteredTasks.filter(task => task.campaign_id === campaignFilter);
   }
 
+  // Apply search filter BEFORE pagination
+  if (searchTerm) {
+    const term = searchTerm.toLowerCase();
+    filteredTasks = filteredTasks.filter((task: ReviewTask) => {
+      // Search by multiple fields
+      const mediaNameMatch = task.media_name?.toLowerCase().includes(term);
+      const campaignNameMatch = task.campaign_name?.toLowerCase().includes(term);
+      const clientNameMatch = task.client_name?.toLowerCase().includes(term);
+      const notesMatch = task.notes?.toLowerCase().includes(term);
+      const mediaIdMatch = task.media_id?.toString().includes(term);
+      const relatedIdMatch = task.related_id.toString().includes(term);
+      const descriptionMatch = task.media_description?.toLowerCase().includes(term);
+
+      return mediaNameMatch || campaignNameMatch || clientNameMatch ||
+             notesMatch || mediaIdMatch || relatedIdMatch || descriptionMatch;
+    });
+  }
+
   const allDataResponse = filteredTasks;
-  
-  // Client-side pagination
+
+  // Client-side pagination (applied AFTER search filter)
   const allTasks = allDataResponse || [];
   const totalTasks = allTasks.length;
   const totalPages = Math.ceil(totalTasks / ITEMS_PER_PAGE);
-  
+
   // Apply client-side pagination
   const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
   const endIndex = startIndex + ITEMS_PER_PAGE;
   const paginatedTasks = allTasks.slice(startIndex, endIndex);
-  
+
   // Debug logging
   console.log('Pagination debug:', {
     ITEMS_PER_PAGE,
@@ -665,7 +683,7 @@ export default function Approvals() {
     paginatedTasksLength: paginatedTasks.length,
     totalPages
   });
-  
+
   const reviewTasksData: PaginatedReviewTasks = {
     items: paginatedTasks,
     total: totalTasks,
@@ -673,25 +691,8 @@ export default function Approvals() {
     size: ITEMS_PER_PAGE,
     pages: totalPages
   };
-  
-  const reviewTasks = reviewTasksData.items;
 
-  const displayedTasks = reviewTasks.filter((task: ReviewTask) => {
-    if (!searchTerm) return true;
-    const term = searchTerm.toLowerCase();
-
-    // Search by multiple fields
-    const mediaNameMatch = task.media_name?.toLowerCase().includes(term);
-    const campaignNameMatch = task.campaign_name?.toLowerCase().includes(term);
-    const clientNameMatch = task.client_name?.toLowerCase().includes(term);
-    const notesMatch = task.notes?.toLowerCase().includes(term);
-    const mediaIdMatch = task.media_id?.toString().includes(term);
-    const relatedIdMatch = task.related_id.toString().includes(term);
-    const descriptionMatch = task.media_description?.toLowerCase().includes(term);
-
-    return mediaNameMatch || campaignNameMatch || clientNameMatch ||
-           notesMatch || mediaIdMatch || relatedIdMatch || descriptionMatch;
-  });
+  const displayedTasks = reviewTasksData.items;
 
   // Calculate stats from all tasks (unfiltered)
   const statsData = allTasksForStats || [];
@@ -708,7 +709,7 @@ export default function Approvals() {
   useEffect(() => {
     setCurrentPage(1);
     setSelectedTasks(new Set()); // Clear selections when filters change
-  }, [statusFilter, taskTypeFilter, campaignFilter]);
+  }, [statusFilter, taskTypeFilter, campaignFilter, searchTerm]);
 
   // Get pending tasks that can be selected (only for clients viewing pending tasks)
   const selectableTasks = displayedTasks.filter(task => 
