@@ -723,20 +723,29 @@ export default function PlacementTracking() {
   const totalPlacements = placementsData?.total || 0;
   const totalPages = placementsData?.pages || 1;
 
-  const campaignsQueryKey = ["clientCampaignsForFilter", user?.person_id, user?.role];
-  const { data: campaignsForFilter = [], isLoading: isLoadingCampaignsForFilter } = useQuery<ClientCampaign[]>({
-    queryKey: campaignsQueryKey,
-    queryFn: async ({ queryKey }) => {
-      const [, personId, role] = queryKey as [string, number | undefined, string | undefined];
-      
-      // For clients, they automatically see only their own campaigns
-      // For staff/admin, they see all campaigns
-      const response = await apiRequest("GET", "/campaigns/");
-      if (!response.ok) throw new Error("Failed to fetch campaigns for filter");
+  // Fetch campaigns with subscription info for filtering
+  const { data: allCampaignsData = [], isLoading: isLoadingCampaignsForFilter } = useQuery<ClientCampaign[]>({
+    queryKey: ['/campaigns/with-subscriptions', user?.role],
+    queryFn: async () => {
+      const response = await apiRequest('GET', '/campaigns/with-subscriptions');
+      if (!response.ok) {
+        // Fallback to regular campaigns endpoint
+        const fallbackResponse = await apiRequest('GET', '/campaigns/');
+        if (!fallbackResponse.ok) throw new Error('Failed to fetch campaigns');
+        const campaigns = await fallbackResponse.json();
+        // Return campaigns without subscription data
+        return campaigns.map((c: any) => ({ ...c, subscription_plan: 'free' }));
+      }
       return response.json();
     },
     enabled: !authLoading && !!user,
   });
+
+  // Filter campaigns for admin/staff to only show paid_premium
+  const isStaffOrAdmin = user?.role === 'admin' || user?.role === 'staff';
+  const campaignsForFilter = isStaffOrAdmin
+    ? allCampaignsData.filter((c: any) => c.subscription_plan === 'paid_premium')
+    : allCampaignsData;
   
   const { data: mediaItemsForForm = [], isLoading: isLoadingMediaForForm } = useQuery<MediaItem[]>({
     queryKey: ["allMediaForForm"],

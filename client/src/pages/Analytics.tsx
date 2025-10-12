@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/hooks/useAuth';
+import { apiRequest } from '@/lib/queryClient';
 import PitchAnalyticsDashboard from '@/components/analytics/PitchAnalyticsDashboard';
 import PlacementAnalyticsDashboard from '@/components/analytics/PlacementAnalyticsDashboard';
 import { BarChart3, Target, TrendingUp, Calendar } from 'lucide-react';
@@ -28,11 +29,29 @@ export default function Analytics() {
   const [selectedCampaignId, setSelectedCampaignId] = useState<string>('all');
   const [selectedDays, setSelectedDays] = useState<number>(30);
   
-  // Fetch available campaigns
-  const { data: campaigns } = useQuery<Campaign[]>({
-    queryKey: ['/campaigns'],
-    select: (data) => data || [],
+  // Fetch available campaigns with subscription info
+  const { data: allCampaignsData = [] } = useQuery<Campaign[]>({
+    queryKey: ['/campaigns/with-subscriptions', user?.role],
+    queryFn: async () => {
+      const response = await apiRequest('GET', '/campaigns/with-subscriptions');
+      if (!response.ok) {
+        // Fallback to regular campaigns endpoint
+        const fallbackResponse = await apiRequest('GET', '/campaigns');
+        if (!fallbackResponse.ok) throw new Error('Failed to fetch campaigns');
+        const campaigns = await fallbackResponse.json();
+        // Return campaigns without subscription data
+        return campaigns.map((c: any) => ({ ...c, subscription_plan: 'free' }));
+      }
+      return response.json();
+    },
+    enabled: !!user,
   });
+
+  // Filter campaigns for admin/staff to only show paid_premium
+  const isStaffOrAdmin = user?.role === 'admin' || user?.role === 'staff';
+  const campaigns = isStaffOrAdmin
+    ? allCampaignsData.filter((c: any) => c.subscription_plan === 'paid_premium')
+    : allCampaignsData;
 
   // Fetch analytics summary (no parameters documented)
   const { data: summary, isLoading: summaryLoading } = useQuery<AnalyticsSummary>({
