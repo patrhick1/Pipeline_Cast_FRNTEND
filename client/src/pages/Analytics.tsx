@@ -53,9 +53,12 @@ export default function Analytics() {
     ? allCampaignsData.filter((c: any) => c.subscription_plan === 'paid_premium')
     : allCampaignsData;
 
-  // Fetch analytics summary (no parameters documented)
+  // Fetch analytics summary with filters using new filtered endpoint
   const { data: summary, isLoading: summaryLoading } = useQuery<AnalyticsSummary>({
-    queryKey: ['/analytics/summary'],
+    queryKey: ['/analytics/summary/filtered', {
+      campaign_id: selectedCampaignId === 'all' ? undefined : selectedCampaignId,
+      days: selectedDays
+    }],
   });
 
   const isClient = user?.role?.toLowerCase() === 'client';
@@ -129,7 +132,10 @@ export default function Analytics() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {campaigns?.length || 0}
+              {selectedCampaignId === 'all'
+                ? (summary?.active_campaigns || campaigns?.length || 0)
+                : 1
+              }
             </div>
           </CardContent>
         </Card>

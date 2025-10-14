@@ -648,7 +648,11 @@ export default function AdminInbox() {
         <div className="w-64 bg-white border-r border-gray-200 flex flex-col">
           <div className="p-4">
             <Button
-              onClick={() => refetchThreads()}
+              onClick={() => {
+                queryClient.invalidateQueries({ queryKey: ['admin-threads'] });
+                queryClient.invalidateQueries({ queryKey: ['admin-thread-details'] });
+                refetchThreads();
+              }}
               className="w-full"
               size="lg"
             >

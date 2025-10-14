@@ -868,7 +868,7 @@ export default function PlacementTracking() {
     scheduled: placements.filter((p: Placement) => ['scheduled', 'recording_booked'].includes(p.current_status || '')).length
   };
 
-  // Fetch analytics summary
+  // Fetch analytics summary with filters using new filtered endpoint
   const { data: analyticsSummary, isLoading: summaryLoading } = useQuery<{
     active_campaigns: number;
     total_pitches_sent: number;
@@ -876,7 +876,10 @@ export default function PlacementTracking() {
     upcoming_recordings: number;
     pending_reviews: number;
   }>({
-    queryKey: ['/analytics/summary'],
+    queryKey: ['/analytics/summary/filtered', {
+      campaign_id: campaignFilter === 'all' ? undefined : campaignFilter,
+      days: selectedDays
+    }],
   });
 
   if (authLoading) {
@@ -921,7 +924,12 @@ export default function PlacementTracking() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-xs text-gray-500">Active Campaigns</p>
-                <div className="text-xl font-bold">{campaignsForFilter?.length || 0}</div>
+                <div className="text-xl font-bold">
+                  {campaignFilter === 'all'
+                    ? (analyticsSummary?.active_campaigns || campaignsForFilter?.length || 0)
+                    : 1
+                  }
+                </div>
               </div>
               <BarChart3 className="h-5 w-5 text-blue-600" />
             </div>

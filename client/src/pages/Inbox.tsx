@@ -282,7 +282,11 @@ export default function Inbox() {
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => refetchThreads()}
+              onClick={() => {
+                queryClient.invalidateQueries({ queryKey: ['/inbox/threads'] });
+                queryClient.invalidateQueries({ queryKey: ['/inbox/nylas-status'] });
+                refetchThreads();
+              }}
             >
               <RefreshCw className="w-3 h-3" />
             </Button>

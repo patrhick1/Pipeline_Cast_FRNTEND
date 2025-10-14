@@ -53,7 +53,7 @@ export default function PlacementAnalyticsDashboard({ campaignId, days = 30 }: P
 
   // Fetch monthly chart data
   const { data: monthlyData } = useQuery({
-    queryKey: ['/placements/monthly-chart', { campaign_id: campaignId }], // Support campaign filter
+    queryKey: ['/placements/monthly-chart', { campaign_id: campaignId, days }], // Support campaign filter and days parameter
     select: (data: any[]) => data || [],
   });
 
