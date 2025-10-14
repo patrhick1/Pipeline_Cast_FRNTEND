@@ -1734,7 +1734,7 @@ export default function PitchOutreach() {
       )}
 
       {/* Smart Send Settings - Show for paid_basic clients only (not for admin/staff managing premium campaigns) */}
-      {!isFreePlan && currentUser?.role !== 'admin' && currentUser?.role !== 'staff' && (
+      {!isFreePlan && user?.role !== 'admin' && user?.role !== 'staff' && (
         <SmartSendSettings
           campaignId={
             // If a campaign is selected, use it
@@ -1757,7 +1757,7 @@ export default function PitchOutreach() {
       )}
 
       {/* Info for Admin/Staff about Smart Send */}
-      {!isFreePlan && (currentUser?.role === 'admin' || currentUser?.role === 'staff') && (
+      {!isFreePlan && (user?.role === 'admin' || user?.role === 'staff') && (
         <Card>
           <CardContent className="p-4">
             <div className="flex items-start gap-3">
