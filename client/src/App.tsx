@@ -43,6 +43,7 @@ import PublicMediaKitPage from "@/pages/PublicMediaKitPage"; // Added for public
 import ResetPasswordPage from "@/pages/ResetPassword"; // Added for password reset
 import Onboarding from "@/pages/Onboarding"; // Added for onboarding flow
 import EmailVerification from "@/pages/EmailVerification"; // Added for email verification
+import VerifyEmailChange from "@/pages/VerifyEmailChange"; // Added for email change verification
 import Inbox from "@/pages/Inbox"; // Added for Nylas inbox integration
 import PrivacyPolicy from "@/pages/PrivacyPolicy"; // Privacy policy page
 import TermsOfService from "@/pages/TermsOfService"; // Terms of service page
@@ -72,6 +73,7 @@ function Router() {
       <Route path="/media-kit/:slug" component={PublicMediaKitPage} /> {/* Public media kit route - accessible to all users */}
       <Route path="/onboarding" component={Onboarding} /> {/* Onboarding route - token-based auth */}
       <Route path="/verify-email" component={EmailVerification} /> {/* Email verification route */}
+      <Route path="/verify-email-change" component={VerifyEmailChange} /> {/* Email change verification route */}
       <Route path="/nylas/callback" component={NylasCallback} /> {/* Nylas OAuth callback route */}
       <Route path="/privacy" component={PrivacyPolicy} /> {/* Privacy policy page */}
       <Route path="/terms" component={TermsOfService} /> {/* Terms of service page */}

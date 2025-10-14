@@ -1733,27 +1733,45 @@ export default function PitchOutreach() {
         </Card>
       )}
 
-      {/* Smart Send Settings - Always show for paid users */}
-      {!isFreePlan && (
-        <SmartSendSettings 
+      {/* Smart Send Settings - Show for paid_basic clients only (not for admin/staff managing premium campaigns) */}
+      {!isFreePlan && currentUser?.role !== 'admin' && currentUser?.role !== 'staff' && (
+        <SmartSendSettings
           campaignId={
             // If a campaign is selected, use it
-            selectedCampaignFilter || 
+            selectedCampaignFilter ||
             // If user has only one campaign, auto-select it
             (campaignsData?.length === 1 ? campaignsData[0].campaign_id : null) ||
             // Otherwise require selection
             null
           }
           campaignName={
-            selectedCampaignFilter 
+            selectedCampaignFilter
               ? campaignsData?.find((c: any) => c.campaign_id === selectedCampaignFilter)?.campaign_name
-              : campaignsData?.length === 1 
+              : campaignsData?.length === 1
                 ? campaignsData[0].campaign_name
                 : undefined
           }
           campaigns={campaignsData} // Pass all campaigns for selection
           onCampaignChange={setSelectedCampaignFilter} // Allow changing campaign from Smart Send
         />
+      )}
+
+      {/* Info for Admin/Staff about Smart Send */}
+      {!isFreePlan && (currentUser?.role === 'admin' || currentUser?.role === 'staff') && (
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-start gap-3">
+              <Info className="h-5 w-5 text-blue-500 mt-0.5" />
+              <div>
+                <p className="text-sm font-medium">Smart Send Schedule for Premium Campaigns</p>
+                <p className="text-sm text-gray-600 mt-1">
+                  Premium (DFY) campaign sending schedules are managed globally.
+                  Go to <Link href="/settings" className="text-primary hover:underline">Settings → Admin Settings</Link> to configure the global schedule.
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       )}
 
       <Tabs defaultValue={activeTabState} onValueChange={setActiveTabState} className="w-full">

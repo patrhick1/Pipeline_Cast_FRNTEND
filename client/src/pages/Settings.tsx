@@ -21,9 +21,11 @@ import { apiRequest } from "@/lib/queryClient";
 import { ImageUpload } from "@/components/ImageUpload";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
-  Settings as SettingsIcon, User, Bell, Shield, Download, Save, Trash2, AlertTriangle,
+  Settings as SettingsIcon, User, Bell, Shield, Download, Save, Trash2, AlertTriangle, Mail,
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { EmailChangeForm } from "@/components/EmailChangeForm";
+import { AdminSmartSendSettings } from "@/components/pitch/AdminSmartSendSettings";
 
 // --- Placeholder Schemas and Types ---
 
@@ -401,6 +403,7 @@ interface OAuthProvider {
 }
 
 function DataAndAccount() {
+  const { user } = useAuth();
   const { toast } = useToast();
   const [isExporting, setIsExporting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -537,6 +540,22 @@ function DataAndAccount() {
 
   return (
     <div className="space-y-6">
+      {/* Email & Security Section */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center">
+            <Mail className="mr-2 h-5 w-5" />
+            Email & Security
+          </CardTitle>
+          <CardDescription>
+            Manage your email address and account security
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {user && <EmailChangeForm currentEmail={user.username} />}
+        </CardContent>
+      </Card>
+
       {/* OAuth Providers Section */}
       <Card>
         <CardHeader>
@@ -686,8 +705,32 @@ function DataAndAccount() {
   );
 }
 
+function AdminSettings() {
+  const { user } = useAuth();
+
+  // Only show for admin and staff users
+  if (!user || (user.role !== 'admin' && user.role !== 'staff')) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Access Denied</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-gray-600">You do not have permission to access admin settings.</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <AdminSmartSendSettings />
+    </div>
+  );
+}
+
 export default function Settings() {
-  const { isLoading: authLoading } = useAuth();
+  const { user, isLoading: authLoading } = useAuth();
 
   if (authLoading) {
     return (
@@ -699,6 +742,9 @@ export default function Settings() {
     );
   }
 
+  // Check if user is admin or staff to show the admin tab
+  const isAdminOrStaff = user?.role === 'admin' || user?.role === 'staff';
+
   return (
     <div className="max-w-4xl mx-auto space-y-8 p-4 md:p-6">
       <div className="flex items-center space-x-3">
@@ -706,16 +752,18 @@ export default function Settings() {
         <h1 className="text-3xl font-bold text-gray-900">Account Settings</h1>
       </div>
       <Tabs defaultValue="profile" className="w-full">
-        <TabsList className="grid w-full grid-cols-2 md:grid-cols-4">
+        <TabsList className={`grid w-full ${isAdminOrStaff ? 'grid-cols-2 md:grid-cols-5' : 'grid-cols-2 md:grid-cols-4'}`}>
           <TabsTrigger value="profile">Profile</TabsTrigger>
           <TabsTrigger value="notifications">Notifications</TabsTrigger>
           <TabsTrigger value="privacy">Privacy</TabsTrigger>
           <TabsTrigger value="data">Data & Account</TabsTrigger>
+          {isAdminOrStaff && <TabsTrigger value="admin">Admin Settings</TabsTrigger>}
         </TabsList>
         <TabsContent value="profile" className="mt-6"><ProfileSettings /></TabsContent>
         <TabsContent value="notifications" className="mt-6"><NotificationSettings /></TabsContent>
         <TabsContent value="privacy" className="mt-6"><PrivacySettings /></TabsContent>
         <TabsContent value="data" className="mt-6"><DataAndAccount /></TabsContent>
+        {isAdminOrStaff && <TabsContent value="admin" className="mt-6"><AdminSettings /></TabsContent>}
       </Tabs>
     </div>
   );
