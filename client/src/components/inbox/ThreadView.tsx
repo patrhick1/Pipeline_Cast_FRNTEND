@@ -528,8 +528,11 @@ export default function ThreadView({ threadId, onClose, onReply }: ThreadViewPro
             const isExpanded = expandedMessages.has(messageId);
             const isLastMessage = index === thread.messages!.length - 1;
 
+            // Detect if this message is a draft (saved but not sent)
+            const isDraft = msg.message_status === 'draft' || msg.message_status === 'scheduled' || msg.message_status === 'failed';
+
             return (
-              <Card key={messageId} className="overflow-hidden">
+              <Card key={messageId} className={cn("overflow-hidden", isDraft && "border-2 border-yellow-300 bg-yellow-50")}>
                 <button
                   onClick={() => toggleMessageExpansion(messageId)}
                   className="w-full p-4 flex items-center justify-between hover:bg-gray-50 transition-colors"
@@ -560,7 +563,26 @@ export default function ThreadView({ threadId, onClose, onReply }: ThreadViewPro
                             return 'Unknown';
                           })()}
                         </p>
-                        {('direction' in message && message.direction === 'inbound') ? (
+                        {isDraft ? (
+                          <Badge variant="outline" className="text-xs bg-yellow-100 text-yellow-800 border-yellow-300">
+                            {msg.message_status === 'scheduled' ? (
+                              <>
+                                <Calendar className="w-3 h-3 mr-1" />
+                                Scheduled
+                              </>
+                            ) : msg.message_status === 'failed' ? (
+                              <>
+                                <X className="w-3 h-3 mr-1" />
+                                Failed
+                              </>
+                            ) : (
+                              <>
+                                <FileText className="w-3 h-3 mr-1" />
+                                Draft
+                              </>
+                            )}
+                          </Badge>
+                        ) : ('direction' in message && message.direction === 'inbound') ? (
                           <ArrowDownLeft className="w-3 h-3 text-green-500" />
                         ) : ('direction' in message && message.direction === 'outbound') ? (
                           <ArrowUpRight className="w-3 h-3 text-blue-500" />
@@ -639,6 +661,30 @@ export default function ThreadView({ threadId, onClose, onReply }: ThreadViewPro
                           );
                         })()}
                       </div>
+
+                      {/* Draft Info Banner */}
+                      {isDraft && (
+                        <div className="mb-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                          {msg.message_status === 'scheduled' && msg.scheduled_send_at ? (
+                            <>
+                              <p className="text-sm font-medium text-yellow-900 mb-2">📅 Scheduled Message</p>
+                              <p className="text-xs text-yellow-700">
+                                This message is scheduled to send on {format(new Date(msg.scheduled_send_at), 'MMM d, yyyy \'at\' h:mm a')}
+                              </p>
+                            </>
+                          ) : msg.message_status === 'failed' ? (
+                            <>
+                              <p className="text-sm font-medium text-red-900 mb-2">❌ Failed to Send</p>
+                              <p className="text-xs text-red-700">This message failed to send. You can edit and try sending again.</p>
+                            </>
+                          ) : (
+                            <>
+                              <p className="text-sm font-medium text-yellow-900 mb-2">📝 This is a draft message</p>
+                              <p className="text-xs text-yellow-700">Click "Edit Draft" below to modify and send or schedule this message.</p>
+                            </>
+                          )}
+                        </div>
+                      )}
 
                       {/* Format toggle only if we have both HTML and actual plain text */}
                       {(() => {
@@ -758,8 +804,77 @@ export default function ThreadView({ threadId, onClose, onReply }: ThreadViewPro
                         </div>
                       )}
 
+                      {/* Draft Action Buttons */}
+                      {isDraft && (
+                        <div className="flex gap-2 mt-4 pt-4 border-t">
+                          <Button
+                            variant="default"
+                            size="sm"
+                            onClick={() => {
+                              // Load draft into reply box for editing
+                              setReplyMode('reply');
+                              const draftContent = msg.body_html || msg.body_text || msg.body || '';
+                              setReplyContent(draftContent);
+                              // Set draft ID using the message_id or draft_id
+                              const currentDraftId = msg.draft_id || msg.message_id;
+                              if (currentDraftId) {
+                                setDraftId(currentDraftId);
+                              }
+                            }}
+                          >
+                            <FileText className="w-4 h-4 mr-2" />
+                            Edit Draft
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={async () => {
+                              const currentDraftId = msg.draft_id || msg.message_id;
+                              if (currentDraftId) {
+                                try {
+                                  await draftsApi.sendDraft(currentDraftId);
+                                  toast({
+                                    title: 'Draft Sent',
+                                    description: 'Your message has been sent',
+                                  });
+                                  queryClient.invalidateQueries({ queryKey: [`/inbox/threads/${threadId}`] });
+                                  queryClient.invalidateQueries({ queryKey: ['drafts'] });
+                                } catch (error) {
+                                  toast({
+                                    title: 'Error',
+                                    description: 'Failed to send draft',
+                                    variant: 'destructive',
+                                  });
+                                }
+                              }
+                            }}
+                          >
+                            <Send className="w-4 h-4 mr-2" />
+                            Send Now
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              // Load draft into reply box and open schedule modal
+                              setReplyMode('reply');
+                              const draftContent = msg.body_html || msg.body_text || msg.body || '';
+                              setReplyContent(draftContent);
+                              const currentDraftId = msg.draft_id || msg.message_id;
+                              if (currentDraftId) {
+                                setDraftId(currentDraftId);
+                              }
+                              setShowScheduleModal(true);
+                            }}
+                          >
+                            <Calendar className="w-4 h-4 mr-2" />
+                            Schedule
+                          </Button>
+                        </div>
+                      )}
+
                       {/* Action buttons */}
-                      {isLastMessage && (
+                      {isLastMessage && !isDraft && (
                         <div className="flex gap-2 mt-4 pt-4 border-t">
                           <Button
                             variant="outline"
