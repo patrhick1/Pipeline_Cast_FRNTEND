@@ -61,7 +61,7 @@ export const STATUS_LABELS: Record<PlacementStatus, string> = {
   recorded: 'Recorded',
   published: 'Published',
   paid: 'Paid',
-  rejected: 'Rejected',
+  rejected: 'Host Declined',
   client_rejected: 'Client Rejected',
   cancelled: 'Cancelled',
 };
@@ -170,7 +170,7 @@ export const statusConfig: Record<PlacementStatus | 'default', StatusConfig> = {
     dotColor: 'bg-emerald-500'
   },
   rejected: {
-    label: 'Rejected',
+    label: 'Host Declined',
     icon: X,
     color: 'bg-red-100 text-red-800',
     dotColor: 'bg-red-500'

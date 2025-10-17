@@ -213,6 +213,28 @@ export default function ThreadView({ threadId, onClose, onReply }: ThreadViewPro
     }
   });
 
+  // Delete draft mutation
+  const deleteDraftMutation = useMutation({
+    mutationFn: async (draftId: number) => {
+      return draftsApi.deleteDraft(draftId);
+    },
+    onSuccess: () => {
+      toast({
+        title: 'Draft deleted',
+        description: 'Your draft has been deleted successfully.',
+      });
+      queryClient.invalidateQueries({ queryKey: [`/inbox/threads/${threadId}`] });
+      queryClient.invalidateQueries({ queryKey: ['drafts'] });
+    },
+    onError: () => {
+      toast({
+        title: 'Failed to delete',
+        description: 'There was an error deleting your draft. Please try again.',
+        variant: 'destructive',
+      });
+    }
+  });
+
   // Auto-expand last message
   useEffect(() => {
     if (thread?.messages && thread.messages.length > 0) {
@@ -869,6 +891,20 @@ export default function ThreadView({ threadId, onClose, onReply }: ThreadViewPro
                           >
                             <Calendar className="w-4 h-4 mr-2" />
                             Schedule
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={async () => {
+                              const currentDraftId = msg.draft_id || msg.message_id;
+                              if (currentDraftId && window.confirm('Are you sure you want to delete this draft?')) {
+                                deleteDraftMutation.mutate(currentDraftId);
+                              }
+                            }}
+                            disabled={deleteDraftMutation.isPending}
+                          >
+                            <Trash2 className="w-4 h-4 mr-2" />
+                            Delete Draft
                           </Button>
                         </div>
                       )}

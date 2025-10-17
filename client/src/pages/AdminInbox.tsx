@@ -363,6 +363,29 @@ export default function AdminInbox() {
     },
   });
 
+  // Delete draft mutation
+  const deleteDraftMutation = useMutation({
+    mutationFn: async ({ accountId, draftId }: { accountId: number; draftId: number }) => {
+      return adminDraftsApi.deleteDraft(accountId, draftId);
+    },
+    onSuccess: () => {
+      toast({
+        title: 'Draft deleted',
+        description: 'Your draft has been deleted successfully.',
+      });
+      queryClient.invalidateQueries({ queryKey: ['admin-thread-details', selectedThreadId] });
+      queryClient.invalidateQueries({ queryKey: ['admin-threads'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-drafts'] });
+    },
+    onError: () => {
+      toast({
+        title: 'Failed to delete',
+        description: 'There was an error deleting your draft. Please try again.',
+        variant: 'destructive',
+      });
+    }
+  });
+
   const handleSendReply = async () => {
     if (!threadDetails || !replyContent.trim()) return;
 
@@ -1213,6 +1236,20 @@ export default function AdminInbox() {
                                   >
                                     <Calendar className="w-4 h-4 mr-2" />
                                     Schedule
+                                  </Button>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={async () => {
+                                      if (internalMessageId && adminAccountId && window.confirm('Are you sure you want to delete this draft?')) {
+                                        const messageIdNumber = typeof internalMessageId === 'string' ? parseInt(internalMessageId) : internalMessageId;
+                                        deleteDraftMutation.mutate({ accountId: adminAccountId, draftId: messageIdNumber });
+                                      }
+                                    }}
+                                    disabled={deleteDraftMutation.isPending}
+                                  >
+                                    <Trash2 className="w-4 h-4 mr-2" />
+                                    Delete Draft
                                   </Button>
                                 </div>
                               </div>
