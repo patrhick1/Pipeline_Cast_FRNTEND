@@ -184,7 +184,9 @@ export function AIGenerateFollowUpButton({
 
       if (!useAutoTemplate && (customTemplateId || templateId)) {
         const baseTemplate = customTemplateId || templateId;
-        payload.template_id = getTemplateId(baseTemplate);
+        if (baseTemplate) {
+          payload.template_id = getTemplateId(baseTemplate);
+        }
       }
       // If useAutoTemplate is true, send empty payload for backend auto-selection
 

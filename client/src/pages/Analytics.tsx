@@ -7,21 +7,14 @@ import { useAuth } from '@/hooks/useAuth';
 import { apiRequest } from '@/lib/queryClient';
 import PitchAnalyticsDashboard from '@/components/analytics/PitchAnalyticsDashboard';
 import PlacementAnalyticsDashboard from '@/components/analytics/PlacementAnalyticsDashboard';
-import { BarChart3, Target, TrendingUp, Calendar } from 'lucide-react';
+import { BarChart3, Target, TrendingUp, Calendar, Users, CheckCircle } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
+import type { AnalyticsSummary } from '@/types/inbox';
 
 interface Campaign {
   id: string;
   name: string;
   client_name?: string;
-}
-
-interface AnalyticsSummary {
-  active_campaigns: number;
-  total_pitches_sent: number;
-  placements_secured: number;
-  upcoming_recordings: number;
-  pending_reviews: number;
 }
 
 export default function Analytics() {
@@ -57,7 +50,8 @@ export default function Analytics() {
   const { data: summary, isLoading: summaryLoading } = useQuery<AnalyticsSummary>({
     queryKey: ['/analytics/summary/filtered', {
       campaign_id: selectedCampaignId === 'all' ? undefined : selectedCampaignId,
-      days: selectedDays
+      days: selectedDays,
+      plan_type: isStaffOrAdmin && selectedCampaignId === 'all' ? 'paid_premium' : undefined
     }],
   });
 
@@ -119,8 +113,8 @@ export default function Analytics() {
         </div>
       </div>
 
-      {/* Quick Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+      {/* Quick Stats - Updated with new metrics */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
         <Card>
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
@@ -144,7 +138,7 @@ export default function Analytics() {
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
               <CardTitle className="text-sm font-medium text-gray-600">
-                Total Pitches Sent
+                Unique Outreach
               </CardTitle>
               <Target className="w-5 h-5 text-green-600" />
             </div>
@@ -154,9 +148,12 @@ export default function Analytics() {
               {summaryLoading ? (
                 <Skeleton className="h-8 w-16" />
               ) : (
-                summary?.total_pitches_sent || 0
+                summary?.unique_outreach || 0
               )}
             </div>
+            <p className="text-xs text-gray-500 mt-1">
+              Distinct podcasts contacted
+            </p>
           </CardContent>
         </Card>
 
@@ -164,9 +161,9 @@ export default function Analytics() {
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
               <CardTitle className="text-sm font-medium text-gray-600">
-                Placements Secured
+                Interested Responses
               </CardTitle>
-              <TrendingUp className="w-5 h-5 text-purple-600" />
+              <Users className="w-5 h-5 text-purple-600" />
             </div>
           </CardHeader>
           <CardContent>
@@ -174,9 +171,12 @@ export default function Analytics() {
               {summaryLoading ? (
                 <Skeleton className="h-8 w-16" />
               ) : (
-                summary?.placements_secured || 0
+                summary?.interested_responses || 0
               )}
             </div>
+            <p className="text-xs text-gray-500 mt-1">
+              Showed interest
+            </p>
           </CardContent>
         </Card>
 
@@ -184,7 +184,30 @@ export default function Analytics() {
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
               <CardTitle className="text-sm font-medium text-gray-600">
-                Upcoming Recordings
+                Completed Placements
+              </CardTitle>
+              <CheckCircle className="w-5 h-5 text-emerald-600" />
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {summaryLoading ? (
+                <Skeleton className="h-8 w-16" />
+              ) : (
+                summary?.completed_placements || 0
+              )}
+            </div>
+            <p className="text-xs text-gray-500 mt-1">
+              Recordings completed
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-sm font-medium text-gray-600">
+                Live Episodes
               </CardTitle>
               <Calendar className="w-5 h-5 text-orange-600" />
             </div>
@@ -194,9 +217,12 @@ export default function Analytics() {
               {summaryLoading ? (
                 <Skeleton className="h-8 w-16" />
               ) : (
-                summary?.upcoming_recordings || 0
+                summary?.live_episodes || 0
               )}
             </div>
+            <p className="text-xs text-gray-500 mt-1">
+              Published episodes
+            </p>
           </CardContent>
         </Card>
       </div>
@@ -209,9 +235,10 @@ export default function Analytics() {
         </TabsList>
 
         <TabsContent value="pitches" className="space-y-6">
-          <PitchAnalyticsDashboard 
+          <PitchAnalyticsDashboard
             campaignId={selectedCampaignId === 'all' ? undefined : selectedCampaignId}
             days={selectedDays}
+            planType={isStaffOrAdmin && selectedCampaignId === 'all' ? 'paid_premium' : undefined}
           />
         </TabsContent>
 

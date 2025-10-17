@@ -278,10 +278,10 @@ export default function EditCampaignDialogClient({ campaign, open, onOpenChange 
                           mode="single"
                           selected={field.value || undefined}
                           onSelect={field.onChange}
-                          disabled={(date) =>
-                            date < new Date("1900-01-01") ||
-                            (form.watch("start_date") && date < form.watch("start_date")!)
-                          }
+                          disabled={(date) => {
+                            const startDate = form.watch("start_date");
+                            return date < new Date("1900-01-01") || (startDate ? date < startDate : false);
+                          }}
                           initialFocus
                         />
                       </PopoverContent>

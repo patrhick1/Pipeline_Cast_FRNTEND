@@ -9,15 +9,15 @@ export interface AutoTextareaProps
 
 const AutoTextarea = React.forwardRef<HTMLTextAreaElement, AutoTextareaProps>(
   ({ className, value, onChange, maxRows = 10, minRows = 2, style, ...props }, ref) => {
-    const textareaRef = React.useRef<HTMLTextAreaElement>(null);
+    const textareaRef = React.useRef<HTMLTextAreaElement | null>(null);
     const combinedRef = React.useCallback(
       (node: HTMLTextAreaElement | null) => {
-        textareaRef.current = node;
+        (textareaRef as React.MutableRefObject<HTMLTextAreaElement | null>).current = node;
         if (ref) {
           if (typeof ref === 'function') {
             ref(node);
           } else {
-            ref.current = node;
+            (ref as React.MutableRefObject<HTMLTextAreaElement | null>).current = node;
           }
         }
       },

@@ -24,6 +24,9 @@ type PLAN = {
     desc: string;
     monthlyPrice: number; // This will be amount / 100 from API
     stripePriceId: string; // This will be stripe_price_id from API
+    stripeMonthlyPlanId?: string; // Monthly plan ID for legacy support
+    stripeYearlyPlanId?: string; // Yearly plan ID for legacy support
+    yearlyPrice?: number; // Yearly price for legacy support
     badge?: string;
     buttonText: string;
     features: string[];
@@ -203,14 +206,14 @@ export default function PricingPlans({ currentPlan, onSelectPlan, isLoading }: P
   );
 }
 
-interface PlanProps {
+interface PlanCardProps {
   plan: PLAN;
   currentPlan?: string;
   onSelect: () => void;
   isLoading?: boolean;
 }
 
-const PlanCard = ({ plan, currentPlan, onSelect, isLoading }: PlanProps) => {
+const PlanCard = ({ plan, currentPlan, onSelect, isLoading }: PlanCardProps) => {
   const isHighlighted = plan.highlighted;
   const isCurrentPlan = currentPlan === plan.id;
   const price = plan.monthlyPrice;

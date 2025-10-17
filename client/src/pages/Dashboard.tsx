@@ -27,16 +27,8 @@ import { OnboardingPrompt } from "@/components/OnboardingPrompt";
 import { getRelativeTime } from "@/lib/timezone";
 import { statusConfig, type PlacementStatus } from "@/constants/placementStatus"; 
 
-// --- Interfaces to match backend dashboard_schemas.py ---
-interface DashboardStatsOverview {
-  active_campaigns: number;
-  total_pitches_sent: number;
-  placements_secured: number;
-  upcoming_recordings: number;
-  pending_reviews: number;
-  approved_placements?: number;
-  success_rate_placements?: number;
-}
+// --- Import new AnalyticsSummary interface ---
+import type { AnalyticsSummary } from "@/types/inbox";
 
 interface RecentPlacementItem {
   placement_id: number;
@@ -168,8 +160,8 @@ function RecentBookingCard({ booking }: { booking: RecentPlacementItem }) {
 export default function Dashboard() {
   const { user, isLoading: authLoading } = useAuth();
 
-  const { data: stats, isLoading: statsLoading, error: statsError } = useQuery<DashboardStatsOverview>({
-    queryKey: ["/analytics/summary", user?.person_id], // Updated to use new analytics endpoint
+  const { data: stats, isLoading: statsLoading, error: statsError } = useQuery<AnalyticsSummary>({
+    queryKey: ["/analytics/summary", user?.person_id], // New analytics endpoint with accurate metrics
     // queryFn will be handled by defaultQueryFn from queryClient, which uses queryKey[0] as URL
     enabled: !!user && !authLoading, // Only fetch if user is loaded
   });
@@ -263,7 +255,7 @@ export default function Dashboard() {
                 
                 <div className="flex items-center gap-3">
                   <div className="flex-shrink-0">
-                    {stats && stats.total_pitches_sent > 0 ? (
+                    {stats && stats.unique_outreach > 0 ? (
                       <CheckCircle2 className="h-5 w-5 text-green-600" />
                     ) : (
                       <Circle className="h-5 w-5 text-gray-400" />
@@ -301,9 +293,9 @@ export default function Dashboard() {
         ) : (
           <>
             <StatsCard title="Active Campaigns" value={stats?.active_campaigns ?? 0} change={null} icon={PodcastIcon} iconColor="bg-primary/10 text-primary" />
-            <StatsCard title="Approved Placements" value={stats?.approved_placements ?? stats?.placements_secured ?? 0} change={null} icon={CheckCircle} iconColor="bg-green-500/10 text-green-500" />
+            <StatsCard title="Completed Placements" value={stats?.completed_placements ?? 0} change={null} icon={CheckCircle} iconColor="bg-green-500/10 text-green-500" />
             <StatsCard title="Pending Reviews" value={stats?.pending_reviews ?? 0} change={null} icon={Clock} iconColor="bg-yellow-500/10 text-yellow-500" />
-            <StatsCard title="Placement Success Rate" value={`${stats?.success_rate_placements ?? 0}%`} change={null} icon={TrendingUp} iconColor="bg-teal-500/10 text-teal-500" />
+            <StatsCard title="Unique Outreach" value={stats?.unique_outreach ?? 0} change={null} icon={TrendingUp} iconColor="bg-teal-500/10 text-teal-500" />
           </>
         )}
       </div>

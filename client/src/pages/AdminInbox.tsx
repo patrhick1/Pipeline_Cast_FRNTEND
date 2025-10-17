@@ -217,9 +217,8 @@ export default function AdminInbox() {
     ? {
         to: replyMode ? replyTo : [(threadDetails as any).from_email || threadDetails.messages[0]?.from_email || ''],
         cc: replyMode && replyCc.length > 0 ? replyCc : undefined,
-        bcc: replyMode && replyBcc.length > 0 ? replyBcc : undefined,
         subject: (threadDetails as any).subject || threadDetails.thread?.subject || '',
-        reply_to_message_id: threadDetails.messages[threadDetails.messages.length - 1]?.message_id || undefined,
+        reply_to_message_id: threadDetails.messages[threadDetails.messages.length - 1]?.message_id?.toString(),
       }
     : { to: [], subject: '' };
 
@@ -269,7 +268,7 @@ export default function AdminInbox() {
   useEffect(() => {
     if (threadDetails?.messages && threadDetails.messages.length > 0) {
       const lastMessage = threadDetails.messages[threadDetails.messages.length - 1];
-      setExpandedMessages(new Set([lastMessage.message_id]));
+      setExpandedMessages(new Set([String(lastMessage.message_id)]));
     }
   }, [threadDetails]);
 
@@ -576,14 +575,14 @@ export default function AdminInbox() {
 
     if (lastMessage.direction === 'inbound') {
       // If inbound, reply to the sender (from_email)
-      replyToEmail = lastMessage.from_email || lastMessage.sender_email;
+      replyToEmail = lastMessage.from_email || lastMessage.sender_email || null;
     } else if (lastMessage.direction === 'outbound') {
       // If outbound, reply to the original recipients (to_emails)
       const toEmails = lastMessage.to_emails || [];
       replyToEmail = toEmails.length > 0 ? toEmails[0] : null;
     } else {
       // Fallback: try from_email first
-      replyToEmail = lastMessage.from_email || lastMessage.sender_email;
+      replyToEmail = lastMessage.from_email || lastMessage.sender_email || null;
     }
 
     if (mode === 'reply') {
@@ -1072,9 +1071,9 @@ export default function AdminInbox() {
                                   )}
                                 </Badge>
                               ) : message.direction === 'inbound' ? (
-                                <ArrowDownLeft className="w-3 h-3 text-green-500" title="Received" />
+                                <ArrowDownLeft className="w-3 h-3 text-green-500" />
                               ) : (
-                                <ArrowUpRight className="w-3 h-3 text-blue-500" title="Sent" />
+                                <ArrowUpRight className="w-3 h-3 text-blue-500" />
                               )}
                             </div>
                             {!isExpanded && (message.body_html || message.body_plain) && (
@@ -1160,9 +1159,10 @@ export default function AdminInbox() {
                                       setReplyMode('reply');
                                       setReplyContent(message.body_html || message.body_plain || '');
                                       setDraftBody(message.body_html || message.body_plain || '');
-                                      // Use internal message_id as draft_id
+                                      // Use internal message_id as draft_id (convert to number if needed)
                                       if (internalMessageId) {
-                                        setDraftId(internalMessageId);
+                                        const draftIdNumber = typeof internalMessageId === 'string' ? parseInt(internalMessageId) : internalMessageId;
+                                        setDraftId(draftIdNumber);
                                       }
                                     }}
                                   >
@@ -1175,7 +1175,8 @@ export default function AdminInbox() {
                                     onClick={async () => {
                                       if (internalMessageId && adminAccountId) {
                                         try {
-                                          await adminDraftsApi.sendDraft(adminAccountId, internalMessageId);
+                                          const messageIdNumber = typeof internalMessageId === 'string' ? parseInt(internalMessageId) : internalMessageId;
+                                          await adminDraftsApi.sendDraft(adminAccountId, messageIdNumber);
                                           toast({
                                             title: 'Draft Sent',
                                             description: 'Your message has been sent',
@@ -1203,9 +1204,10 @@ export default function AdminInbox() {
                                       setReplyMode('reply');
                                       setReplyContent(message.body_html || message.body_plain || '');
                                       setDraftBody(message.body_html || message.body_plain || '');
-                                      // Use internal message_id as draft_id
+                                      // Use internal message_id as draft_id (convert to number if needed)
                                       if (internalMessageId) {
-                                        setDraftId(internalMessageId);
+                                        const draftIdNumber = typeof internalMessageId === 'string' ? parseInt(internalMessageId) : internalMessageId;
+                                        setDraftId(draftIdNumber);
                                       }
                                     }}
                                   >

@@ -22,10 +22,14 @@ export interface EmailThread {
   starred: boolean;
   folder: string;
   message_count: number;
+  campaign_id?: string;  // Campaign UUID
+  media_name?: string;  // Podcast/media name
 }
 
 export interface EmailMessage {
-  message_id: string;
+  message_id: string | number;  // Can be string or number
+  nylas_message_id?: string;  // Nylas-specific message ID
+  sender_email?: string;  // Sender email address
   from_email: string;
   from_name: string;
   to_emails: string[] | null;
@@ -41,6 +45,8 @@ export interface EmailMessage {
   unread?: boolean;
   starred?: boolean;
   folder?: string;
+  message_status?: 'draft' | 'scheduled' | 'sent' | 'failed';  // Message status
+  scheduled_send_at?: string;  // Scheduled send time
 }
 
 export interface ThreadDetails {

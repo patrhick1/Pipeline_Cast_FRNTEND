@@ -261,7 +261,9 @@ export default function RecentReplies({
                     <div className="flex items-center justify-between">
                       {thread.classification && (
                         <Badge variant="outline" className="text-xs">
-                          {thread.classification === 'pitch_response' ? 'Pitch Response' : thread.classification.category || thread.classification}
+                          {typeof thread.classification === 'string'
+                            ? (thread.classification === 'pitch_response' ? 'Pitch Response' : thread.classification)
+                            : (thread.classification.category === 'pitch_response' ? 'Pitch Response' : thread.classification.category || 'Unknown')}
                         </Badge>
                       )}
                       <Button variant="ghost" size="sm" className="h-7 text-xs">

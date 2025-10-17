@@ -366,7 +366,7 @@ export function ModernPitchReview({
                 {canUseAI && selectedGroupDrafts[0].match_id && (
                   <AIGenerateFollowUpButton
                     matchId={selectedGroupDrafts[0].match_id}
-                    mediaName={selectedGroupDrafts[0].media_name}
+                    mediaName={selectedGroupDrafts[0].media_name || undefined}
                     onSuccess={() => window.location.reload()}
                     size="default"
                     variant="outline"

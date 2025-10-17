@@ -36,9 +36,13 @@ export default function CampaignThreads({ campaignId, campaignName }: CampaignTh
   });
 
   const getStatusIcon = (thread: EmailThread) => {
-    if (thread.classification?.category === 'booking_confirmation') {
+    const classificationCategory = typeof thread.classification === 'string'
+      ? thread.classification
+      : thread.classification?.category;
+
+    if (classificationCategory === 'booking_confirmation') {
       return <CheckCircle className="w-4 h-4 text-green-500" />;
-    } else if (thread.classification?.category === 'rejection') {
+    } else if (classificationCategory === 'rejection') {
       return <XCircle className="w-4 h-4 text-red-500" />;
     } else if (thread.unread_count === 0 && thread.message_count > 1) {
       return <MessageSquare className="w-4 h-4 text-blue-500" />;
@@ -71,7 +75,10 @@ export default function CampaignThreads({ campaignId, campaignName }: CampaignTh
   const stats = {
     total: threads?.length || 0,
     replied: threads?.filter((t: EmailThread) => t.message_count > 1).length || 0,
-    booked: threads?.filter((t: EmailThread) => t.classification?.category === 'booking_confirmation').length || 0,
+    booked: threads?.filter((t: EmailThread) => {
+      const category = typeof t.classification === 'string' ? t.classification : t.classification?.category;
+      return category === 'booking_confirmation';
+    }).length || 0,
     pending: threads?.filter((t: EmailThread) => t.message_count === 1).length || 0
   };
 
@@ -170,7 +177,11 @@ export default function CampaignThreads({ campaignId, campaignName }: CampaignTh
                                 <h4 className="font-medium text-sm">
                                   {participant?.name || participant?.email || 'Unknown'}
                                 </h4>
-                                {thread.classification && getStatusBadge(thread.classification.category)}
+                                {thread.classification && getStatusBadge(
+                                  typeof thread.classification === 'string'
+                                    ? thread.classification
+                                    : (thread.classification.category || '')
+                                )}
                               </div>
                               
                               <p className="text-sm text-gray-600 mb-1">

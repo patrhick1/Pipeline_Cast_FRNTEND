@@ -201,9 +201,9 @@ export function AdminSendPitchButton({
                   {availableAccounts.map((account) => {
                     const usagePercent = (account.sends_today / account.daily_send_limit) * 100;
                     return (
-                      <SelectItem key={account.id} value={account.id}>
+                      <SelectItem key={account.id} value={account.id.toString()}>
                         <div className="flex items-center justify-between w-full">
-                          <span>{account.email}</span>
+                          <span>{account.email_address}</span>
                           <div className="ml-4 flex items-center gap-2">
                             <span className="text-xs text-muted-foreground">
                               {account.sends_today}/{account.daily_send_limit} sent

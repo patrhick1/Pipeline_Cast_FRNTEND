@@ -32,12 +32,12 @@ interface PitchEmailThreadProps {
 
 export default function PitchEmailThread({ pitchId, podcastName, compact = false }: PitchEmailThreadProps) {
   const [, setLocation] = useLocation();
-  const [expandedMessages, setExpandedMessages] = useState<Set<number>>(new Set());
+  const [expandedMessages, setExpandedMessages] = useState<Set<string | number>>(new Set());
   const { usePitchThread, syncThread } = useEmailThreads();
   
   const { data: thread, isLoading, refetch } = usePitchThread(pitchId);
 
-  const toggleMessage = (messageId: number) => {
+  const toggleMessage = (messageId: string | number) => {
     setExpandedMessages(prev => {
       const newSet = new Set(prev);
       if (newSet.has(messageId)) {
@@ -116,7 +116,7 @@ export default function PitchEmailThread({ pitchId, podcastName, compact = false
             <ExternalLink className="w-4 h-4 text-gray-400" />
           </div>
           
-          {(thread.messages?.length > 0 || thread.snippet) && (
+          {((thread.messages && thread.messages.length > 0) || thread.snippet) && (
             <div className="space-y-2">
               <div className="text-sm text-gray-600">
                 {thread.snippet || (thread.messages && thread.messages[thread.messages.length - 1]?.snippet)}
@@ -191,7 +191,9 @@ export default function PitchEmailThread({ pitchId, podcastName, compact = false
             )}
             {thread.classification && (
               <Badge variant="secondary" className="ml-2">
-                {thread.classification.replace(/_/g, ' ')}
+                {typeof thread.classification === 'string'
+                  ? thread.classification.replace(/_/g, ' ')
+                  : thread.classification.category?.replace(/_/g, ' ')}
               </Badge>
             )}
           </div>
@@ -302,7 +304,7 @@ export default function PitchEmailThread({ pitchId, podcastName, compact = false
           {(thread.last_reply_at || thread.thread?.last_reply_at) && (
             <Badge variant="secondary" className="text-xs">
               <Clock className="w-3 h-3 mr-1" />
-              Last reply: {format(new Date(thread.last_reply_at || thread.thread.last_reply_at), 'MMM d, h:mm a')}
+              Last reply: {format(new Date(thread.last_reply_at || thread.thread?.last_reply_at || new Date()), 'MMM d, h:mm a')}
             </Badge>
           )}
         </div>
@@ -313,32 +315,33 @@ export default function PitchEmailThread({ pitchId, podcastName, compact = false
           <div className="space-y-3">
             {thread.messages && thread.messages.length > 0 ? (
               thread.messages.map((message, index) => {
-              const isExpanded = expandedMessages.has(message.message_id);
-              const isLastMessage = index === thread.messages.length - 1;
+              const messageId = message.message_id || message.id;
+              const isExpanded = expandedMessages.has(messageId);
+              const isLastMessage = index === thread.messages!.length - 1;
               
               return (
-                <Card 
-                  key={message.message_id} 
+                <Card
+                  key={messageId}
                   className={cn(
                     "overflow-hidden",
                     message.direction === 'outbound' ? 'ml-8' : 'mr-8'
                   )}
                 >
                   <button
-                    onClick={() => toggleMessage(message.message_id)}
+                    onClick={() => toggleMessage(messageId)}
                     className="w-full p-3 flex items-center justify-between hover:bg-gray-50 transition-colors"
                   >
                     <div className="flex items-center gap-3">
                       <Avatar className="h-8 w-8">
                         <AvatarFallback className="text-xs">
-                          {getInitials(message.sender_name, message.sender_email)}
+                          {getInitials(message.sender_name || '', message.sender_email || '')}
                         </AvatarFallback>
                       </Avatar>
                       <div className="text-left">
                         <div className="flex items-center gap-2">
                           {getMessageIcon(message)}
                           <p className="text-sm font-medium">
-                            {message.sender_name || message.sender_email}
+                            {message.sender_name || message.sender_email || 'Unknown'}
                           </p>
                           {message.sender_type && (
                             <Badge variant="outline" className="text-xs">
@@ -356,7 +359,7 @@ export default function PitchEmailThread({ pitchId, podcastName, compact = false
                     
                     <div className="flex items-center gap-2">
                       <span className="text-xs text-gray-500">
-                        {format(new Date(message.message_date), 'MMM d, h:mm a')}
+                        {message.message_date ? format(new Date(message.message_date), 'MMM d, h:mm a') : ''}
                       </span>
                       {isExpanded ? (
                         <ChevronUp className="w-4 h-4 text-gray-400" />
@@ -371,7 +374,7 @@ export default function PitchEmailThread({ pitchId, podcastName, compact = false
                       <div className="pt-4">
                         {/* Email metadata */}
                         <div className="text-xs text-gray-500 mb-3 space-y-1">
-                          <p>To: {message.recipient_emails.join(', ')}</p>
+                          <p>To: {message.recipient_emails?.join(', ') || 'N/A'}</p>
                         </div>
 
                         {/* Email body */}
@@ -424,12 +427,12 @@ export default function PitchEmailThread({ pitchId, podcastName, compact = false
         {thread.source && (
           <div className="mt-4 text-xs text-gray-500 text-center">
             Data source: {thread.source === 'stored' ? 'Cached' : 'Live'}
-            {thread.source === 'stored' && (
+            {thread.source === 'stored' && thread.thread?.nylas_thread_id && (
               <Button
                 variant="link"
                 size="sm"
                 className="ml-2 text-xs p-0 h-auto"
-                onClick={() => thread.thread.nylas_thread_id && syncThread.mutate(thread.thread.nylas_thread_id)}
+                onClick={() => thread.thread?.nylas_thread_id && syncThread.mutate(thread.thread.nylas_thread_id)}
               >
                 Refresh from Nylas
               </Button>

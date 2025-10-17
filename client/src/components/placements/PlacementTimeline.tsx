@@ -4,7 +4,7 @@ import { Calendar, Phone, Mic, Radio, DollarSign, FileText, Check, X, Bell } fro
 import { formatDateTime, fromAPIDateTime, isUpcoming, getDateTimeDescription } from '@/lib/timezone';
 
 interface TimelineEvent {
-  date: string | null;
+  date: string | null | undefined;
   label: string;
   icon: React.ReactNode;
   status: 'completed' | 'upcoming' | 'missed';
@@ -29,7 +29,7 @@ interface PlacementTimelineProps {
 export const PlacementTimeline: React.FC<PlacementTimelineProps> = ({ placement }) => {
   const now = new Date();
 
-  const getEventStatus = (isoDate: string | null, isCompleted: boolean): 'completed' | 'upcoming' | 'missed' => {
+  const getEventStatus = (isoDate: string | null | undefined, isCompleted: boolean): 'completed' | 'upcoming' | 'missed' => {
     if (!isoDate) return 'upcoming';
     if (isCompleted) return 'completed';
 
@@ -43,8 +43,8 @@ export const PlacementTimeline: React.FC<PlacementTimelineProps> = ({ placement 
   // Determine which events are completed based on status
   const statusProgress = {
     created: true,
-    follow_up: ['interested', 'scheduling', 'scheduled', 'recorded', 'published', 'paid'].includes(placement.current_status || ''),
-    meeting: ['scheduling', 'scheduled', 'recorded', 'published', 'paid'].includes(placement.current_status || ''),
+    follow_up: ['interested', 'scheduled', 'recorded', 'published', 'paid'].includes(placement.current_status || ''),
+    meeting: ['scheduled', 'recorded', 'published', 'paid'].includes(placement.current_status || ''),
     call: ['scheduled', 'recorded', 'published', 'paid'].includes(placement.current_status || ''),
     recording: ['recorded', 'published', 'paid'].includes(placement.current_status || ''),
     live: ['published', 'paid'].includes(placement.current_status || ''),
@@ -56,7 +56,7 @@ export const PlacementTimeline: React.FC<PlacementTimelineProps> = ({ placement 
       date: placement.created_at,
       label: 'Placement Created',
       icon: <FileText className="w-4 h-4" />,
-      status: 'completed'
+      status: 'completed' as const
     },
     {
       date: placement.follow_up_date,
@@ -96,7 +96,7 @@ export const PlacementTimeline: React.FC<PlacementTimelineProps> = ({ placement 
       date: new Date().toISOString(),
       label: 'Payment Received',
       icon: <DollarSign className="w-4 h-4" />,
-      status: 'completed'
+      status: 'completed' as const
     });
   }
 
@@ -106,7 +106,7 @@ export const PlacementTimeline: React.FC<PlacementTimelineProps> = ({ placement 
       date: new Date().toISOString(),
       label: 'Placement Rejected',
       icon: <X className="w-4 h-4" />,
-      status: 'completed'
+      status: 'completed' as const
     });
   }
 
@@ -116,7 +116,7 @@ export const PlacementTimeline: React.FC<PlacementTimelineProps> = ({ placement 
       date: new Date().toISOString(),
       label: 'Client Rejected',
       icon: <X className="w-4 h-4" />,
-      status: 'completed'
+      status: 'completed' as const
     });
   }
 

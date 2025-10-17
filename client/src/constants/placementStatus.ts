@@ -14,7 +14,6 @@ export type PlacementStatus =
   | 'responded'
   | 'follow_up'
   | 'interested'
-  | 'scheduling'
   | 'scheduled'
   | 'recorded'
   | 'published'
@@ -41,7 +40,6 @@ export const PLACEMENT_STATUSES = {
   RESPONDED: 'responded',
   FOLLOW_UP: 'follow_up',
   INTERESTED: 'interested',
-  SCHEDULING: 'scheduling',
   SCHEDULED: 'scheduled',
   RECORDED: 'recorded',
   PUBLISHED: 'published',
@@ -59,7 +57,6 @@ export const STATUS_LABELS: Record<PlacementStatus, string> = {
   responded: 'Responded',
   follow_up: 'Follow Up',
   interested: 'Interested',
-  scheduling: 'Scheduling',
   scheduled: 'Scheduled',
   recorded: 'Recorded',
   published: 'Published',
@@ -77,7 +74,6 @@ export const STATUS_COLORS: Record<PlacementStatus, string> = {
   responded: 'bg-blue-100 text-blue-800',
   follow_up: 'bg-yellow-100 text-yellow-800',
   interested: 'bg-green-100 text-green-800',
-  scheduling: 'bg-purple-100 text-purple-800',
   scheduled: 'bg-indigo-100 text-indigo-800',
   recorded: 'bg-pink-100 text-pink-800',
   published: 'bg-teal-100 text-teal-800',
@@ -95,7 +91,6 @@ export const STATUS_DOT_COLORS: Record<PlacementStatus, string> = {
   responded: 'bg-blue-500',
   follow_up: 'bg-yellow-500',
   interested: 'bg-green-500',
-  scheduling: 'bg-purple-500',
   scheduled: 'bg-indigo-500',
   recorded: 'bg-pink-500',
   published: 'bg-teal-500',
@@ -113,7 +108,6 @@ export const STATUS_ICONS: Record<PlacementStatus, LucideIcon> = {
   responded: MessageSquare,
   follow_up: Phone,
   interested: Eye,
-  scheduling: Calendar,
   scheduled: Calendar,
   recorded: PlayCircle,
   published: ExternalLink,
@@ -150,12 +144,6 @@ export const statusConfig: Record<PlacementStatus | 'default', StatusConfig> = {
     icon: Eye,
     color: 'bg-green-100 text-green-800',
     dotColor: 'bg-green-500'
-  },
-  scheduling: {
-    label: 'Scheduling',
-    icon: Calendar,
-    color: 'bg-purple-100 text-purple-800',
-    dotColor: 'bg-purple-500'
   },
   scheduled: {
     label: 'Scheduled',
@@ -214,7 +202,6 @@ export const STATUS_PROGRESSION: PlacementStatus[] = [
   'responded',
   'follow_up',
   'interested',
-  'scheduling',
   'scheduled',
   'recorded',
   'published',
@@ -238,7 +225,6 @@ export const ACTIVE_STATUSES: PlacementStatus[] = [
   'responded',
   'follow_up',
   'interested',
-  'scheduling',
   'scheduled',
   'recorded',
   'published',

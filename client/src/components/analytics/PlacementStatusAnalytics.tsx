@@ -1,37 +1,31 @@
 import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import {
   BarChart,
   Bar,
-  LineChart,
-  Line,
-  AreaChart,
-  Area,
   XAxis,
   YAxis,
   CartesianGrid,
   Tooltip,
   Legend,
   ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
-  FunnelChart,
-  Funnel,
-  LabelList
+  Cell
 } from 'recharts';
-import { 
-  TrendingUp, 
-  Clock, 
-  ArrowRight, 
+import {
+  TrendingUp,
+  Clock,
+  ArrowRight,
   Activity,
   Target,
   AlertCircle,
-  Calendar
+  Calendar,
+  Layers,
+  BarChart3
 } from 'lucide-react';
 import { useState } from 'react';
 import { format } from 'date-fns';
@@ -89,49 +83,39 @@ interface StatusHistoryData {
   };
 }
 
+// Hex colors matching the Tailwind colors from placementStatus constants
 const statusColors: Record<string, string> = {
-  'initial_contact': '#6b7280',
-  'initial_reply': '#60a5fa',
-  'in_discussion': '#3b82f6',
-  'confirmed_interest': '#34d399',
-  'confirmed': '#10b981',
-  'scheduling': '#fbbf24',
-  'scheduled': '#f97316',
-  'recording_booked': '#a78bfa',
-  'recorded': '#8b5cf6',
-  'live': '#14b8a6',
-  'published': '#10b981',
-  'paid': '#22c55e',
-  'needs_info': '#fb923c',
-  'declined': '#f87171',
-  'cancelled': '#ef4444',
-  'rejected': '#dc2626',
-  'client_rejected': '#f97316',
-  'default': '#9ca3af'
+  'pending': '#6b7280',         // gray-500
+  'responded': '#3b82f6',       // blue-500
+  'follow_up': '#eab308',       // yellow-500
+  'interested': '#22c55e',      // green-500
+  'scheduled': '#6366f1',       // indigo-500
+  'recorded': '#ec4899',        // pink-500
+  'published': '#14b8a6',       // teal-500
+  'paid': '#10b981',            // emerald-500
+  'rejected': '#ef4444',        // red-500
+  'client_rejected': '#f97316', // orange-500
+  'cancelled': '#6b7280',       // gray-500
+  'default': '#9ca3af'          // gray-400
 };
 
 const statusLabels: Record<string, string> = {
-  'initial_contact': 'Initial Contact',
-  'initial_reply': 'Initial Reply',
-  'in_discussion': 'In Discussion',
-  'confirmed_interest': 'Confirmed Interest',
-  'confirmed': 'Confirmed',
-  'scheduling': 'Scheduling',
+  'pending': 'Pending',
+  'responded': 'Responded',
+  'follow_up': 'Follow Up',
+  'interested': 'Interested',
   'scheduled': 'Scheduled',
-  'recording_booked': 'Recording Booked',
   'recorded': 'Recorded',
-  'live': 'Live',
   'published': 'Published',
   'paid': 'Paid',
-  'needs_info': 'Needs Info',
-  'declined': 'Declined',
-  'cancelled': 'Cancelled',
   'rejected': 'Rejected',
-  'client_rejected': 'Client Rejected'
+  'client_rejected': 'Client Rejected',
+  'cancelled': 'Cancelled'
 };
 
 export default function PlacementStatusAnalytics({ campaignId, days = 30 }: PlacementStatusAnalyticsProps) {
   const [selectedPeriod, setSelectedPeriod] = useState<string>('week');
+  const [isStacked, setIsStacked] = useState<boolean>(true);
   
   // Calculate date range
   const endDate = new Date().toISOString().split('T')[0];
@@ -178,27 +162,37 @@ export default function PlacementStatusAnalytics({ campaignId, days = 30 }: Plac
 
   // Prepare data for charts
   const funnelData = analytics.conversion_funnel ? [
-    { stage: 'Contacted', value: analytics.conversion_funnel.contacted || 0, fill: '#3b82f6' },
+    { stage: 'Interested', value: analytics.conversion_funnel.contacted || 0, fill: '#22c55e' },
     { stage: 'Confirmed', value: analytics.conversion_funnel.confirmed || 0, fill: '#10b981' },
-    { stage: 'Scheduled', value: analytics.conversion_funnel.scheduled || 0, fill: '#f97316' },
-    { stage: 'Recorded', value: analytics.conversion_funnel.recorded || 0, fill: '#8b5cf6' },
+    { stage: 'Scheduled', value: analytics.conversion_funnel.scheduled || 0, fill: '#6366f1' },
+    { stage: 'Recorded', value: analytics.conversion_funnel.recorded || 0, fill: '#ec4899' },
     { stage: 'Published', value: analytics.conversion_funnel.published || 0, fill: '#14b8a6' },
-    { stage: 'Paid', value: analytics.conversion_funnel.paid || 0, fill: '#22c55e' }
+    { stage: 'Paid', value: analytics.conversion_funnel.paid || 0, fill: '#10b981' }
   ].filter(item => item.value > 0) : [];
 
-  // Prepare timeline data
-  const timelineData = (analytics.status_history_by_period || []).map(period => {
-    const data: any = { period: format(new Date(period.period), 'MMM d') };
-    Object.entries(period.statuses || {}).forEach(([status, values]) => {
-      data[status] = values.count;
+  // Prepare timeline data - sort chronologically (oldest to newest)
+  const timelineData = (analytics.status_history_by_period || [])
+    .sort((a, b) => new Date(a.period).getTime() - new Date(b.period).getTime())
+    .map(period => {
+      const data: any = { period: format(new Date(period.period), 'MMM d') };
+      Object.entries(period.statuses || {}).forEach(([status, values]) => {
+        data[status] = values.count;
+      });
+      return data;
     });
-    return data;
+
+  // Calculate total occurrences for each status to filter low-activity ones
+  const statusTotals: Record<string, number> = {};
+  (analytics.status_history_by_period || []).forEach(period => {
+    Object.entries(period.statuses || {}).forEach(([status, values]) => {
+      statusTotals[status] = (statusTotals[status] || 0) + values.count;
+    });
   });
 
-  // Get unique statuses for timeline chart
+  // Get unique statuses for timeline chart - filter out low-activity statuses (< 3 total occurrences)
   const uniqueStatuses = Array.from(new Set(
     (analytics.status_history_by_period || []).flatMap(p => Object.keys(p.statuses || {}))
-  ));
+  )).filter(status => (statusTotals[status] || 0) >= 3);
 
   // Prepare duration data
   const durationData = (analytics.time_in_status || [])
@@ -300,28 +294,32 @@ export default function PlacementStatusAnalytics({ campaignId, days = 30 }: Plac
           <CardContent>
             <div className="h-[300px]">
               <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={analytics.current_status_distribution || []}
-                    cx="50%"
-                    cy="50%"
-                    outerRadius={80}
-                    fill="#8884d8"
-                    dataKey="count"
-                  >
+                <BarChart
+                  data={analytics.current_status_distribution || []}
+                  layout="vertical"
+                  margin={{ top: 5, right: 30, left: 120, bottom: 5 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis type="number" />
+                  <YAxis
+                    dataKey="status"
+                    type="category"
+                    width={110}
+                    tickFormatter={(value) => statusLabels[value] || value}
+                  />
+                  <Tooltip
+                    formatter={(value: any, name: any, props: any) => [
+                      `${value} (${props.payload.percentage?.toFixed(1) || 0}%)`,
+                      'Count'
+                    ]}
+                    labelFormatter={(value) => statusLabels[value] || value}
+                  />
+                  <Bar dataKey="count" radius={[0, 4, 4, 0]}>
                     {(analytics.current_status_distribution || []).map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={statusColors[entry.status] || statusColors.default} />
                     ))}
-                  </Pie>
-                  <Tooltip formatter={(value, name) => [value, statusLabels[name as string] || name]} />
-                  <Legend 
-                    verticalAlign="middle" 
-                    align="right" 
-                    layout="vertical"
-                    formatter={(value) => statusLabels[value] || value}
-                    wrapperStyle={{ paddingLeft: '20px' }}
-                  />
-                </PieChart>
+                  </Bar>
+                </BarChart>
               </ResponsiveContainer>
             </div>
           </CardContent>
@@ -340,14 +338,14 @@ export default function PlacementStatusAnalytics({ campaignId, days = 30 }: Plac
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart
                   data={funnelData}
-                  layout="horizontal"
-                  margin={{ top: 5, right: 30, left: 60, bottom: 5 }}
+                  layout="vertical"
+                  margin={{ top: 5, right: 30, left: 80, bottom: 5 }}
                 >
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis type="number" />
-                  <YAxis dataKey="stage" type="category" />
+                  <YAxis dataKey="stage" type="category" width={75} />
                   <Tooltip />
-                  <Bar dataKey="value" fill="#3b82f6">
+                  <Bar dataKey="value" radius={[0, 4, 4, 0]}>
                     {funnelData.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={entry.fill} />
                     ))}
@@ -361,34 +359,56 @@ export default function PlacementStatusAnalytics({ campaignId, days = 30 }: Plac
         {/* Status Timeline */}
         <Card className="lg:col-span-2">
           <CardHeader>
-            <CardTitle>Status Changes Over Time</CardTitle>
-            <CardDescription>
-              {selectedPeriod === 'day' ? 'Daily' : 
-               selectedPeriod === 'week' ? 'Weekly' :
-               selectedPeriod === 'month' ? 'Monthly' : 'Quarterly'} status progression
-            </CardDescription>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle>Status Changes Over Time</CardTitle>
+                <CardDescription>
+                  {selectedPeriod === 'day' ? 'Daily' :
+                   selectedPeriod === 'week' ? 'Weekly' :
+                   selectedPeriod === 'month' ? 'Monthly' : 'Quarterly'} status progression
+                </CardDescription>
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  variant={isStacked ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setIsStacked(true)}
+                  className="flex items-center gap-1"
+                >
+                  <Layers className="w-4 h-4" />
+                  Stacked
+                </Button>
+                <Button
+                  variant={!isStacked ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setIsStacked(false)}
+                  className="flex items-center gap-1"
+                >
+                  <BarChart3 className="w-4 h-4" />
+                  Separate
+                </Button>
+              </div>
+            </div>
           </CardHeader>
           <CardContent>
             <div className="h-[300px]">
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={timelineData}>
+                <BarChart data={timelineData}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="period" />
                   <YAxis />
                   <Tooltip />
                   <Legend />
                   {uniqueStatuses.map((status, index) => (
-                    <Area
+                    <Bar
                       key={status}
-                      type="monotone"
                       dataKey={status}
-                      stackId="1"
-                      stroke={statusColors[status] || statusColors.default}
+                      stackId={isStacked ? "1" : status}
                       fill={statusColors[status] || statusColors.default}
                       name={statusLabels[status] || status}
                     />
                   ))}
-                </AreaChart>
+                </BarChart>
               </ResponsiveContainer>
             </div>
           </CardContent>

@@ -346,9 +346,9 @@ function StatusChangeDialog({
       });
     },
     onSuccess: () => {
-      toast({ 
-        title: "Status Updated", 
-        description: `Placement status changed to ${statusConfig[newStatus]?.label || newStatus}. This change has been logged in the status history.` 
+      toast({
+        title: "Status Updated",
+        description: `Placement status changed to ${statusConfig[newStatus as PlacementStatus]?.label || newStatus}. This change has been logged in the status history.`
       });
       onOpenChange(false);
       onSuccess();
@@ -534,7 +534,7 @@ function PlacementTable({
           )}
           {placements.map((placement) => {
             const currentStatusKey = placement.current_status || 'default';
-            const config = statusConfig[currentStatusKey] || statusConfig.default;
+            const config = statusConfig[currentStatusKey as PlacementStatus | 'default'] || statusConfig.default;
             const StatusIcon = config.icon;
             return (
               <TableRow key={placement.placement_id} className="hover:bg-gray-50">
@@ -869,16 +869,11 @@ export default function PlacementTracking() {
   };
 
   // Fetch analytics summary with filters using new filtered endpoint
-  const { data: analyticsSummary, isLoading: summaryLoading } = useQuery<{
-    active_campaigns: number;
-    total_pitches_sent: number;
-    placements_secured: number;
-    upcoming_recordings: number;
-    pending_reviews: number;
-  }>({
+  const { data: analyticsSummary, isLoading: summaryLoading } = useQuery<import('@/types/inbox').AnalyticsSummary>({
     queryKey: ['/analytics/summary/filtered', {
       campaign_id: campaignFilter === 'all' ? undefined : campaignFilter,
-      days: selectedDays
+      days: selectedDays,
+      plan_type: isStaffOrAdmin && campaignFilter === 'all' ? 'paid_premium' : undefined
     }],
   });
 
@@ -893,7 +888,22 @@ export default function PlacementTracking() {
             <h1 className="text-2xl font-bold text-gray-900">Placements & Analytics</h1>
             <p className="text-gray-600">Track your podcast placements and analyze performance metrics.</p>
         </div>
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3">
+          {/* Campaign Filter - Available for all tabs */}
+          {!isClient && (
+            <Select value={campaignFilter} onValueChange={setCampaignFilter} disabled={isLoadingCampaignsForFilter}>
+              <SelectTrigger className="w-[200px]">
+                <SelectValue placeholder="Filter by campaign" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Campaigns</SelectItem>
+                {campaignsForFilter.map(c => (
+                  <SelectItem key={c.campaign_id} value={c.campaign_id}>{c.campaign_name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+
           {/* Date Range Selector */}
           <Select value={selectedDays.toString()} onValueChange={(value) => setSelectedDays(Number(value))}>
             <SelectTrigger className="w-[180px]">
@@ -908,7 +918,7 @@ export default function PlacementTracking() {
               <SelectItem value="365">Last year</SelectItem>
             </SelectContent>
           </Select>
-          
+
           {user?.role !== 'client' && (
             <Button onClick={handleCreateNew} className="bg-primary text-primary-foreground hover:bg-primary/90">
               <Plus className="mr-2 h-4 w-4" /> Add Placement
@@ -939,9 +949,9 @@ export default function PlacementTracking() {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs text-gray-500">Total Pitches</p>
+                <p className="text-xs text-gray-500">Unique Outreach</p>
                 <div className="text-xl font-bold">
-                  {summaryLoading ? <Skeleton className="h-6 w-12"/> : (analyticsSummary?.total_pitches_sent || 0)}
+                  {summaryLoading ? <Skeleton className="h-6 w-12"/> : (analyticsSummary?.unique_outreach || 0)}
                 </div>
               </div>
               <Target className="h-5 w-5 text-green-600" />
@@ -952,8 +962,8 @@ export default function PlacementTracking() {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs text-gray-500">Placements</p>
-                <div className="text-xl font-bold">{isLoadingPlacements ? <Skeleton className="h-6 w-12"/> : stats.total}</div>
+                <p className="text-xs text-gray-500">Completed Placements</p>
+                <div className="text-xl font-bold">{summaryLoading ? <Skeleton className="h-6 w-12"/> : (analyticsSummary?.completed_placements || 0)}</div>
               </div>
               <PodcastIcon className="h-5 w-5 text-purple-600" />
             </div>
@@ -964,7 +974,7 @@ export default function PlacementTracking() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-xs text-gray-500">Live Episodes</p>
-                <div className="text-xl font-bold text-green-600">{isLoadingPlacements ? <Skeleton className="h-6 w-12"/> : stats.live}</div>
+                <div className="text-xl font-bold text-green-600">{summaryLoading ? <Skeleton className="h-6 w-12"/> : (analyticsSummary?.live_episodes || 0)}</div>
               </div>
               <PlayCircle className="h-5 w-5 text-green-600" />
             </div>
@@ -987,11 +997,9 @@ export default function PlacementTracking() {
 
       {/* Main Tabbed Interface */}
       <Tabs defaultValue="placements" className="space-y-6">
-        <TabsList className="grid w-full max-w-xl grid-cols-4">
+        <TabsList className="grid w-full max-w-md grid-cols-2">
           <TabsTrigger value="placements">Placements</TabsTrigger>
-          <TabsTrigger value="status-analytics">Status Flow</TabsTrigger>
-          <TabsTrigger value="analytics">Metrics</TabsTrigger>
-          <TabsTrigger value="insights">Pitch Insights</TabsTrigger>
+          <TabsTrigger value="analytics">Analytics</TabsTrigger>
         </TabsList>
 
         {/* Placements Tab - Existing placement tracking functionality */}
@@ -1009,7 +1017,7 @@ export default function PlacementTracking() {
                   className="pl-9 text-sm"
                 />
               </div>
-              
+
               <Select value={statusFilter} onValueChange={setStatusFilter}>
                 <SelectTrigger className="w-full sm:w-[180px] text-sm">
                   <Filter className="h-3.5 w-3.5 mr-1.5" />
@@ -1019,18 +1027,6 @@ export default function PlacementTracking() {
                   <SelectItem value="all">All Statuses</SelectItem>
                   {Object.entries(statusConfig).filter(([k])=>k!=='default').map(([key, conf]) => (
                     <SelectItem key={key} value={key}>{conf.label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              <Select value={campaignFilter} onValueChange={setCampaignFilter} disabled={isLoadingCampaignsForFilter}>
-                <SelectTrigger className="w-full sm:w-[200px] text-sm">
-                  <SelectValue placeholder="Filter by campaign" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Campaigns</SelectItem>
-                  {campaignsForFilter.map(c => (
-                    <SelectItem key={c.campaign_id} value={c.campaign_id}>{c.campaign_name}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -1188,28 +1184,40 @@ export default function PlacementTracking() {
       )}
         </TabsContent>
 
-        {/* Status Analytics Tab - Placement status flow analytics */}
-        <TabsContent value="status-analytics" className="space-y-6">
-          <PlacementStatusAnalytics 
-            campaignId={campaignFilter === 'all' ? undefined : campaignFilter}
-            days={selectedDays}
-          />
-        </TabsContent>
-
-        {/* Metrics Tab - Placement metrics dashboard */}
+        {/* Analytics Tab - Consolidated analytics with sub-tabs */}
         <TabsContent value="analytics" className="space-y-6">
-          <PlacementAnalyticsDashboard 
-            campaignId={campaignFilter === 'all' ? undefined : campaignFilter}
-            days={selectedDays}
-          />
-        </TabsContent>
+          <Tabs defaultValue="pipeline" className="space-y-4">
+            <TabsList>
+              <TabsTrigger value="pipeline">Pipeline</TabsTrigger>
+              <TabsTrigger value="outreach">Outreach</TabsTrigger>
+              <TabsTrigger value="outcomes">Outcomes</TabsTrigger>
+            </TabsList>
 
-        {/* Insights Tab - Pitch analytics dashboard */}
-        <TabsContent value="insights" className="space-y-6">
-          <PitchAnalyticsDashboard 
-            campaignId={campaignFilter === 'all' ? undefined : campaignFilter}
-            days={selectedDays}
-          />
+            {/* Pipeline Sub-tab - Status flow analytics */}
+            <TabsContent value="pipeline">
+              <PlacementStatusAnalytics
+                campaignId={campaignFilter === 'all' ? undefined : campaignFilter}
+                days={selectedDays}
+              />
+            </TabsContent>
+
+            {/* Outreach Sub-tab - Pitch/email analytics */}
+            <TabsContent value="outreach">
+              <PitchAnalyticsDashboard
+                campaignId={campaignFilter === 'all' ? undefined : campaignFilter}
+                days={selectedDays}
+                planType={isStaffOrAdmin && campaignFilter === 'all' ? 'paid_premium' : undefined}
+              />
+            </TabsContent>
+
+            {/* Outcomes Sub-tab - Results & trends */}
+            <TabsContent value="outcomes">
+              <PlacementAnalyticsDashboard
+                campaignId={campaignFilter === 'all' ? undefined : campaignFilter}
+                days={selectedDays}
+              />
+            </TabsContent>
+          </Tabs>
         </TabsContent>
       </Tabs>
 

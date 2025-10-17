@@ -15,7 +15,7 @@ import EditCampaignDialog, { CampaignForEdit } from "@/components/dialogs/EditCa
 
 
 interface PersonSummaryForCampaignManagement {
-  person_id: string;
+  person_id: number;  // Changed from string to number to match PersonForClientSelection
   full_name: string;
   email: string;
   role?: string;
