@@ -173,9 +173,37 @@ export default function Inbox() {
     setSelectedThread(null);
   };
 
+  const formatDate = (dateStr: string | null | undefined): string => {
+    if (!dateStr) return 'Draft';
+
+    try {
+      const messageDate = new Date(dateStr);
+      // Check if date is valid
+      if (isNaN(messageDate.getTime())) return 'Draft';
+
+      const now = new Date();
+      const diff = now.getTime() - messageDate.getTime();
+      const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+
+      if (days === 0) {
+        return format(messageDate, 'h:mm a');
+      } else if (days === 1) {
+        return 'Yesterday';
+      } else if (days < 7) {
+        return format(messageDate, 'EEEE');
+      } else if (messageDate.getFullYear() === now.getFullYear()) {
+        return format(messageDate, 'MMM d');
+      } else {
+        return format(messageDate, 'MMM d, yyyy');
+      }
+    } catch (error) {
+      return 'Draft';
+    }
+  };
+
   const getClassificationBadge = (classification?: string) => {
     if (!classification) return null;
-    
+
     const variants: Record<string, { color: string; label: string }> = {
       booking_confirmation: { color: 'bg-green-500', label: 'Booking' },
       rejection: { color: 'bg-red-500', label: 'Rejected' },
@@ -186,7 +214,7 @@ export default function Inbox() {
     };
 
     const variant = variants[classification] || variants.general;
-    
+
     return (
       <Badge className={cn('text-white text-xs', variant.color)}>
         {variant.label}
@@ -388,7 +416,7 @@ export default function Inbox() {
                       </div>
                       <div className="flex items-center gap-2">
                         <span className="text-xs text-gray-500">
-                          {format(new Date(thread.date || thread.last_message_date || new Date()), 'MMM d')}
+                          {formatDate(thread.date || thread.last_message_date)}
                         </span>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>

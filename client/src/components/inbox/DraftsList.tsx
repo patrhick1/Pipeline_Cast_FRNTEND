@@ -11,7 +11,7 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { draftsApi, adminDraftsApi, type Draft } from '@/services/drafts';
 import { FileText, Send, Trash2, Calendar, Clock, Edit, X } from 'lucide-react';
-import { formatDistanceToNow } from 'date-fns';
+import { formatRelativeDateTime, formatDateTime } from '@/lib/timezone';
 import RichTextEditor from '@/components/inbox/RichTextEditor';
 
 interface DraftsListProps {
@@ -292,13 +292,11 @@ export function DraftsList({ isAdminInbox = false, adminAccountId }: DraftsListP
                     <div className="flex items-center gap-4 text-xs text-gray-500">
                       <span className="flex items-center gap-1">
                         <Clock className="h-3 w-3" />
-                        {formatDistanceToNow(new Date(draft.last_edited_at), {
-                          addSuffix: true,
-                        })}
+                        {formatRelativeDateTime(draft.last_edited_at)}
                       </span>
                       {draft.status === 'scheduled' && draft.scheduled_send_at && (
                         <span className="flex items-center gap-1 text-blue-600">
-                          📅 {new Date(draft.scheduled_send_at).toLocaleString()}
+                          📅 {formatDateTime(draft.scheduled_send_at)}
                         </span>
                       )}
                     </div>

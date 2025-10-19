@@ -20,6 +20,7 @@ import { Separator } from '@/components/ui/separator';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
+import { formatRelativeDateTime } from '@/lib/timezone';
 import { cn } from '@/lib/utils';
 import {
   Mail,
@@ -1109,7 +1110,30 @@ export default function AdminInbox() {
 
                         <div className="flex items-center gap-2">
                           <span className="text-xs text-gray-500">
-                            {format(new Date(message.date), 'MMM d, h:mm a')}
+                            {(() => {
+                              // Try multiple date fields in order of preference
+                              const dateStr = message.date || message.last_edited_at || message.created_at || message.scheduled_send_at;
+
+                              if (!dateStr || dateStr === null) {
+                                return 'Draft';
+                              }
+
+                              try {
+                                const messageDate = new Date(dateStr);
+                                if (isNaN(messageDate.getTime())) {
+                                  return isDraft ? 'Draft' : 'No date';
+                                }
+
+                                // For drafts, show relative time if it's recent
+                                if (isDraft && (message.last_edited_at || message.created_at)) {
+                                  return formatRelativeDateTime(message.last_edited_at || message.created_at);
+                                }
+
+                                return format(messageDate, 'MMM d, h:mm a');
+                              } catch (error) {
+                                return isDraft ? 'Draft' : 'No date';
+                              }
+                            })()}
                           </span>
                           {isExpanded ? (
                             <ChevronUp className="w-4 h-4 text-gray-400" />

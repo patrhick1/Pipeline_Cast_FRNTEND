@@ -39,6 +39,7 @@ import {
   Loader2
 } from 'lucide-react';
 import { format } from 'date-fns';
+import { formatRelativeDateTime } from '@/lib/timezone';
 import { cn } from '@/lib/utils';
 import type { EmailThread, EmailMessage, SmartReply } from '@/types/inbox';
 import { useToast } from '@/hooks/use-toast';
@@ -620,7 +621,34 @@ export default function ThreadView({ threadId, onClose, onReply }: ThreadViewPro
 
                   <div className="flex items-center gap-2">
                     <span className="text-xs text-gray-500">
-                      {format(new Date(('date' in message ? message.date : message.message_date) || new Date()), 'MMM d, h:mm a')}
+                      {(() => {
+                        // Try multiple date fields in order of preference
+                        const dateStr = ('date' in message ? message.date : undefined) ||
+                                       ('message_date' in message ? message.message_date : undefined) ||
+                                       ('last_edited_at' in msg ? msg.last_edited_at : undefined) ||
+                                       ('created_at' in msg ? msg.created_at : undefined) ||
+                                       ('scheduled_send_at' in msg ? msg.scheduled_send_at : undefined);
+
+                        if (!dateStr || dateStr === null) {
+                          return 'Draft';
+                        }
+
+                        try {
+                          const messageDate = new Date(dateStr);
+                          if (isNaN(messageDate.getTime())) {
+                            return isDraft ? 'Draft' : 'No date';
+                          }
+
+                          // For drafts, show relative time if it's recent
+                          if (isDraft && (('last_edited_at' in msg && msg.last_edited_at) || ('created_at' in msg && msg.created_at))) {
+                            return formatRelativeDateTime(msg.last_edited_at || msg.created_at);
+                          }
+
+                          return format(messageDate, 'MMM d, h:mm a');
+                        } catch (error) {
+                          return isDraft ? 'Draft' : 'No date';
+                        }
+                      })()}
                     </span>
                     {isExpanded ? (
                       <ChevronUp className="w-4 h-4 text-gray-400" />
