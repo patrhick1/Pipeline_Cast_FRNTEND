@@ -33,13 +33,13 @@ import { AdminSmartSendSettings } from "@/components/pitch/AdminSmartSendSetting
 const userProfileUpdateSchema = z.object({
   full_name: z.string().min(1, "Full name is required").optional(),
   bio: z.string().optional().nullable(),
-  website: z.string().url("Invalid URL").optional().or(z.literal("")).nullable(),
+  website: z.string().optional().or(z.literal("")).nullable(),
   location: z.string().optional().nullable(),
   timezone: z.string().optional().nullable(),
-  linkedin_profile_url: z.string().url("Invalid LinkedIn URL").optional().or(z.literal("")).nullable(),
-  twitter_profile_url: z.string().url("Invalid Twitter/X URL").optional().or(z.literal("")).nullable(),
-  instagram_profile_url: z.string().url("Invalid Instagram URL").optional().or(z.literal("")).nullable(),
-  tiktok_profile_url: z.string().url("Invalid TikTok URL").optional().or(z.literal("")).nullable(),
+  linkedin_profile_url: z.string().optional().or(z.literal("")).nullable(),
+  twitter_profile_url: z.string().optional().or(z.literal("")).nullable(),
+  instagram_profile_url: z.string().optional().or(z.literal("")).nullable(),
+  tiktok_profile_url: z.string().optional().or(z.literal("")).nullable(),
   dashboard_username: z.string().min(1, "Dashboard username is required").optional(),
 });
 type UserProfileUpdateFormData = z.infer<typeof userProfileUpdateSchema>;
@@ -122,7 +122,7 @@ function ProfileSettings() {
       const payload = Object.fromEntries(
         Object.entries(data).filter(([, value]) => value !== "" && value !== undefined)
       );
-      return apiRequest("PATCH", "/users/me/profile", payload);
+      return apiRequest("PATCH", "/people/me/profile", payload);
     },
     onSuccess: async (response) => {
       if (!response.ok) {
