@@ -38,6 +38,13 @@ import ComposeModal from '@/components/inbox/ComposeModal';
 import NylasConnect from '@/components/inbox/NylasConnect';
 import { DraftsList } from '@/components/inbox/DraftsList';
 import { useToast } from '@/hooks/use-toast';
+import {
+  CLASSIFICATION_TYPES,
+  getAIClassifications,
+  getWorkflowClassifications,
+  getClassificationColor,
+  getClassificationLabel
+} from '@/lib/classifications';
 
 export default function Inbox() {
   // Check URL params for thread ID
@@ -204,20 +211,12 @@ export default function Inbox() {
   const getClassificationBadge = (classification?: string) => {
     if (!classification) return null;
 
-    const variants: Record<string, { color: string; label: string }> = {
-      booking_confirmation: { color: 'bg-green-500', label: 'Booking' },
-      rejection: { color: 'bg-red-500', label: 'Rejected' },
-      question: { color: 'bg-blue-500', label: 'Question' },
-      follow_up: { color: 'bg-yellow-500', label: 'Follow-up' },
-      pitch_response: { color: 'bg-purple-500', label: 'Response' },
-      general: { color: 'bg-gray-500', label: 'General' }
-    };
-
-    const variant = variants[classification] || variants.general;
+    const color = getClassificationColor(classification);
+    const label = getClassificationLabel(classification);
 
     return (
-      <Badge className={cn('text-white text-xs', variant.color)}>
-        {variant.label}
+      <Badge className={cn('text-white text-xs', color)}>
+        {label}
       </Badge>
     );
   };
@@ -273,28 +272,63 @@ export default function Inbox() {
           </div>
 
           <div className="px-4 py-2 border-t">
-            <p className="text-xs text-gray-500 mb-2">Classifications</p>
+            <p className="text-xs text-gray-500 mb-2">Filter by Classification</p>
             <div className="space-y-1">
-              {['booking_confirmation', 'question', 'follow_up', 'pitch_response'].map(type => (
-                <button
-                  key={type}
-                  onClick={() => setFilters(prev => ({ 
-                    ...prev, 
-                    classification: prev.classification === type ? undefined : type 
-                  }))}
-                  className={cn(
-                    'w-full flex items-center gap-2 px-3 py-1.5 rounded text-xs transition-colors',
-                    filters.classification === type 
-                      ? 'bg-gray-200' 
-                      : 'hover:bg-gray-100'
-                  )}
-                >
-                  {getClassificationBadge(type)}
-                  <span className="text-gray-700">
-                    {type.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
-                  </span>
-                </button>
-              ))}
+              <button
+                onClick={() => setFilters(prev => ({ ...prev, classification: undefined }))}
+                className={cn(
+                  'w-full text-left px-3 py-1.5 rounded text-xs transition-colors',
+                  !filters.classification ? 'bg-gray-200' : 'hover:bg-gray-100'
+                )}
+              >
+                All Classifications
+              </button>
+
+              {/* AI Classifications */}
+              <div className="pt-2">
+                <p className="text-xs font-semibold text-gray-600 px-3 py-1">AI Classifications</p>
+                {getAIClassifications().map(type => (
+                  <button
+                    key={type.value}
+                    onClick={() => setFilters(prev => ({
+                      ...prev,
+                      classification: prev.classification === type.value ? undefined : type.value
+                    }))}
+                    className={cn(
+                      'w-full flex items-center gap-2 px-3 py-1.5 rounded text-xs transition-colors',
+                      filters.classification === type.value
+                        ? 'bg-gray-200'
+                        : 'hover:bg-gray-100'
+                    )}
+                  >
+                    {getClassificationBadge(type.value)}
+                    <span className="text-gray-700">{type.label}</span>
+                  </button>
+                ))}
+              </div>
+
+              {/* Workflow Classifications */}
+              <div className="pt-2">
+                <p className="text-xs font-semibold text-gray-600 px-3 py-1">Workflow</p>
+                {getWorkflowClassifications().map(type => (
+                  <button
+                    key={type.value}
+                    onClick={() => setFilters(prev => ({
+                      ...prev,
+                      classification: prev.classification === type.value ? undefined : type.value
+                    }))}
+                    className={cn(
+                      'w-full flex items-center gap-2 px-3 py-1.5 rounded text-xs transition-colors',
+                      filters.classification === type.value
+                        ? 'bg-gray-200'
+                        : 'hover:bg-gray-100'
+                    )}
+                  >
+                    {getClassificationBadge(type.value)}
+                    <span className="text-gray-700">{type.label}</span>
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
         </ScrollArea>
@@ -407,7 +441,7 @@ export default function Inbox() {
                     
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        {getClassificationBadge(thread.classification?.category)}
+                        {getClassificationBadge(thread.classification)}
                         {thread.message_count > 1 && (
                           <span className="text-xs text-gray-500">
                             {thread.message_count} messages

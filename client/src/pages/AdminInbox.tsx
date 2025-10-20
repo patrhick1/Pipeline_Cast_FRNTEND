@@ -23,6 +23,13 @@ import { format } from 'date-fns';
 import { formatRelativeDateTime } from '@/lib/timezone';
 import { cn } from '@/lib/utils';
 import {
+  CLASSIFICATION_TYPES,
+  getAIClassifications,
+  getWorkflowClassifications,
+  getClassificationColor,
+  getClassificationLabel
+} from '@/lib/classifications';
+import {
   Mail,
   Inbox as InboxIcon,
   Send,
@@ -87,6 +94,7 @@ export default function AdminInbox() {
   const [showSmartReplies, setShowSmartReplies] = useState(false);
   const [selectedAccountFilter, setSelectedAccountFilter] = useState<number | null>(null);
   const [selectedCampaignFilter, setSelectedCampaignFilter] = useState<string | null>(null);
+  const [selectedClassification, setSelectedClassification] = useState<string | null>(null);
   const [groupByCampaign, setGroupByCampaign] = useState(true);
   const [showScheduleModal, setShowScheduleModal] = useState(false);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
@@ -149,7 +157,7 @@ export default function AdminInbox() {
 
   // Fetch threads for ALL accounts or filtered account
   const { data: threadsData, isLoading: isLoadingThreads, refetch: refetchThreads } = useQuery({
-    queryKey: ['admin-threads', selectedAccountFilter, currentPage, selectedFolder],
+    queryKey: ['admin-threads', selectedAccountFilter, currentPage, selectedFolder, selectedClassification],
     queryFn: async () => {
       if (!accountsData?.accounts?.length) return null;
 
@@ -160,7 +168,14 @@ export default function AdminInbox() {
 
       // Fetch threads from all selected accounts
       const promises = accountIds.map(id =>
-        adminInboxService.getThreads(id, currentPage, 20, selectedFolder === 'all' ? undefined : selectedFolder as any)
+        adminInboxService.getThreads(
+          id,
+          currentPage,
+          20,
+          selectedFolder === 'all' ? undefined : selectedFolder as any,
+          false,
+          selectedClassification || undefined
+        )
       );
 
       const results = await Promise.all(promises);
@@ -500,6 +515,11 @@ export default function AdminInbox() {
       return false;
     }
 
+    // Filter by classification if selected
+    if (selectedClassification && thread.classification !== selectedClassification) {
+      return false;
+    }
+
     // Filter by search query
     if (!searchQuery) return true;
     const query = searchQuery.toLowerCase();
@@ -633,6 +653,37 @@ export default function AdminInbox() {
     }
   };
 
+  // Classification badge helper
+  const getClassificationBadge = (classification?: string) => {
+    if (!classification) return null;
+
+    const color = getClassificationColor(classification);
+    const label = getClassificationLabel(classification);
+
+    return (
+      <Badge className={cn('text-white text-xs', color)}>
+        {label}
+      </Badge>
+    );
+  };
+
+  // Update classification mutation
+  const updateClassificationMutation = useMutation({
+    mutationFn: ({ threadId, classification }: { threadId: string; classification: string }) =>
+      adminInboxService.updateClassification(threadId, classification),
+    onSuccess: () => {
+      toast({ title: 'Classification updated successfully' });
+      queryClient.invalidateQueries({ queryKey: ['admin-threads'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-thread-details'] });
+    },
+    onError: () => {
+      toast({
+        title: 'Failed to update classification',
+        variant: 'destructive'
+      });
+    },
+  });
+
   const folders = [
     { id: 'inbox', label: 'Inbox', icon: InboxIcon },
     { id: 'sent', label: 'Sent', icon: Send },
@@ -642,6 +693,10 @@ export default function AdminInbox() {
     { id: 'trash', label: 'Trash', icon: Trash2 },
     { id: 'spam', label: 'Spam', icon: AlertCircle },
   ];
+
+  // State for custom classification input
+  const [customClassificationInput, setCustomClassificationInput] = useState('');
+  const [showCustomInput, setShowCustomInput] = useState(false);
 
   return (
     <div className="h-screen flex flex-col bg-gray-50">
@@ -761,6 +816,57 @@ export default function AdminInbox() {
                     {campaign.campaign_name}
                   </button>
                 ))}
+              </div>
+            </div>
+
+            <div className="px-4 py-2 border-t">
+              <p className="text-xs text-gray-500 mb-2">Filter by Classification</p>
+              <div className="space-y-1">
+                <button
+                  onClick={() => setSelectedClassification(null)}
+                  className={cn(
+                    'w-full text-left px-3 py-1.5 rounded text-xs transition-colors',
+                    !selectedClassification ? 'bg-gray-200' : 'hover:bg-gray-100'
+                  )}
+                >
+                  All Classifications
+                </button>
+
+                {/* AI Classifications */}
+                <div className="pt-2">
+                  <p className="text-xs font-semibold text-gray-600 px-3 py-1">AI Classifications</p>
+                  {getAIClassifications().map(type => (
+                    <button
+                      key={type.value}
+                      onClick={() => setSelectedClassification(type.value)}
+                      className={cn(
+                        'w-full flex items-center gap-2 px-3 py-1.5 rounded text-xs transition-colors',
+                        selectedClassification === type.value ? 'bg-gray-200' : 'hover:bg-gray-100'
+                      )}
+                    >
+                      {getClassificationBadge(type.value)}
+                      <span className="text-gray-700">{type.label}</span>
+                    </button>
+                  ))}
+                </div>
+
+                {/* Workflow Classifications */}
+                <div className="pt-2">
+                  <p className="text-xs font-semibold text-gray-600 px-3 py-1">Workflow</p>
+                  {getWorkflowClassifications().map(type => (
+                    <button
+                      key={type.value}
+                      onClick={() => setSelectedClassification(type.value)}
+                      className={cn(
+                        'w-full flex items-center gap-2 px-3 py-1.5 rounded text-xs transition-colors',
+                        selectedClassification === type.value ? 'bg-gray-200' : 'hover:bg-gray-100'
+                      )}
+                    >
+                      {getClassificationBadge(type.value)}
+                      <span className="text-gray-700">{type.label}</span>
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
 
@@ -886,6 +992,7 @@ export default function AdminInbox() {
                                   {thread.message_count} messages
                                 </Badge>
                               )}
+                              {getClassificationBadge(thread.classification)}
                             </div>
                             {thread.account_email && (
                               <span className="text-xs text-gray-400 truncate max-w-[150px]" title={thread.account_email}>
@@ -963,6 +1070,7 @@ export default function AdminInbox() {
                             {thread.message_count} messages
                           </span>
                         )}
+                        {getClassificationBadge(thread.classification)}
                       </div>
                       <span className="text-xs text-gray-500">
                         {format(new Date(thread.date), 'MMM d')}
@@ -1021,6 +1129,121 @@ export default function AdminInbox() {
                     </div>
 
                 <div className="flex items-center gap-2">
+                  {/* Classification Dropdown */}
+                  <DropdownMenu open={showCustomInput ? true : undefined} onOpenChange={setShowCustomInput}>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="outline" size="sm" className="gap-2">
+                        {(() => {
+                          const currentThread = threadsData?.threads?.find(t => t.thread_id === selectedThreadId);
+                          return getClassificationBadge(currentThread?.classification) || (
+                            <>
+                              <Filter className="w-4 h-4" />
+                              <span className="text-xs">Classify</span>
+                            </>
+                          );
+                        })()}
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-64">
+                      {/* AI Classifications Section */}
+                      <div className="px-2 py-1.5 text-xs font-semibold text-gray-500">AI Classifications</div>
+                      {getAIClassifications().map(type => (
+                        <DropdownMenuItem
+                          key={type.value}
+                          onClick={() => {
+                            updateClassificationMutation.mutate({
+                              threadId: selectedThreadId,
+                              classification: type.value
+                            });
+                            setShowCustomInput(false);
+                          }}
+                        >
+                          <div className="flex items-center gap-2">
+                            {getClassificationBadge(type.value)}
+                            <span className="text-sm">{type.value}</span>
+                          </div>
+                        </DropdownMenuItem>
+                      ))}
+
+                      <DropdownMenuSeparator />
+
+                      {/* Workflow Classifications Section */}
+                      <div className="px-2 py-1.5 text-xs font-semibold text-gray-500">Workflow</div>
+                      {getWorkflowClassifications().map(type => (
+                        <DropdownMenuItem
+                          key={type.value}
+                          onClick={() => {
+                            updateClassificationMutation.mutate({
+                              threadId: selectedThreadId,
+                              classification: type.value
+                            });
+                            setShowCustomInput(false);
+                          }}
+                        >
+                          <div className="flex items-center gap-2">
+                            {getClassificationBadge(type.value)}
+                            <span className="text-sm">{type.value}</span>
+                          </div>
+                        </DropdownMenuItem>
+                      ))}
+
+                      <DropdownMenuSeparator />
+
+                      {/* Custom Classification Input */}
+                      <div className="p-2">
+                        <div className="text-xs font-semibold text-gray-500 mb-2">Custom</div>
+                        <Input
+                          placeholder="Type custom classification..."
+                          value={customClassificationInput}
+                          onChange={(e) => setCustomClassificationInput(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' && customClassificationInput.trim()) {
+                              updateClassificationMutation.mutate({
+                                threadId: selectedThreadId,
+                                classification: customClassificationInput.trim()
+                              });
+                              setCustomClassificationInput('');
+                              setShowCustomInput(false);
+                            }
+                          }}
+                          className="text-sm"
+                        />
+                        {customClassificationInput.trim() && (
+                          <Button
+                            size="sm"
+                            className="w-full mt-2"
+                            onClick={() => {
+                              updateClassificationMutation.mutate({
+                                threadId: selectedThreadId,
+                                classification: customClassificationInput.trim()
+                              });
+                              setCustomClassificationInput('');
+                              setShowCustomInput(false);
+                            }}
+                          >
+                            Apply Custom
+                          </Button>
+                        )}
+                      </div>
+
+                      <DropdownMenuSeparator />
+
+                      {/* Clear Classification */}
+                      <DropdownMenuItem
+                        onClick={() => {
+                          updateClassificationMutation.mutate({
+                            threadId: selectedThreadId,
+                            classification: ''
+                          });
+                          setShowCustomInput(false);
+                        }}
+                        className="text-red-600"
+                      >
+                        Clear classification
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+
                   <Button
                     variant="ghost"
                     size="icon"

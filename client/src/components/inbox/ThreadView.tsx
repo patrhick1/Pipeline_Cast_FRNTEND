@@ -36,7 +36,8 @@ import {
   ArrowUpRight,
   Calendar,
   Check,
-  Loader2
+  Loader2,
+  Filter
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { formatRelativeDateTime } from '@/lib/timezone';
@@ -48,8 +49,16 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
 import SmartReplies from './SmartReplies';
+import {
+  CLASSIFICATION_TYPES,
+  getAIClassifications,
+  getWorkflowClassifications,
+  getClassificationColor,
+  getClassificationLabel
+} from '@/lib/classifications';
 
 interface ThreadViewProps {
   threadId: string;
@@ -75,6 +84,10 @@ export default function ThreadView({ threadId, onClose, onReply }: ThreadViewPro
   const [replyCcInput, setReplyCcInput] = useState('');
   const [replyBccInput, setReplyBccInput] = useState('');
   const [showCcBcc, setShowCcBcc] = useState(false);
+
+  // Classification state
+  const [customClassificationInput, setCustomClassificationInput] = useState('');
+  const [showCustomInput, setShowCustomInput] = useState(false);
 
   // Use hybrid approach - try stored thread first, fallback to Nylas
   const { useStoredThread } = useEmailThreads();
@@ -213,6 +226,42 @@ export default function ThreadView({ threadId, onClose, onReply }: ThreadViewPro
       queryClient.invalidateQueries({ queryKey: ['/inbox/threads'] });
     }
   });
+
+  // Update classification mutation
+  const updateClassificationMutation = useMutation({
+    mutationFn: async (classification: string) => {
+      const res = await apiRequest('PATCH', `/inbox/threads/${threadId}/classification`, { classification });
+      if (!res.ok) throw new Error('Failed to update classification');
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: 'Classification updated',
+        description: 'Thread classification has been updated.',
+      });
+      queryClient.invalidateQueries({ queryKey: ['/inbox/threads'] });
+      queryClient.invalidateQueries({ queryKey: [`/inbox/threads/${threadId}`] });
+    },
+    onError: () => {
+      toast({
+        title: 'Failed to update',
+        description: 'There was an error updating the classification.',
+        variant: 'destructive',
+      });
+    }
+  });
+
+  // Helper to get classification badge
+  const getClassificationBadge = (classification?: string) => {
+    if (!classification) return null;
+    const color = getClassificationColor(classification);
+    const label = getClassificationLabel(classification);
+    return (
+      <Badge className={cn('text-white text-xs', color)}>
+        {label}
+      </Badge>
+    );
+  };
 
   // Delete draft mutation
   const deleteDraftMutation = useMutation({
@@ -501,6 +550,109 @@ export default function ThreadView({ threadId, onClose, onReply }: ThreadViewPro
           </div>
           
           <div className="flex items-center gap-2">
+            {/* Classification Dropdown */}
+            <DropdownMenu open={showCustomInput ? true : undefined} onOpenChange={setShowCustomInput}>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="gap-2">
+                  {(() => {
+                    const classification = 'classification' in thread ? thread.classification : undefined;
+                    const classificationString = typeof classification === 'string'
+                      ? classification
+                      : classification?.category;
+                    return getClassificationBadge(classificationString) || (
+                      <>
+                        <Filter className="w-4 h-4" />
+                        <span className="text-xs">Classify</span>
+                      </>
+                    );
+                  })()}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-64">
+                {/* AI Classifications Section */}
+                <div className="px-2 py-1.5 text-xs font-semibold text-gray-500">AI Classifications</div>
+                {getAIClassifications().map(type => (
+                  <DropdownMenuItem
+                    key={type.value}
+                    onClick={() => {
+                      updateClassificationMutation.mutate(type.value);
+                      setShowCustomInput(false);
+                    }}
+                  >
+                    <div className="flex items-center gap-2">
+                      {getClassificationBadge(type.value)}
+                      <span className="text-sm">{type.value}</span>
+                    </div>
+                  </DropdownMenuItem>
+                ))}
+
+                <DropdownMenuSeparator />
+
+                {/* Workflow Classifications Section */}
+                <div className="px-2 py-1.5 text-xs font-semibold text-gray-500">Workflow</div>
+                {getWorkflowClassifications().map(type => (
+                  <DropdownMenuItem
+                    key={type.value}
+                    onClick={() => {
+                      updateClassificationMutation.mutate(type.value);
+                      setShowCustomInput(false);
+                    }}
+                  >
+                    <div className="flex items-center gap-2">
+                      {getClassificationBadge(type.value)}
+                      <span className="text-sm">{type.value}</span>
+                    </div>
+                  </DropdownMenuItem>
+                ))}
+
+                <DropdownMenuSeparator />
+
+                {/* Custom Classification Input */}
+                <div className="p-2">
+                  <div className="text-xs font-semibold text-gray-500 mb-2">Custom</div>
+                  <Input
+                    placeholder="Type custom classification..."
+                    value={customClassificationInput}
+                    onChange={(e) => setCustomClassificationInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && customClassificationInput.trim()) {
+                        updateClassificationMutation.mutate(customClassificationInput.trim());
+                        setCustomClassificationInput('');
+                        setShowCustomInput(false);
+                      }
+                    }}
+                    className="text-sm"
+                  />
+                  {customClassificationInput.trim() && (
+                    <Button
+                      size="sm"
+                      className="w-full mt-2"
+                      onClick={() => {
+                        updateClassificationMutation.mutate(customClassificationInput.trim());
+                        setCustomClassificationInput('');
+                        setShowCustomInput(false);
+                      }}
+                    >
+                      Apply Custom
+                    </Button>
+                  )}
+                </div>
+
+                <DropdownMenuSeparator />
+
+                {/* Clear Classification */}
+                <DropdownMenuItem
+                  onClick={() => {
+                    updateClassificationMutation.mutate('');
+                    setShowCustomInput(false);
+                  }}
+                  className="text-red-600"
+                >
+                  Clear classification
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+
             <Button
               variant="ghost"
               size="icon"

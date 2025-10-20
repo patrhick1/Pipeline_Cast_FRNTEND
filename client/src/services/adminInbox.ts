@@ -24,6 +24,7 @@ export interface EmailThread {
   message_count: number;
   campaign_id?: string;  // Campaign UUID
   media_name?: string;  // Podcast/media name
+  classification?: string;  // AI classification type
 }
 
 export interface EmailMessage {
@@ -47,6 +48,8 @@ export interface EmailMessage {
   folder?: string;
   message_status?: 'draft' | 'scheduled' | 'sent' | 'failed';  // Message status
   scheduled_send_at?: string;  // Scheduled send time
+  created_at?: string;  // Draft creation time
+  last_edited_at?: string;  // Draft last edit time
 }
 
 export interface ThreadDetails {
@@ -100,7 +103,8 @@ class AdminInboxService {
     page = 1,
     size = 20,
     folder?: string,
-    unreadOnly = false
+    unreadOnly = false,
+    classification?: string
   ): Promise<{
     threads: EmailThread[];
     total: number;
@@ -117,6 +121,9 @@ class AdminInboxService {
       params.append('folder', folder);
     }
     params.append('unread_only', unreadOnly.toString());
+    if (classification) {
+      params.append('classification', classification);
+    }
 
     const response = await apiRequest('GET', `${this.baseUrl}/threads?${params.toString()}`);
     if (!response.ok) {
@@ -232,6 +239,20 @@ class AdminInboxService {
    */
   async moveToInbox(threadId: string): Promise<void> {
     return this.moveThreadToFolder(threadId, 'inbox');
+  }
+
+  /**
+   * Update thread classification (manual override)
+   */
+  async updateClassification(threadId: string, classification: string): Promise<void> {
+    const response = await apiRequest(
+      'PATCH',
+      `${this.baseUrl}/threads/${threadId}/classification`,
+      { classification }
+    );
+    if (!response.ok) {
+      throw new Error('Failed to update classification');
+    }
   }
 }
 
