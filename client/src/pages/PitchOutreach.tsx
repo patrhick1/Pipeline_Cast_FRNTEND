@@ -34,6 +34,9 @@ import { useSubscription } from "@/hooks/useSubscription";
 // ManualPitchEditor removed - using PitchSequenceEditor for all pitch creation
 import { PitchSequenceEditor } from "@/components/pitch/PitchSequenceEditor";
 import { useAuth } from "@/hooks/useAuth";
+import { useFeatureAccess } from "@/hooks/useFeatureAccess";
+import { UpgradeBanner } from "@/components/UpgradeBanner";
+import { LockedOverlay } from "@/components/LockedOverlay";
 import PitchEmailThread from "@/components/pitch/PitchEmailThread";
 import { SmartSendSettings } from "@/components/pitch/SmartSendSettings";
 import { AIGeneratePitchButton } from "@/components/pitch/AIGeneratePitchButton";
@@ -634,7 +637,7 @@ function ReadyToSendTab({
 }: {
     pitches: PitchReadyToSend[];
     onSend: (pitchGenId: number) => void;
-    onBulkSend: (pitchGenIds: number[]) => void;
+    onBulkSend: (pitchIds: number[]) => void;
     onPreview: (pitch: PitchReadyToSend) => void;
     onSendSequence?: (matchId: number) => void;
     isLoadingSendForPitchId: number | null;
@@ -642,7 +645,7 @@ function ReadyToSendTab({
     isLoadingPitches: boolean;
     campaigns?: any[];
 }) {
-    const [selectedPitchGenIds, setSelectedPitchGenIds] = useState<number[]>([]);
+    const [selectedPitchIds, setSelectedPitchIds] = useState<number[]>([]);
     const [selectAll, setSelectAll] = useState(false);
     const [pitchEmails, setPitchEmails] = useState<Record<number, string>>({});
     const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
@@ -713,25 +716,25 @@ function ReadyToSendTab({
     const handleSelectAll = (checked: boolean) => {
         setSelectAll(checked);
         if (checked) {
-            setSelectedPitchGenIds(pitches.map(p => p.pitch_gen_id));
+            setSelectedPitchIds(pitches.map(p => p.pitch_id));
         } else {
-            setSelectedPitchGenIds([]);
+            setSelectedPitchIds([]);
         }
     };
 
-    const handleSelectPitch = (pitchGenId: number, checked: boolean) => {
+    const handleSelectPitch = (pitchId: number, checked: boolean) => {
         if (checked) {
-            setSelectedPitchGenIds([...selectedPitchGenIds, pitchGenId]);
+            setSelectedPitchIds([...selectedPitchIds, pitchId]);
         } else {
-            setSelectedPitchGenIds(selectedPitchGenIds.filter(id => id !== pitchGenId));
+            setSelectedPitchIds(selectedPitchIds.filter(id => id !== pitchId));
             setSelectAll(false);
         }
     };
 
     const handleBulkSend = () => {
-        if (selectedPitchGenIds.length === 0) return;
-        onBulkSend(selectedPitchGenIds);
-        setSelectedPitchGenIds([]);
+        if (selectedPitchIds.length === 0) return;
+        onBulkSend(selectedPitchIds);
+        setSelectedPitchIds([]);
         setSelectAll(false);
     };
 
@@ -811,22 +814,22 @@ function ReadyToSendTab({
                         disabled={isLoadingBulkSend}
                     />
                     <span className="text-sm text-gray-600">
-                        {selectedPitchGenIds.length === 0 
-                            ? "Select all" 
-                            : `${selectedPitchGenIds.length} of ${pitches.length} selected`}
+                        {selectedPitchIds.length === 0
+                            ? "Select all"
+                            : `${selectedPitchIds.length} of ${pitches.length} selected`}
                     </span>
                 </div>
                 <Button
                     size="sm"
                     variant="default"
                     onClick={handleBulkSend}
-                    disabled={selectedPitchGenIds.length === 0 || isLoadingBulkSend}
+                    disabled={selectedPitchIds.length === 0 || isLoadingBulkSend}
                     className="bg-blue-600 hover:bg-blue-700"
                 >
                     {isLoadingBulkSend ? (
                         <><RefreshCw className="h-4 w-4 animate-spin mr-1.5"/> Sending pitches and scheduling follow-ups...</>
                     ) : (
-                        <><SendHorizontal className="h-4 w-4 mr-1.5"/> Send Selected ({selectedPitchGenIds.length})</>
+                        <><SendHorizontal className="h-4 w-4 mr-1.5"/> Send Selected ({selectedPitchIds.length})</>
                     )}
                 </Button>
             </div>
@@ -977,7 +980,7 @@ function ReadyToSendTab({
                                         {isStaffOrAdmin && getCampaignSubscription(group.campaign_id) === 'paid_premium' ? (
                                             // Show admin send button for premium clients
                                             <AdminSendPitchButton
-                                                pitchGenId={firstPitch.pitch_gen_id}
+                                                pitchId={firstPitch.pitch_id}
                                                 campaignId={group.campaign_id}
                                                 recipientEmail={groupEmail || firstPitch.recipient_email}
                                                 clientSubscriptionPlan="paid_premium"
@@ -1055,8 +1058,8 @@ function ReadyToSendTab({
                                             }`}>
                                                 <div className="flex items-start space-x-3">
                                                     <Checkbox
-                                                        checked={selectedPitchGenIds.includes(pitch.pitch_gen_id)}
-                                                        onCheckedChange={(checked) => handleSelectPitch(pitch.pitch_gen_id, checked as boolean)}
+                                                        checked={selectedPitchIds.includes(pitch.pitch_id)}
+                                                        onCheckedChange={(checked) => handleSelectPitch(pitch.pitch_id, checked as boolean)}
                                                         disabled={isLoadingBulkSend || isLoadingSendForPitchId === pitch.pitch_id}
                                                         className="mt-1"
                                                     />
@@ -1082,7 +1085,7 @@ function ReadyToSendTab({
                                                         {/* Show admin send button for premium clients when user is staff/admin */}
                                                         {isStaffOrAdmin && getCampaignSubscription(pitch.campaign_id) === 'paid_premium' ? (
                                                             <AdminSendPitchButton
-                                                                pitchGenId={pitch.pitch_gen_id}
+                                                                pitchId={pitch.pitch_id}
                                                                 campaignId={pitch.campaign_id}
                                                                 recipientEmail={pitch.recipient_email || pitchEmails[pitch.pitch_gen_id]}
                                                                 clientSubscriptionPlan="paid_premium"
@@ -1215,6 +1218,11 @@ export default function PitchOutreach() {
   const initialCampaignIdFilter = queryParams.get("campaignId"); // Example: ?campaignId=some-uuid
   const { user } = useAuth();
   const { capabilities, isLoading: isLoadingCapabilities, canUseAI, isFreePlan, isAdmin } = usePitchCapabilities();
+  const { hasPaidAccess, canAccessFeature } = useFeatureAccess();
+
+  // Show paywall for clients without paid access
+  const isClient = user?.role?.toLowerCase() === 'client';
+  const shouldShowPaywall = isClient && !hasPaidAccess && !canAccessFeature('pitch-outreach');
 
   const [activeTabState, setActiveTabState] = useState<string>("readyForDraft");
   const [editingDraft, setEditingDraft] = useState<PitchDraftForReview | null>(null);
@@ -1248,7 +1256,7 @@ export default function PitchOutreach() {
   // Filter campaign ID based on user role - clients only see their own campaigns
   const [selectedCampaignFilter, setSelectedCampaignFilter] = useState<string | null>(initialCampaignIdFilter);
   const userRole = user?.role?.toLowerCase();
-  const isClient = userRole === 'client';
+  // isClient already declared above for paywall logic
 
   // Fetch campaigns for both campaign selector and Smart Send settings
   const { data: allCampaignsData = [], isLoading: isLoadingCampaigns } = useQuery({
@@ -1538,57 +1546,39 @@ export default function PitchOutreach() {
     isPending: false
   };
 
-  /*
+  // Admin/Staff bulk send mutation using the correct endpoint
   const bulkSendPitchesMutation = useMutation({
     mutationFn: async (pitchIds: number[]) => {
-        setIsLoadingBulkSend(true);
-        const response = await apiRequest("POST", `/pitches/bulk-send`, { pitch_ids: pitchIds });
-        if (!response.ok) { 
-            const errorData = await response.json().catch(() => ({ detail: "Failed to send pitches." })); 
-            throw new Error(errorData.detail); 
+        const response = await apiRequest("POST", `/pitches/bulk-send`, pitchIds);
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({ detail: "Failed to send pitches." }));
+            throw new Error(errorData.detail);
         }
         return response.json();
     },
     onSuccess: (data) => {
-        const successCount = data.results?.filter((r: any) => r.success).length || 0;
-        const failCount = data.results?.filter((r: any) => !r.success).length || 0;
-        
+        const successCount = data.successful || 0;
+        const failCount = data.failed || 0;
+
         let description = `Successfully sent ${successCount} pitch${successCount !== 1 ? 'es' : ''}.`;
         if (failCount > 0) {
             description += ` ${failCount} failed.`;
         }
-        
-        toast({ 
-            title: "Bulk Send Complete", 
+
+        toast({
+            title: "Bulk Send Complete",
             description,
             variant: failCount > 0 ? "default" : "default"
         });
-        
+
         refreshAllPitchData();
         setActiveTabState("sentPitches");
     },
-    onError: (error: any) => { 
-        toast({ title: "Bulk Send Failed", description: error.message, variant: "destructive" }); 
-    },
-    onSettled: () => { setIsLoadingBulkSend(false); }
-  });
-  */
-
-  // NEW: Using Nylas batch mutation with proper loading states
-  // Wrap the mutation to handle tab switching after success
-  const bulkSendPitchesMutation = {
-    mutate: (pitchGenIds: number[]) => {
-      sendBatchMutation.mutate(pitchGenIds);
-    },
-    isPending: sendBatchMutation.isPending
-  };
-
-  // Switch to sent pitches tab when batch send completes successfully
-  React.useEffect(() => {
-    if (sendBatchMutation.isSuccess) {
-      setActiveTabState("sentPitches");
+    onError: (error: any) => {
+        toast({ title: "Bulk Send Failed", description: error.message, variant: "destructive" });
     }
-  }, [sendBatchMutation.isSuccess]);
+  });
+
 
 
   // Helper function to refresh all pitch-related data for better UX
@@ -1637,7 +1627,7 @@ export default function PitchOutreach() {
     setIsLoadingSendForPitchId(matchId); // Use matchId as loading indicator
     sendSequenceMutation.mutate(matchId);
   };
-  const handleBulkSendPitches = (pitchGenIds: number[]) => { bulkSendPitchesMutation.mutate(pitchGenIds); };
+  const handleBulkSendPitches = (pitchIds: number[]) => { bulkSendPitchesMutation.mutate(pitchIds); };
   const handleOpenEditModal = (draft: PitchDraftForReview) => { setEditingDraft(draft); setIsEditModalOpen(true); };
   const handleSaveEditedDraft = (pitchGenId: number, data: EditDraftFormData) => { updatePitchDraftMutation.mutate({ pitchGenId, data }); };
   const handlePreviewPitch = (pitch: PitchReadyToSend) => { setPreviewPitch(pitch); setIsPreviewModalOpen(true); };
@@ -1670,7 +1660,17 @@ export default function PitchOutreach() {
   }
 
   return (
-    <div className="space-y-6 p-4 md:p-6">
+    <>
+      {/* Upgrade Banner for free users */}
+      {shouldShowPaywall && (
+        <UpgradeBanner
+          featureName="Pitch Outreach"
+          featureDescription="Create, manage, and send personalized podcast pitches with AI assistance."
+        />
+      )}
+
+      {/* Main Content */}
+      <div className="space-y-6 p-4 md:p-6">
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div>
             <h1 className="text-2xl font-bold text-gray-900 flex items-center">
@@ -1774,7 +1774,13 @@ export default function PitchOutreach() {
         </Card>
       )}
 
-      <Tabs defaultValue={activeTabState} onValueChange={setActiveTabState} className="w-full">
+      <div className="relative">
+        {/* Locked overlay for free users */}
+        {shouldShowPaywall && (
+          <LockedOverlay message="Upgrade to create and manage pitch outreach campaigns" />
+        )}
+
+        <Tabs defaultValue={activeTabState} onValueChange={setActiveTabState} className="w-full">
         <TabsList className="grid w-full grid-cols-2 md:grid-cols-4 gap-1">
           <TabsTrigger value="readyForDraft"><Lightbulb className="mr-1.5 h-4 w-4"/>Ready for Draft ({isLoadingApprovedMatches ? '...' : approvedMatches.length})</TabsTrigger>
           <TabsTrigger value="draftsReview"><Edit3 className="mr-1.5 h-4 w-4"/>Review Drafts ({isLoadingPitchDrafts ? '...' : pitchDraftsForReview.length})</TabsTrigger>
@@ -1883,7 +1889,7 @@ export default function PitchOutreach() {
              onPreview={handlePreviewPitch}
              onSendSequence={handleSendSequence}
              isLoadingSendForPitchId={isLoadingSendForPitchId}
-             isLoadingBulkSend={sendBatchMutation.isPending}
+             isLoadingBulkSend={bulkSendPitchesMutation.isPending}
              isLoadingPitches={isLoadingReadyToSend}
              campaigns={campaignsData}
            />
@@ -1895,6 +1901,7 @@ export default function PitchOutreach() {
            {sentPitchesError && <p className="text-red-500 mt-2">Error loading sent pitches: {(sentPitchesError as Error).message}</p>}
         </TabsContent>
       </Tabs>
+      </div>
 
       <EditDraftModal
         draft={editingDraft}
@@ -2201,5 +2208,6 @@ export default function PitchOutreach() {
         }}
       />
     </div>
+    </>
   );
 }

@@ -38,6 +38,10 @@ import ComposeModal from '@/components/inbox/ComposeModal';
 import NylasConnect from '@/components/inbox/NylasConnect';
 import { DraftsList } from '@/components/inbox/DraftsList';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/useAuth';
+import { useFeatureAccess } from '@/hooks/useFeatureAccess';
+import { UpgradeBanner } from '@/components/UpgradeBanner';
+import { LockedOverlay } from '@/components/LockedOverlay';
 import {
   CLASSIFICATION_TYPES,
   getAIClassifications,
@@ -50,7 +54,7 @@ export default function Inbox() {
   // Check URL params for thread ID
   const urlParams = new URLSearchParams(window.location.search);
   const threadFromUrl = urlParams.get('thread');
-  
+
   const [selectedThread, setSelectedThread] = useState<string | null>(threadFromUrl);
   const [isComposeOpen, setIsComposeOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -58,6 +62,13 @@ export default function Inbox() {
   const [filters, setFilters] = useState<InboxFilters>({
     folder: 'inbox'  // Always default to inbox
   });
+
+  const { user } = useAuth();
+  const { hasPaidAccess, canAccessFeature } = useFeatureAccess();
+
+  // Show paywall for clients without paid access
+  const isClient = user?.role?.toLowerCase() === 'client';
+  const shouldShowPaywall = isClient && !hasPaidAccess && !canAccessFeature('inbox');
   const { toast } = useToast();
 
   // Check Nylas connection status
@@ -226,7 +237,21 @@ export default function Inbox() {
   }
 
   return (
-    <div className="flex h-[calc(100vh-4rem)] bg-gray-50">
+    <>
+      {/* Upgrade Banner for free users */}
+      {shouldShowPaywall && (
+        <UpgradeBanner
+          featureName="Email Inbox"
+          featureDescription="Manage email conversations, track responses, and handle podcast outreach communications."
+        />
+      )}
+
+      {/* Main Content */}
+      <div className="flex h-[calc(100vh-4rem)] bg-gray-50 relative">
+        {/* Locked overlay for free users */}
+        {shouldShowPaywall && (
+          <LockedOverlay message="Upgrade to access your email inbox and manage conversations" />
+        )}
       {/* Sidebar */}
       <div className="w-64 bg-white border-r border-gray-200 flex flex-col">
         <div className="p-4">
@@ -519,5 +544,6 @@ export default function Inbox() {
         />
       )}
     </div>
+    </>
   );
 }

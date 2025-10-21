@@ -21,6 +21,9 @@ import { PitchReviewCard } from "@/components/PitchReviewCard";
 import { PodcastDetailsModal } from "@/components/modals/PodcastDetailsModal";
 import { BatchAIGenerateButton } from "@/components/pitch/BatchAIGenerateButton";
 import { usePitchCapabilities } from "@/hooks/usePitchCapabilities";
+import { useFeatureAccess } from "@/hooks/useFeatureAccess";
+import { UpgradeBanner } from "@/components/UpgradeBanner";
+import { LockedOverlay } from "@/components/LockedOverlay";
 
 export interface ReviewTask {
   review_task_id: number;
@@ -570,11 +573,16 @@ export default function Approvals() {
   const [isBulkApproving, setIsBulkApproving] = useState(false);
   const [approvedMatches, setApprovedMatches] = useState<any[]>([]);
   const [showBatchAIGenerate, setShowBatchAIGenerate] = useState(false);
+  const [showPaywall, setShowPaywall] = useState(false);
 
   // Determine if user is a client or admin/staff
   const isClient = user?.role?.toLowerCase() === 'client';
   const isStaffOrAdmin = user?.role?.toLowerCase() === 'staff' || user?.role?.toLowerCase() === 'admin';
   const { canUseAI } = usePitchCapabilities();
+  const { hasPaidAccess, canAccessFeature } = useFeatureAccess();
+
+  // Show paywall for clients without paid access
+  const shouldShowPaywall = isClient && !hasPaidAccess && !canAccessFeature('approvals');
 
   interface PaginatedReviewTasks {
     items: ReviewTask[];
@@ -840,7 +848,17 @@ export default function Approvals() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto space-y-6 p-4 md:p-6">
+    <>
+      {/* Upgrade Banner for free users */}
+      {shouldShowPaywall && (
+        <UpgradeBanner
+          featureName="Match Approvals"
+          featureDescription="Review and approve AI-powered podcast matches to start your outreach campaign."
+        />
+      )}
+
+      {/* Main Content */}
+      <div className="max-w-7xl mx-auto space-y-6 p-4 md:p-6">
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 md:gap-4">
         {/* Total Card - Rendered Separately */}
         <Card className="shadow-sm">
@@ -874,16 +892,20 @@ export default function Approvals() {
         })}
       </div>
 
-      <Card className="shadow-md">
+      <Card className="shadow-md relative">
         <CardHeader>
             <CardTitle className="text-xl">{isClient ? 'Approve Matches' : 'Match Suggestion Approvals'}</CardTitle>
             <CardDescription>
-              {isClient 
-                ? 'Review and approve podcast matches for your campaigns.' 
+              {isClient
+                ? 'Review and approve podcast matches for your campaigns.'
                 : 'Review and approve AI-generated podcast match suggestions.'}
             </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="relative">
+          {/* Locked overlay for free users */}
+          {shouldShowPaywall && (
+            <LockedOverlay message="Upgrade to review and approve podcast matches" />
+          )}
           <div className="flex flex-col md:flex-row gap-3 items-center justify-between mb-4">
             <div className="flex flex-col sm:flex-row gap-3 flex-1 w-full md:w-auto">
               <div className="relative flex-1 min-w-[180px] sm:min-w-[240px]">
@@ -1127,5 +1149,6 @@ export default function Approvals() {
         </CardContent>
       </Card>
     </div>
+    </>
   );
 }

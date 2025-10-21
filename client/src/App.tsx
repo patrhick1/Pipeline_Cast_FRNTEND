@@ -117,16 +117,8 @@ function Router() {
                     <Route path="/my-campaigns/:campaignId">{params => <CampaignDetail campaignIdParam={params.campaignId} />}</Route>
                     <Route path="/profile-setup" component={ProfileSetup} />
                     {/* Podcast discovery removed - managed automatically in backend */}
-                    <Route path="/inbox">
-                      <PremiumClientRoute>
-                        <Inbox />
-                      </PremiumClientRoute>
-                    </Route> {/* Client inbox - blocked for premium clients */}
-                    <Route path="/pitch-outreach">
-                      <PremiumClientRoute>
-                        <PitchOutreach />
-                      </PremiumClientRoute>
-                    </Route> {/* Pitch outreach for clients - blocked for premium clients */}
+                    <Route path="/inbox" component={Inbox} /> {/* Client inbox - paywall handled in component */}
+                    <Route path="/pitch-outreach" component={PitchOutreach} /> {/* Pitch outreach for clients - paywall handled in component */}
                     <Route path="/media/:mediaId" component={MediaDetail} /> {/* Add new route */}
                     <Route path="/pricing" component={Pricing} /> {/* Pricing page */}
                     <Route path="/billing" component={Billing} /> {/* Billing management */}

@@ -16,6 +16,9 @@ import { z } from "zod";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient as appQueryClient } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/useAuth";
+import { useFeatureAccess } from "@/hooks/useFeatureAccess";
+import { UpgradeBanner } from "@/components/UpgradeBanner";
+import { LockedOverlay } from "@/components/LockedOverlay";
 import {
   TrendingUp, Calendar, Users, PlayCircle, BarChart3, Download, ExternalLink, Podcast as PodcastIcon,
   Eye, Share2, MessageSquare, Search, Filter, Plus, Edit, CheckCircle, Clock, AlertCircle, Check, X, Trash2, AlertTriangle, ChevronLeft, ChevronRight, History, LayoutGrid, List, Target, Award, FileText
@@ -689,9 +692,13 @@ export default function PlacementTracking() {
   const { toast } = useToast();
   const tanstackQueryClient = useTanstackQueryClient();
   const { user, isLoading: authLoading } = useAuth();
+  const { hasPaidAccess, canAccessFeature } = useFeatureAccess();
 
   // Use my-placements endpoint for clients, regular endpoint for staff/admin
   const isClient = user?.role === 'client';
+
+  // Show paywall for clients without paid access
+  const shouldShowPaywall = isClient && !hasPaidAccess && !canAccessFeature('placement-tracking');
   const placementsEndpoint = isClient ? "/placements/my-placements" : "/placements/";
   
   const placementsQueryKey = [placementsEndpoint, { 
@@ -882,7 +889,17 @@ export default function PlacementTracking() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto space-y-6 p-4 md:p-6">
+    <>
+      {/* Upgrade Banner for free users */}
+      {shouldShowPaywall && (
+        <UpgradeBanner
+          featureName="Placement Tracking & Analytics"
+          featureDescription="Track podcast placements, monitor performance metrics, and analyze campaign effectiveness."
+        />
+      )}
+
+      {/* Main Content */}
+      <div className="max-w-7xl mx-auto space-y-6 p-4 md:p-6">
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div>
             <h1 className="text-2xl font-bold text-gray-900">Placements & Analytics</h1>
@@ -996,7 +1013,13 @@ export default function PlacementTracking() {
       </div>
 
       {/* Main Tabbed Interface */}
-      <Tabs defaultValue="placements" className="space-y-6">
+      <div className="relative">
+        {/* Locked overlay for free users */}
+        {shouldShowPaywall && (
+          <LockedOverlay message="Upgrade to track placements and view analytics" />
+        )}
+
+        <Tabs defaultValue="placements" className="space-y-6">
         <TabsList className="grid w-full max-w-md grid-cols-2">
           <TabsTrigger value="placements">Placements</TabsTrigger>
           <TabsTrigger value="analytics">Analytics</TabsTrigger>
@@ -1220,6 +1243,7 @@ export default function PlacementTracking() {
           </Tabs>
         </TabsContent>
       </Tabs>
+      </div>
 
       {/* Show PlacementEditDialog for clients, PlacementFormDialog for staff/admin */}
       {isFormOpen && isClient && editingPlacement && (
@@ -1271,5 +1295,6 @@ export default function PlacementTracking() {
         />
       )}
     </div>
+    </>
   );
 }

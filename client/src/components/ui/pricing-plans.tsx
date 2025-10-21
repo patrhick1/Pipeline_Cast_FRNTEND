@@ -199,7 +199,7 @@ export default function PricingPlans({ currentPlan, onSelectPlan, isLoading }: P
       
       <div className="mt-16 text-center">
         <p className="text-sm text-muted-foreground">
-          All paid plans include a 3-day money-back guarantee • Cancel anytime • No setup fees
+          All plans include a 3-day money-back guarantee • Cancel anytime • No setup fees
         </p>
       </div>
     </div>

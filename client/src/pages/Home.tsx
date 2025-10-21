@@ -101,7 +101,7 @@ export default function Home() {
               </Link>
               <Link href="/signup">
                 <Button className="bg-indigo-600 hover:bg-indigo-700 text-white">
-                  Start Free Trial
+                  Get Started
                 </Button>
               </Link>
             </div>
@@ -127,7 +127,7 @@ export default function Home() {
               <Link href="/signup">
                 <Button size="lg" className="bg-yellow-400 hover:bg-yellow-300 text-black font-semibold px-8 py-6 text-lg">
                   <Sparkles className="mr-2 h-5 w-5" />
-                  Start Your Free Trial
+                  Get Started
                 </Button>
               </Link>
               <a href="#how-it-works" onClick={(e) => scrollToSection(e, 'how-it-works')}>
@@ -137,9 +137,6 @@ export default function Home() {
                 </Button>
               </a>
             </div>
-            <p className="mt-6 text-sm text-indigo-200">
-              No credit card required • 7-day free trial • Cancel anytime
-            </p>
           </div>
         </div>
       </section>
@@ -556,7 +553,7 @@ export default function Home() {
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link href="/signup">
               <Button size="lg" className="bg-yellow-400 hover:bg-yellow-300 text-black font-semibold px-8 py-6 text-lg">
-                Start Your Free Trial
+                Get Started
                 <ArrowRight className="ml-2 h-5 w-5" />
               </Button>
             </Link>
@@ -566,9 +563,6 @@ export default function Home() {
               </Button>
             </Link>
           </div>
-          <p className="mt-6 text-sm text-indigo-200">
-            No credit card required • 7-day free trial • Cancel anytime
-          </p>
         </div>
       </section>
 

@@ -25,7 +25,7 @@ import { SendingAccount } from '@/services/adminSendingAccounts';
 import { Badge } from '@/components/ui/badge';
 
 interface AdminSendPitchButtonProps {
-  pitchGenId: number;
+  pitchId: number;
   campaignId: string;
   recipientEmail?: string | null;
   clientSubscriptionPlan?: string;
@@ -38,7 +38,7 @@ interface AdminSendPitchButtonProps {
 }
 
 export function AdminSendPitchButton({
-  pitchGenId,
+  pitchId,
   campaignId,
   recipientEmail,
   clientSubscriptionPlan,
@@ -80,14 +80,13 @@ export function AdminSendPitchButton({
 
   // Send pitch mutation using admin account
   const sendPitchMutation = useMutation({
-    mutationFn: async ({ accountId, pitchGenId, recipientEmail }: {
+    mutationFn: async ({ accountId, pitchId, recipientEmail }: {
       accountId: string;
-      pitchGenId: number;
+      pitchId: number;
       recipientEmail?: string | null;
     }) => {
-      const response = await apiRequest('POST', '/admin/send-pitch', {
+      const response = await apiRequest('POST', `/pitches/${pitchId}/send`, {
         sending_account_id: accountId,
-        pitch_gen_id: pitchGenId,
         recipient_email: recipientEmail || undefined
       });
 
@@ -128,7 +127,7 @@ export function AdminSendPitchButton({
     setIsSending(true);
     sendPitchMutation.mutate({
       accountId: selectedAccount,
-      pitchGenId,
+      pitchId,
       recipientEmail
     });
     setIsSending(false);
