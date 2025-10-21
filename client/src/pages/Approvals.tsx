@@ -578,7 +578,7 @@ export default function Approvals() {
   // Determine if user is a client or admin/staff
   const isClient = user?.role?.toLowerCase() === 'client';
   const isStaffOrAdmin = user?.role?.toLowerCase() === 'staff' || user?.role?.toLowerCase() === 'admin';
-  const { canUseAI } = usePitchCapabilities();
+  const { canUseAI, isPremiumPlan } = usePitchCapabilities();
   const { hasPaidAccess, canAccessFeature } = useFeatureAccess();
 
   // Show paywall for clients without paid access
@@ -965,7 +965,8 @@ export default function Approvals() {
           </div>
 
           {/* Batch AI Generation Bar - Show after successful bulk approval */}
-          {showBatchAIGenerate && approvedMatches.length > 0 && (
+          {/* Only show for non-premium clients (paid_premium is agency-managed by PGL) */}
+          {showBatchAIGenerate && approvedMatches.length > 0 && !isPremiumPlan && (
             <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-4">
               <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
                 <div className="flex items-center gap-2">
