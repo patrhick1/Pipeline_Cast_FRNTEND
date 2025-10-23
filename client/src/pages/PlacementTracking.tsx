@@ -701,9 +701,10 @@ export default function PlacementTracking() {
   const shouldShowPaywall = isClient && !hasPaidAccess && !canAccessFeature('placement-tracking');
   const placementsEndpoint = isClient ? "/placements/my-placements" : "/placements/";
   
-  const placementsQueryKey = [placementsEndpoint, { 
+  const placementsQueryKey = [placementsEndpoint, {
     campaign_id: campaignFilter === "all" ? undefined : campaignFilter,
     status: statusFilter === "all" ? undefined : statusFilter,
+    search: searchTerm || undefined,
     page: currentPage,
     size: pageSize,
   }];
@@ -716,6 +717,7 @@ export default function PlacementTracking() {
         
         if (params.campaign_id) queryParams.append("campaign_id", params.campaign_id);
         if (params.status) queryParams.append("status", params.status);
+        if (params.search) queryParams.append("search", params.search);
         if (params.page) queryParams.append("page", params.page.toString());
         if (params.size) queryParams.append("size", params.size.toString());
         
@@ -728,7 +730,7 @@ export default function PlacementTracking() {
   });
   const placements = placementsData?.items || [];
   const totalPlacements = placementsData?.total || 0;
-  const totalPages = placementsData?.pages || 1;
+  const totalPages = Math.ceil(totalPlacements / pageSize);
 
   // Fetch campaigns with subscription info for filtering
   const { data: allCampaignsData = [], isLoading: isLoadingCampaignsForFilter } = useQuery<ClientCampaign[]>({
@@ -856,17 +858,6 @@ export default function PlacementTracking() {
   useEffect(() => {
     setCurrentPage(1);
   }, [searchTerm, statusFilter, campaignFilter]);
-
-  const filteredPlacements = placements.filter((placement: Placement) => {
-    const searchTermLower = searchTerm.toLowerCase();
-    const matchesSearch = 
-        (placement.media_name && placement.media_name.toLowerCase().includes(searchTermLower)) ||
-        (placement.client_name && placement.client_name.toLowerCase().includes(searchTermLower)) ||
-        (placement.campaign_name && placement.campaign_name.toLowerCase().includes(searchTermLower)) ||
-        (placement.outreach_topic && placement.outreach_topic.toLowerCase().includes(searchTermLower));
-    const matchesStatus = statusFilter === "all" || placement.current_status === statusFilter;
-    return matchesSearch && matchesStatus;
-  });
 
   const stats = {
     total: totalPlacements,
@@ -1089,7 +1080,7 @@ export default function PlacementTracking() {
             <AlertTriangle className="inline h-5 w-5 mr-2" />
             Error loading placements: {(placementsError as Error).message}
         </div>
-      ) : filteredPlacements.length === 0 ? (
+      ) : placements.length === 0 ? (
         <div className="text-center py-12">
           <PodcastIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
           <h3 className="text-lg font-medium text-gray-900">No placements found</h3>
@@ -1099,13 +1090,13 @@ export default function PlacementTracking() {
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <p className="text-sm text-gray-600">
-              Showing {Math.min(pageSize, filteredPlacements.length)} of {totalPlacements} placements
+              Showing {placements.length} of {totalPlacements} placements
             </p>
           </div>
           {/* Show cards for clients in card view, table otherwise */}
           {isClient && viewMode === "cards" ? (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {filteredPlacements.map((placement) => (
+              {placements.map((placement) => (
                 <ClientPlacementCard
                   key={placement.placement_id}
                   placement={placement}
@@ -1117,7 +1108,7 @@ export default function PlacementTracking() {
             </div>
           ) : (
             <PlacementTable
-              placements={filteredPlacements}
+              placements={placements}
               onEdit={handleEdit}
               onDelete={handleDelete}
               onStatusChange={handleStatusChange}
