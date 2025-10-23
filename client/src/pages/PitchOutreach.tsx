@@ -1349,7 +1349,8 @@ export default function PitchOutreach() {
   // Filter out non-pending tasks (backend status filter not working correctly)
   const allPitchDrafts = reviewTasksPageData?.items || [];
   const pitchDraftsForReview = allPitchDrafts.filter(draft => draft.status === 'pending');
-  const reviewDraftsTotalItems = pitchDraftsForReview.length;
+  // Use backend's total count which represents unique matches (not individual pitch rows)
+  const reviewDraftsTotalItems = reviewTasksPageData?.total || 0;
   const reviewDraftsTotalPages = Math.ceil(reviewDraftsTotalItems / REVIEW_DRAFTS_PAGE_SIZE);
 
 
@@ -1783,7 +1784,7 @@ export default function PitchOutreach() {
         <Tabs defaultValue={activeTabState} onValueChange={setActiveTabState} className="w-full">
         <TabsList className="grid w-full grid-cols-2 md:grid-cols-4 gap-1">
           <TabsTrigger value="readyForDraft"><Lightbulb className="mr-1.5 h-4 w-4"/>Ready for Draft ({isLoadingApprovedMatches ? '...' : approvedMatches.length})</TabsTrigger>
-          <TabsTrigger value="draftsReview"><Edit3 className="mr-1.5 h-4 w-4"/>Review Drafts ({isLoadingPitchDrafts ? '...' : pitchDraftsForReview.length})</TabsTrigger>
+          <TabsTrigger value="draftsReview"><Edit3 className="mr-1.5 h-4 w-4"/>Review Drafts ({isLoadingPitchDrafts ? '...' : reviewDraftsTotalItems})</TabsTrigger>
           <TabsTrigger value="readyToSend"><MailCheck className="mr-1.5 h-4 w-4"/>Ready to Send ({isLoadingReadyToSend ? '...' : pitchesReadyToSend.length})</TabsTrigger>
           <TabsTrigger value="sentPitches"><MailOpen className="mr-1.5 h-4 w-4"/>Sent Pitches ({isLoadingSentPitches ? '...' : sentPitches.length})</TabsTrigger>
         </TabsList>
@@ -1842,7 +1843,7 @@ export default function PitchOutreach() {
                       <div>
                         <h3 className="font-medium text-green-900">Bulk Approve Pitches</h3>
                         <p className="text-sm text-green-700">
-                          Approve all {pitchDraftsForReview.length} draft{pitchDraftsForReview.length !== 1 ? 's' : ''} and move them to "Ready to Send".
+                          Approve all {reviewDraftsTotalItems} match{reviewDraftsTotalItems !== 1 ? 'es' : ''} (including follow-ups) and move them to "Ready to Send".
                         </p>
                       </div>
                       <BulkApproveButton
