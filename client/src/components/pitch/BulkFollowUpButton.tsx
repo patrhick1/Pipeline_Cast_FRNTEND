@@ -91,27 +91,27 @@ export function BulkFollowUpButton({
   const pitchTypeOptions = [
     {
       value: "initial",
-      label: "Initial Pitches",
+      label: "Generate first follow-ups",
       nextType: "follow_up_1",
-      description: "Generate first follow-ups for all initial pitches"
+      description: "For all initial pitches that were sent"
     },
     {
       value: "follow_up_1",
-      label: "First Follow-ups",
+      label: "Generate second follow-ups",
       nextType: "follow_up_2",
-      description: "Generate second follow-ups"
+      description: "For pitches with one follow-up already sent"
     },
     {
       value: "follow_up_2",
-      label: "Second Follow-ups",
+      label: "Generate third follow-ups",
       nextType: "follow_up_3",
-      description: "Generate third follow-ups"
+      description: "For pitches with two follow-ups already sent"
     },
     {
       value: "follow_up_3",
-      label: "Third Follow-ups",
+      label: "Generate fourth follow-ups",
       nextType: "follow_up_4",
-      description: "Generate final follow-ups"
+      description: "For pitches with three follow-ups already sent"
     }
   ];
 
@@ -257,9 +257,6 @@ export function BulkFollowUpButton({
                   ))}
                 </SelectContent>
               </Select>
-              <p className="text-xs text-muted-foreground">
-                Will generate <strong>{pitchTypeOptions.find(o => o.value === pitchTypeFilter)?.nextType}</strong> follow-ups
-              </p>
             </div>
 
             {/* Limit Selection */}
