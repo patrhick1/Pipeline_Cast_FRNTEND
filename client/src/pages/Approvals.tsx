@@ -429,7 +429,9 @@ function ReviewTaskItem({
                     </Badge>
                   )}
                   <Badge variant="secondary" className="text-xs">
-                    Reach: {formatReachNumber(task.reach_estimate_min || 10000)}-{formatReachNumber(task.reach_estimate_max || 50000)}
+                    Reach: {task.reach_estimate_min && task.reach_estimate_max
+                      ? `${formatReachNumber(task.reach_estimate_min)}-${formatReachNumber(task.reach_estimate_max)}`
+                      : 'N/A'}
                   </Badge>
                 </div>
               )}

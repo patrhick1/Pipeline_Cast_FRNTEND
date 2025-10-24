@@ -137,7 +137,9 @@ export const MatchIntelligenceCard = ({
                 <strong className="text-blue-800">Match Percentage: {Math.round(match.vetting_score)}%</strong>
               </div>
               <div className="bg-gray-50 border border-gray-200 rounded-md p-3 flex-1">
-                <strong className="text-gray-800">Reach Estimate: {formatReachNumber(match.reach_estimate_min || 10000)}-{formatReachNumber(match.reach_estimate_max || 50000)}</strong>
+                <strong className="text-gray-800">Reach Estimate: {match.reach_estimate_min && match.reach_estimate_max
+                  ? `${formatReachNumber(match.reach_estimate_min)}-${formatReachNumber(match.reach_estimate_max)}`
+                  : 'N/A'}</strong>
               </div>
             </div>
           )}
@@ -331,7 +333,9 @@ export const MatchIntelligenceCard = ({
           </div>
           <div className="intelligence-item p-3 bg-gray-50 border border-gray-200 rounded-md flex-1">
             <strong className="flex items-center text-gray-800">
-              <Check className="h-4 w-4 mr-2 text-gray-600"/> Reach Estimate: {formatReachNumber(match.reach_estimate_min || 10000)}-{formatReachNumber(match.reach_estimate_max || 50000)}
+              <Check className="h-4 w-4 mr-2 text-gray-600"/> Reach Estimate: {match.reach_estimate_min && match.reach_estimate_max
+                ? `${formatReachNumber(match.reach_estimate_min)}-${formatReachNumber(match.reach_estimate_max)}`
+                : 'N/A'}
             </strong>
           </div>
         </div>
