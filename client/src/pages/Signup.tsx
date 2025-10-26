@@ -1,5 +1,5 @@
 // client/src/pages/Signup.tsx
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -20,6 +20,7 @@ const signupSchema = z.object({
   email: z.string().email("Invalid email address"),
   password: z.string().min(8, "Password must be at least 8 characters"),
   confirmPassword: z.string(),
+  captcha_token: z.string().optional(), // CAPTCHA token from Turnstile
 }).refine((data) => data.password === data.confirmPassword, {
   message: "Passwords don't match",
   path: ["confirmPassword"], // path of error
@@ -64,6 +65,7 @@ export default function SignupPage() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [showVerificationMessage, setShowVerificationMessage] = useState(false);
   const [registeredEmail, setRegisteredEmail] = useState("");
+  const [captchaToken, setCaptchaToken] = useState<string>("");
   const { toast } = useToast();
   const [, navigate] = useLocation();
 
@@ -79,6 +81,7 @@ export default function SignupPage() {
       email: "",
       password: "",
       confirmPassword: "",
+      captcha_token: "",
     },
   });
 
@@ -98,13 +101,50 @@ export default function SignupPage() {
     };
   }, [password]);
 
+  // Set up Turnstile callback functions
+  useEffect(() => {
+    // Define callback for successful CAPTCHA completion
+    (window as any).onTurnstileSuccess = (token: string) => {
+      console.log("CAPTCHA completed successfully");
+      setCaptchaToken(token);
+      form.setValue("captcha_token", token);
+    };
+
+    // Optional: Handle CAPTCHA errors
+    (window as any).onTurnstileError = () => {
+      console.error("CAPTCHA verification failed");
+      toast({
+        title: "CAPTCHA Failed",
+        description: "CAPTCHA verification failed. Please refresh and try again.",
+        variant: "destructive",
+      });
+    };
+
+    // Cleanup callbacks on unmount
+    return () => {
+      delete (window as any).onTurnstileSuccess;
+      delete (window as any).onTurnstileError;
+    };
+  }, [form, toast]);
+
   const handleSignup = async (data: SignupFormData) => {
+    // Validate CAPTCHA token before submission
+    if (!captchaToken) {
+      toast({
+        title: "CAPTCHA Required",
+        description: "Please complete the CAPTCHA verification.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsLoading(true);
     try {
       const payload = {
         full_name: data.full_name,
         email: data.email.toLowerCase(),
         password: data.password,
+        captcha_token: captchaToken, // NEW: Send CAPTCHA token to backend
         // Include prospect data if available for lead magnet
         ...(prospectPersonId && { prospect_person_id: parseInt(prospectPersonId) }),
         ...(prospectCampaignId && { prospect_campaign_id: prospectCampaignId }),
@@ -378,9 +418,22 @@ export default function SignupPage() {
                   </div>
                    {form.formState.errors.confirmPassword && <p className="text-sm text-red-500 mt-1">{form.formState.errors.confirmPassword.message}</p>}
                 </div>
-                <Button 
+
+                {/* Cloudflare Turnstile CAPTCHA Widget */}
+                <div className="flex justify-center">
+                  <div
+                    className="cf-turnstile"
+                    data-sitekey={import.meta.env.VITE_TURNSTILE_SITE_KEY || "0x4AAAAAAB8yoiO1L6EI05aZ"}
+                    data-callback="onTurnstileSuccess"
+                    data-error-callback="onTurnstileError"
+                    data-theme="auto"
+                    data-size="flexible"
+                  ></div>
+                </div>
+
+                <Button
                   type="submit"
-                  disabled={isLoading}
+                  disabled={isLoading || !captchaToken}
                   className="w-full bg-primary text-primary-foreground hover:bg-primary/90 py-3 text-base"
                 >
                   {isLoading ? "Creating Account..." : (
