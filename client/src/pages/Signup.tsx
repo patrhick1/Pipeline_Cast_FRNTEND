@@ -103,16 +103,30 @@ export default function SignupPage() {
 
   // Set up Turnstile callback functions
   useEffect(() => {
+    console.log("🔧 Setting up Turnstile callbacks...");
+    console.log("🔑 Sitekey from env:", import.meta.env.VITE_TURNSTILE_SITE_KEY);
+
+    // Wait for Turnstile script to load
+    const checkTurnstile = () => {
+      if (typeof (window as any).turnstile !== "undefined") {
+        console.log("✅ Turnstile script loaded successfully!");
+      } else {
+        console.log("⏳ Waiting for Turnstile script to load...");
+      }
+    };
+
+    checkTurnstile();
+
     // Define callback for successful CAPTCHA completion
     (window as any).onTurnstileSuccess = (token: string) => {
-      console.log("CAPTCHA completed successfully");
+      console.log("✅ CAPTCHA completed successfully! Token:", token.substring(0, 20) + "...");
       setCaptchaToken(token);
       form.setValue("captcha_token", token);
     };
 
     // Optional: Handle CAPTCHA errors
     (window as any).onTurnstileError = () => {
-      console.error("CAPTCHA verification failed");
+      console.error("❌ CAPTCHA verification failed");
       toast({
         title: "CAPTCHA Failed",
         description: "CAPTCHA verification failed. Please refresh and try again.",
@@ -420,20 +434,21 @@ export default function SignupPage() {
                 </div>
 
                 {/* Cloudflare Turnstile CAPTCHA Widget */}
-                <div className="flex justify-center">
+                <div className="flex flex-col items-center gap-2">
+                  <p className="text-xs text-gray-500">Security verification</p>
                   <div
                     className="cf-turnstile"
                     data-sitekey={import.meta.env.VITE_TURNSTILE_SITE_KEY || "0x4AAAAAAB8yoiO1L6EI05aZ"}
                     data-callback="onTurnstileSuccess"
                     data-error-callback="onTurnstileError"
                     data-theme="auto"
-                    data-size="flexible"
+                    data-size="normal"
                   ></div>
                 </div>
 
                 <Button
                   type="submit"
-                  disabled={isLoading || !captchaToken}
+                  disabled={isLoading}
                   className="w-full bg-primary text-primary-foreground hover:bg-primary/90 py-3 text-base"
                 >
                   {isLoading ? "Creating Account..." : (
