@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Send, Loader2, Mail, Crown, Users } from 'lucide-react';
 import { usePitchSending } from '@/hooks/usePitchSending';
 import { useAuth } from '@/hooks/useAuth';
-import { useQuery, useMutation } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
 import {
@@ -51,9 +51,9 @@ export function AdminSendPitchButton({
 }: AdminSendPitchButtonProps) {
   const { user } = useAuth();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [showSendDialog, setShowSendDialog] = useState(false);
   const [selectedAccount, setSelectedAccount] = useState<string>('');
-  const [isSending, setIsSending] = useState(false);
 
   const isStaffOrAdmin = user?.role?.toLowerCase() === 'staff' || user?.role?.toLowerCase() === 'admin';
   const isPremiumClient = clientSubscriptionPlan === 'paid_premium';
@@ -102,6 +102,13 @@ export function AdminSendPitchButton({
         title: "Success",
         description: "Pitch sent successfully from admin account"
       });
+
+      // Invalidate and refetch pitch queries to refresh the lists
+      queryClient.invalidateQueries({ queryKey: ["pitchesReadyToSend"] });
+      queryClient.invalidateQueries({ queryKey: ["sentPitchesStatus"] });
+      queryClient.refetchQueries({ queryKey: ["pitchesReadyToSend"] });
+      queryClient.refetchQueries({ queryKey: ["sentPitchesStatus"] });
+
       setShowSendDialog(false);
       setSelectedAccount('');
     },
@@ -124,13 +131,11 @@ export function AdminSendPitchButton({
       return;
     }
 
-    setIsSending(true);
     sendPitchMutation.mutate({
       accountId: selectedAccount,
       pitchId,
       recipientEmail
     });
-    setIsSending(false);
   };
 
   // If not staff/admin or not premium client, use regular send button
@@ -231,15 +236,15 @@ export function AdminSendPitchButton({
             <Button
               variant="outline"
               onClick={() => setShowSendDialog(false)}
-              disabled={isSending}
+              disabled={sendPitchMutation.isPending}
             >
               Cancel
             </Button>
             <Button
               onClick={handleSend}
-              disabled={!selectedAccount || isSending}
+              disabled={!selectedAccount || sendPitchMutation.isPending}
             >
-              {isSending ? (
+              {sendPitchMutation.isPending ? (
                 <>
                   <Loader2 className="h-4 w-4 animate-spin mr-2" />
                   Sending...
