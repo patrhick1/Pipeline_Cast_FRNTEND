@@ -180,7 +180,8 @@ export default function ThreadView({ threadId, onClose, onReply }: ThreadViewPro
         description: 'Your reply has been sent successfully.',
       });
       setReplyMode(null);
-      setReplyContent('');
+      setReplyContent(''); // Clears draft body (aliased from setBody)
+      setDraftId(null); // Clear draft ID to prevent re-using
       setShowSmartReplies(false);
       queryClient.invalidateQueries({ queryKey: [`/inbox/threads/${threadId}`] });
     },

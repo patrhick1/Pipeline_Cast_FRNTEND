@@ -319,6 +319,8 @@ export default function AdminInbox() {
       setReplyMode(null);
       setReplyContent('');
       setReplySubject('');
+      setDraftBody(''); // Clear draft body to prevent re-saving
+      setDraftId(null); // Clear draft ID
       setShowSmartReplies(false);
       queryClient.invalidateQueries({ queryKey: ['admin-thread-details', selectedThreadId] });
       queryClient.invalidateQueries({ queryKey: ['admin-threads'] });
@@ -424,7 +426,7 @@ export default function AdminInbox() {
         });
         setReplyMode(null);
         setReplyContent('');
-        setDraftBody('');
+        setDraftBody(''); // Clear draft body to prevent re-saving
         setDraftId(null);
         setShowSmartReplies(false);
         queryClient.invalidateQueries({ queryKey: ['admin-thread-details', selectedThreadId] });
