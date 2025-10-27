@@ -129,7 +129,7 @@ export default function AdminInbox() {
   // Fetch all available admin accounts
   const { data: accountsData, isLoading: isLoadingAccounts } = useQuery({
     queryKey: ['admin-accounts'],
-    queryFn: () => adminInboxService.getAccounts(),
+    queryFn: () => adminInboxService.getAccounts(false),
   });
 
   // Fetch all campaigns for grouping
@@ -785,7 +785,7 @@ export default function AdminInbox() {
                     )}
                     title={account.email_address}
                   >
-                    {account.sending_name || account.email_address}
+                    {account.email_address}
                   </button>
                 ))}
               </div>
