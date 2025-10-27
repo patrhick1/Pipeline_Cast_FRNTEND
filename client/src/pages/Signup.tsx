@@ -101,21 +101,12 @@ export default function SignupPage() {
     };
   }, [password]);
 
-  // Set up Turnstile callback functions
+  // Set up Turnstile callback functions and explicit rendering
   useEffect(() => {
     console.log("🔧 Setting up Turnstile callbacks...");
     console.log("🔑 Sitekey from env:", import.meta.env.VITE_TURNSTILE_SITE_KEY);
 
-    // Wait for Turnstile script to load
-    const checkTurnstile = () => {
-      if (typeof (window as any).turnstile !== "undefined") {
-        console.log("✅ Turnstile script loaded successfully!");
-      } else {
-        console.log("⏳ Waiting for Turnstile script to load...");
-      }
-    };
-
-    checkTurnstile();
+    let widgetId: string | null = null;
 
     // Define callback for successful CAPTCHA completion
     (window as any).onTurnstileSuccess = (token: string) => {
@@ -124,7 +115,7 @@ export default function SignupPage() {
       form.setValue("captcha_token", token);
     };
 
-    // Optional: Handle CAPTCHA errors
+    // Handle CAPTCHA errors
     (window as any).onTurnstileError = () => {
       console.error("❌ CAPTCHA verification failed");
       toast({
@@ -134,8 +125,55 @@ export default function SignupPage() {
       });
     };
 
+    // Wait for Turnstile script to load and explicitly render widget
+    const renderTurnstile = () => {
+      const container = document.getElementById('turnstile-container');
+
+      if (!container) {
+        console.log("⏳ Turnstile container not found yet...");
+        return;
+      }
+
+      if (typeof (window as any).turnstile === "undefined") {
+        console.log("⏳ Waiting for Turnstile script to load...");
+        setTimeout(renderTurnstile, 100);
+        return;
+      }
+
+      console.log("✅ Turnstile script loaded successfully!");
+
+      // Check if already rendered
+      if (container.children.length > 0) {
+        console.log("ℹ️ Turnstile widget already rendered");
+        return;
+      }
+
+      try {
+        widgetId = (window as any).turnstile.render('#turnstile-container', {
+          sitekey: import.meta.env.VITE_TURNSTILE_SITE_KEY || '0x4AAAAAAB8yoiO1L6EI05aZ',
+          callback: 'onTurnstileSuccess',
+          'error-callback': 'onTurnstileError',
+          theme: 'auto',
+          size: 'normal',
+        });
+        console.log("✅ Turnstile widget rendered with ID:", widgetId);
+      } catch (error) {
+        console.error("❌ Failed to render Turnstile widget:", error);
+      }
+    };
+
+    // Start rendering process
+    renderTurnstile();
+
     // Cleanup callbacks on unmount
     return () => {
+      if (widgetId && typeof (window as any).turnstile !== "undefined") {
+        try {
+          (window as any).turnstile.remove(widgetId);
+        } catch (e) {
+          console.log("Failed to remove Turnstile widget:", e);
+        }
+      }
       delete (window as any).onTurnstileSuccess;
       delete (window as any).onTurnstileError;
     };
@@ -436,14 +474,7 @@ export default function SignupPage() {
                 {/* Cloudflare Turnstile CAPTCHA Widget */}
                 <div className="flex flex-col items-center gap-2">
                   <p className="text-xs text-gray-500">Security verification</p>
-                  <div
-                    className="cf-turnstile"
-                    data-sitekey={import.meta.env.VITE_TURNSTILE_SITE_KEY || "0x4AAAAAAB8yoiO1L6EI05aZ"}
-                    data-callback="onTurnstileSuccess"
-                    data-error-callback="onTurnstileError"
-                    data-theme="auto"
-                    data-size="normal"
-                  ></div>
+                  <div id="turnstile-container"></div>
                 </div>
 
                 <Button
