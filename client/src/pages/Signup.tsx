@@ -109,14 +109,16 @@ export default function SignupPage() {
     let widgetId: string | null = null;
 
     // Define callback for successful CAPTCHA completion
-    (window as any).onTurnstileSuccess = (token: string) => {
+    const handleTurnstileSuccess = (token: string) => {
       console.log("✅ CAPTCHA completed successfully! Token:", token.substring(0, 20) + "...");
+      console.log("📝 Setting captcha token in state and form...");
       setCaptchaToken(token);
       form.setValue("captcha_token", token);
+      console.log("✅ Captcha token saved:", token ? "Yes" : "No");
     };
 
     // Handle CAPTCHA errors
-    (window as any).onTurnstileError = () => {
+    const handleTurnstileError = () => {
       console.error("❌ CAPTCHA verification failed");
       toast({
         title: "CAPTCHA Failed",
@@ -151,8 +153,8 @@ export default function SignupPage() {
       try {
         widgetId = (window as any).turnstile.render('#turnstile-container', {
           sitekey: import.meta.env.VITE_TURNSTILE_SITE_KEY || '0x4AAAAAAB8yoiO1L6EI05aZ',
-          callback: 'onTurnstileSuccess',
-          'error-callback': 'onTurnstileError',
+          callback: handleTurnstileSuccess,
+          'error-callback': handleTurnstileError,
           theme: 'auto',
           size: 'normal',
         });
@@ -165,7 +167,7 @@ export default function SignupPage() {
     // Start rendering process
     renderTurnstile();
 
-    // Cleanup callbacks on unmount
+    // Cleanup on unmount
     return () => {
       if (widgetId && typeof (window as any).turnstile !== "undefined") {
         try {
@@ -174,14 +176,17 @@ export default function SignupPage() {
           console.log("Failed to remove Turnstile widget:", e);
         }
       }
-      delete (window as any).onTurnstileSuccess;
-      delete (window as any).onTurnstileError;
     };
   }, [form, toast]);
 
   const handleSignup = async (data: SignupFormData) => {
+    console.log("🚀 handleSignup called");
+    console.log("🔍 Current captchaToken state:", captchaToken);
+    console.log("🔍 Form captcha_token value:", form.getValues("captcha_token"));
+
     // Validate CAPTCHA token before submission
     if (!captchaToken) {
+      console.error("❌ No CAPTCHA token found!");
       toast({
         title: "CAPTCHA Required",
         description: "Please complete the CAPTCHA verification.",
@@ -189,6 +194,8 @@ export default function SignupPage() {
       });
       return;
     }
+
+    console.log("✅ CAPTCHA token validated, proceeding with signup...");
 
     setIsLoading(true);
     try {
