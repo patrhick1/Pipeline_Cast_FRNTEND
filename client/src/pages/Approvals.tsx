@@ -25,6 +25,28 @@ import { useFeatureAccess } from "@/hooks/useFeatureAccess";
 import { UpgradeBanner } from "@/components/UpgradeBanner";
 import { LockedOverlay } from "@/components/LockedOverlay";
 
+// Paginated API response structure
+export interface PaginatedReviewTaskResponse {
+  items: ReviewTask[];
+  total: number;
+  page: number;
+  page_size: number;
+  total_pages: number;
+}
+
+// Stats API response structure
+export interface ReviewTaskStatsResponse {
+  total: number;
+  pending: number;
+  approved: number;
+  rejected: number;
+  completed: number;
+  match_suggestion_total: number;
+  pitch_review_total: number;
+  campaign_id: string | null;
+  campaign_name: string | null;
+}
+
 export interface ReviewTask {
   review_task_id: number;
   task_type: 'match_suggestion' | 'pitch_review' | string;
@@ -567,7 +589,7 @@ export default function Approvals() {
   const tanstackQueryClient = useTanstackQueryClient();
   const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState("pending");
+  const [statusFilter, setStatusFilter] = useState("all"); // Changed from "pending" to "all"
   const [taskTypeFilter, setTaskTypeFilter] = useState<"all" | "match_suggestion">("match_suggestion");
   const [campaignFilter, setCampaignFilter] = useState<string>("all"); // New campaign filter
   const [currentPage, setCurrentPage] = useState(1);
@@ -626,91 +648,65 @@ export default function Approvals() {
     ? allCampaignsData.filter((c: any) => c.subscription_plan === 'paid_premium')
     : allCampaignsData;
 
-  // Always fetch ALL tasks, then filter client-side
-  const { data: allTasksData, isLoading, error, isFetching } = useQuery<ReviewTask[], Error>({
+  // Fetch tasks with backend filtering
+  const { data: allTasksData, isLoading, error, isFetching } = useQuery<PaginatedReviewTaskResponse, Error>({
     queryKey: ["/review-tasks/enhanced", {
-      task_type: "match_suggestion"
-      // Always fetch all, no status filter
+      task_type: "match_suggestion",
+      ...(statusFilter !== "all" && { status: statusFilter }),
+      ...(campaignFilter !== "all" && { campaign_id: campaignFilter }),
+      ...(searchTerm && { media_name: searchTerm }),
+      page: currentPage,
+      page_size: ITEMS_PER_PAGE
     }],
     placeholderData: (previousData) => previousData,
     staleTime: 30000, // Consider data fresh for 30 seconds
     refetchOnWindowFocus: false, // Don't refetch on window focus
   });
 
-  // Use all tasks for stats
-  const allTasksForStats = allTasksData || [];
+  // Extract items and metadata from paginated API response
+  console.log('🔍 API Response Debug:', {
+    hasData: !!allTasksData,
+    itemsCount: allTasksData?.items?.length,
+    total: allTasksData?.total,
+    page: allTasksData?.page,
+    total_pages: allTasksData?.total_pages,
+    isLoading,
+    error
+  });
 
-  // Filter tasks client-side based on statusFilter AND campaignFilter
-  let filteredTasks = allTasksData || [];
+  // Use backend pagination directly - no client-side filtering needed!
+  const displayedTasks = allTasksData?.items || [];
+  const totalTasks = allTasksData?.total || 0;
+  const totalPages = allTasksData?.total_pages || 0;
 
-  // Apply status filter
-  if (statusFilter !== "all") {
-    filteredTasks = filteredTasks.filter(task => task.status === statusFilter);
-  }
+  // Fetch stats from dedicated stats endpoint (lightweight, returns just counts)
+  // Include campaign filter so stats update when filtering by campaign
+  const { data: statsResponse } = useQuery<ReviewTaskStatsResponse, Error>({
+    queryKey: ["/review-tasks/enhanced/stats", {
+      task_type: "match_suggestion",
+      ...(campaignFilter !== "all" && { campaign_id: campaignFilter })
+      // Note: No status or media_name filter - stats show all statuses for the selected campaign
+    }],
+    staleTime: 60000, // Cache stats for 1 minute
+    refetchOnWindowFocus: false,
+  });
 
-  // Apply campaign filter (only for admin/staff)
-  if (isStaffOrAdmin && campaignFilter !== "all") {
-    filteredTasks = filteredTasks.filter(task => task.campaign_id === campaignFilter);
-  }
-
-  // Apply search filter BEFORE pagination
-  if (searchTerm) {
-    const term = searchTerm.toLowerCase();
-    filteredTasks = filteredTasks.filter((task: ReviewTask) => {
-      // Search by multiple fields
-      const mediaNameMatch = task.media_name?.toLowerCase().includes(term);
-      const campaignNameMatch = task.campaign_name?.toLowerCase().includes(term);
-      const clientNameMatch = task.client_name?.toLowerCase().includes(term);
-      const notesMatch = task.notes?.toLowerCase().includes(term);
-      const mediaIdMatch = task.media_id?.toString().includes(term);
-      const relatedIdMatch = task.related_id.toString().includes(term);
-      const descriptionMatch = task.media_description?.toLowerCase().includes(term);
-
-      return mediaNameMatch || campaignNameMatch || clientNameMatch ||
-             notesMatch || mediaIdMatch || relatedIdMatch || descriptionMatch;
-    });
-  }
-
-  const allDataResponse = filteredTasks;
-
-  // Client-side pagination (applied AFTER search filter)
-  const allTasks = allDataResponse || [];
-  const totalTasks = allTasks.length;
-  const totalPages = Math.ceil(totalTasks / ITEMS_PER_PAGE);
-
-  // Apply client-side pagination
-  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-  const endIndex = startIndex + ITEMS_PER_PAGE;
-  const paginatedTasks = allTasks.slice(startIndex, endIndex);
-
-  // Debug logging
   console.log('Pagination debug:', {
     ITEMS_PER_PAGE,
     totalTasks,
     currentPage,
-    startIndex,
-    endIndex,
-    paginatedTasksLength: paginatedTasks.length,
+    displayedTasksLength: displayedTasks.length,
     totalPages
   });
 
-  const reviewTasksData: PaginatedReviewTasks = {
-    items: paginatedTasks,
-    total: totalTasks,
-    page: currentPage,
-    size: ITEMS_PER_PAGE,
-    pages: totalPages
-  };
+  console.log('Stats response:', statsResponse);
 
-  const displayedTasks = reviewTasksData.items;
-
-  // Calculate stats from all tasks (unfiltered)
-  const statsData = allTasksForStats || [];
+  // Use stats directly from API response
   const stats = {
-    total: statsData.length,
-    pending: statsData.filter((task: ReviewTask) => task.status === 'pending').length,
-    approved: statsData.filter((task: ReviewTask) => task.status === 'approved').length,
-    rejected: statsData.filter((task: ReviewTask) => task.status === 'rejected').length,
+    total: statsResponse?.total || 0,
+    pending: statsResponse?.pending || 0,
+    approved: statsResponse?.approved || 0,
+    rejected: statsResponse?.rejected || 0,
   };
   // Define which keys from stats map to reviewTaskStatusConfig
   const statusKeysForStats: Array<keyof Omit<typeof stats, 'total'>> = ['pending', 'approved', 'rejected'];
@@ -913,9 +909,12 @@ export default function Approvals() {
               <div className="relative flex-1 min-w-[180px] sm:min-w-[240px]">
                 <Search className="absolute left-2.5 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                 <Input
-                  placeholder="Search by podcast name, campaign, client, or description..."
+                  placeholder="Search by podcast name..."
                   value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
+                  onChange={(e) => {
+                    setSearchTerm(e.target.value);
+                    setCurrentPage(1); // Reset to first page when searching
+                  }}
                   className="pl-9 text-sm"
                 />
               </div>
@@ -924,6 +923,7 @@ export default function Approvals() {
                 value={statusFilter}
                 onValueChange={(value) => {
                   setStatusFilter(value);
+                  setCurrentPage(1); // Reset to first page when filter changes
                 }}
               >
                 <SelectTrigger className="w-full sm:w-[160px] text-sm">
@@ -944,6 +944,7 @@ export default function Approvals() {
                   value={campaignFilter}
                   onValueChange={(value) => {
                     setCampaignFilter(value);
+                    setCurrentPage(1); // Reset to first page when campaign filter changes
                   }}
                 >
                   <SelectTrigger className="w-full sm:w-[200px] text-sm">
