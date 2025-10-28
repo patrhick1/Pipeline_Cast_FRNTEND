@@ -1803,6 +1803,7 @@ export default function AdminInbox() {
       }}
       threadId={selectedThreadId || ''}
       isAdminInbox={true}
+      adminAccountId={adminAccountId}
       onScheduled={() => {
         setShowScheduleModal(false);
         setReplyMode(null);
