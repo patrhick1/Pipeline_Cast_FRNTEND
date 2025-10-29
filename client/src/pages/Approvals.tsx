@@ -606,7 +606,8 @@ export default function Approvals() {
   const { hasPaidAccess, canAccessFeature } = useFeatureAccess();
 
   // Show paywall for clients without paid access
-  const shouldShowPaywall = isClient && !hasPaidAccess && !canAccessFeature('approvals');
+  // Disabled for match approvals - clients can now access for free
+  const shouldShowPaywall = false; // isClient && !hasPaidAccess && !canAccessFeature('approvals');
 
   interface PaginatedReviewTasks {
     items: ReviewTask[];
