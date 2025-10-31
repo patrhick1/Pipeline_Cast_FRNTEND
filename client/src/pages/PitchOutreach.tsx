@@ -46,6 +46,7 @@ import { BulkFollowUpButton } from "@/components/pitch/BulkFollowUpButton";
 import { BulkApproveButton } from "@/components/pitch/BulkApproveButton";
 import { formatUTCToLocal } from "@/lib/timezone";
 import { ModernPitchReview } from "@/components/pitch/ModernPitchReview";
+import RichTextEditor from "@/components/inbox/RichTextEditor";
 
 // --- Interfaces (Aligned with expected enriched backend responses) ---
 
@@ -379,7 +380,20 @@ function EditDraftModal({ draft, open, onOpenChange, onSave, isSaving }: {
                 <Form {...form}>
                     <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 pt-2">
                         <FormField control={form.control} name="subject_line" render={({ field }) => (<FormItem><FormLabel>Subject Line</FormLabel><FormControl><Input placeholder="Enter pitch subject line" {...field} /></FormControl><FormMessage /></FormItem>)} />
-                        <FormField control={form.control} name="draft_text" render={({ field }) => (<FormItem><FormLabel>Pitch Body</FormLabel><FormControl><Textarea placeholder="Enter pitch body..." className="min-h-[200px] max-h-[35vh] overflow-y-auto text-sm" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                        <FormField control={form.control} name="draft_text" render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Pitch Body</FormLabel>
+                                <FormControl>
+                                    <RichTextEditor
+                                        value={field.value}
+                                        onChange={field.onChange}
+                                        placeholder="Enter pitch body..."
+                                        minHeight="min-h-[200px]"
+                                    />
+                                </FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )} />
                         <DialogFooter><Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button><Button type="submit" disabled={isSaving} className="bg-primary text-primary-foreground">{isSaving ? "Saving..." : <><Save className="mr-2 h-4 w-4"/>Save Changes</>}</Button></DialogFooter>
                     </form>
                 </Form>
@@ -535,7 +549,7 @@ function DraftsReviewTab({
                                                 mediaName={group.media_name ?? undefined}
                                                 onSuccess={() => {
                                                     // Refresh the data to show new follow-ups
-                                                    window.location.reload(); // Temporary - should refresh via React Query
+                                                    globalRefreshAllPitchData();
                                                 }}
                                                 size="sm"
                                                 variant="outline"
@@ -1630,6 +1644,16 @@ export default function PitchOutreach() {
   };
   const handleBulkSendPitches = (pitchIds: number[]) => { bulkSendPitchesMutation.mutate(pitchIds); };
   const handleOpenEditModal = (draft: PitchDraftForReview) => { setEditingDraft(draft); setIsEditModalOpen(true); };
+  const handleSaveInlineEdit = (draft: PitchDraftForReview) => {
+    // Handle inline edit from ModernPitchReview - save directly
+    updatePitchDraftMutation.mutate({
+      pitchGenId: draft.pitch_gen_id,
+      data: {
+        draft_text: draft.draft_text,
+        subject_line: draft.subject_line || ''
+      }
+    });
+  };
   const handleSaveEditedDraft = (pitchGenId: number, data: EditDraftFormData) => { updatePitchDraftMutation.mutate({ pitchGenId, data }); };
   const handlePreviewPitch = (pitch: PitchReadyToSend) => { setPreviewPitch(pitch); setIsPreviewModalOpen(true); };
 
@@ -1865,7 +1889,7 @@ export default function PitchOutreach() {
             <ModernPitchReview
               drafts={pitchDraftsForReview}
               onApprove={handleApprovePitch}
-              onEdit={handleOpenEditModal}
+              onEdit={handleSaveInlineEdit}
               onBatchAction={(action, draftIds) => {
                 if (action === 'approve') {
                   draftIds.forEach(id => {
@@ -1874,6 +1898,7 @@ export default function PitchOutreach() {
                   });
                 }
               }}
+              onFollowUpGenerated={refreshAllPitchData}
               isLoading={isLoadingPitchDrafts}
               isProcessing={isLoadingApproveForPitchGenId !== null}
               canUseAI={canUseAI}

@@ -1,6 +1,6 @@
 // client/src/pages/PublicMediaKitPage.tsx
 import { useEffect, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useParams } from "wouter"; // To get the :slug from the URL
 import { apiRequest } from "@/lib/queryClient";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -165,6 +165,7 @@ export default function PublicMediaKitPage() {
   const slug = params.slug;
   const { user } = useAuth();
   const [showEditor, setShowEditor] = useState(false);
+  const queryClient = useQueryClient();
 
   const { data: mediaKit, isLoading, error, isError } = useQuery<PublicMediaKitData | null>({
     queryKey: ["publicMediaKit", slug],
@@ -426,7 +427,7 @@ export default function PublicMediaKitPage() {
                 isOwner={true}
                 onSave={() => {
                   // Refetch the media kit data
-                  window.location.reload();
+                  queryClient.invalidateQueries({ queryKey: ["publicMediaKit", slug] });
                 }}
               />
             </div>

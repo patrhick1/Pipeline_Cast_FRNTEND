@@ -8,6 +8,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+import RichTextEditor from '@/components/inbox/RichTextEditor';
 import {
   Check,
   X,
@@ -57,6 +58,7 @@ interface ModernPitchReviewProps {
   onApprove: (pitchGenId: number) => void;
   onEdit: (draft: PitchDraft) => void;
   onBatchAction?: (action: 'approve' | 'delete', draftIds: number[]) => void;
+  onFollowUpGenerated?: () => void;
   isLoading?: boolean;
   isProcessing?: boolean;
   canUseAI?: boolean;
@@ -67,6 +69,7 @@ export function ModernPitchReview({
   onApprove,
   onEdit,
   onBatchAction,
+  onFollowUpGenerated,
   isLoading = false,
   isProcessing = false,
   canUseAI = false,
@@ -174,7 +177,14 @@ export function ModernPitchReview({
     if (field === 'subject') {
       setEditedSubject(draft.subject_line || '');
     } else {
-      setEditedBody(draft.draft_text);
+      // Convert plain text line breaks to HTML if the text doesn't already contain HTML tags
+      let bodyText = draft.draft_text;
+      const hasHtmlTags = /<[^>]+>/.test(bodyText);
+      if (!hasHtmlTags && bodyText) {
+        // Plain text - convert \n to <br>
+        bodyText = bodyText.replace(/\n/g, '<br>');
+      }
+      setEditedBody(bodyText);
     }
     setEditingField(field);
   };
@@ -183,7 +193,14 @@ export function ModernPitchReview({
     const editingDraft = drafts.find(d => d.pitch_gen_id === editingDraftId);
     if (!editingDraft || !editingField) return;
 
-    onEdit(editingDraft);
+    // Create updated draft with edited content
+    const updatedDraft = {
+      ...editingDraft,
+      subject_line: editingField === 'subject' ? editedSubject : editingDraft.subject_line,
+      draft_text: editingField === 'body' ? editedBody : editingDraft.draft_text,
+    };
+
+    onEdit(updatedDraft);
     setEditingField(null);
     setEditingDraftId(null);
 
@@ -220,6 +237,18 @@ export function ModernPitchReview({
   const getPitchTypeColor = (type?: string | null) => {
     if (!type || type === 'initial') return 'bg-green-100 text-green-800';
     return 'bg-blue-100 text-blue-800';
+  };
+
+  // Helper to convert plain text to HTML for display
+  const formatTextForDisplay = (text: string) => {
+    if (!text) return 'Click to add email content...';
+    // Check if text already contains HTML tags
+    const hasHtmlTags = /<[^>]+>/.test(text);
+    if (hasHtmlTags) {
+      return text;
+    }
+    // Plain text - convert \n to <br>
+    return text.replace(/\n/g, '<br>');
   };
 
   if (isLoading && drafts.length === 0) {
@@ -367,7 +396,7 @@ export function ModernPitchReview({
                   <AIGenerateFollowUpButton
                     matchId={selectedGroupDrafts[0].match_id}
                     mediaName={selectedGroupDrafts[0].media_name || undefined}
-                    onSuccess={() => window.location.reload()}
+                    onSuccess={() => onFollowUpGenerated?.()}
                     size="default"
                     variant="outline"
                     className="border-gray-300"
@@ -493,12 +522,12 @@ export function ModernPitchReview({
                     <div>
                       {isEditingThis && editingField === 'body' ? (
                   <div className="space-y-3">
-                    <Textarea
+                    <RichTextEditor
                       value={editedBody}
-                      onChange={(e) => setEditedBody(e.target.value)}
-                      className="min-h-[500px] text-[15px] leading-[1.8] p-5 resize-none border-2 border-blue-200 focus:border-blue-400"
+                      onChange={setEditedBody}
                       placeholder="Write your email content here..."
-                      autoFocus
+                      minHeight="min-h-[500px]"
+                      className="border-2 border-blue-200 focus:border-blue-400 rounded-lg"
                     />
                     <div className="flex gap-2">
                       <Button size="sm" onClick={handleSaveEdit} className="bg-blue-600 hover:bg-blue-700 text-white">
@@ -513,11 +542,10 @@ export function ModernPitchReview({
                 ) : (
                   <div className="group relative">
                     <div
-                      className="text-gray-700 text-[15px] leading-[1.85] whitespace-pre-wrap p-6 rounded-xl bg-white border border-gray-200 hover:border-gray-300 hover:shadow-sm transition-all cursor-text min-h-[500px]"
+                      className="text-gray-700 text-[15px] leading-[1.85] p-6 rounded-xl bg-white border border-gray-200 hover:border-gray-300 hover:shadow-sm transition-all cursor-text min-h-[500px]"
                       onClick={() => handleStartEdit(draft.pitch_gen_id, 'body')}
-                    >
-                      {draft.draft_text || 'Click to add email content...'}
-                    </div>
+                      dangerouslySetInnerHTML={{ __html: formatTextForDisplay(draft.draft_text) }}
+                    />
                     <Button
                       size="sm"
                       variant="ghost"

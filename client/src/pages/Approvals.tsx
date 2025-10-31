@@ -650,7 +650,7 @@ export default function Approvals() {
     : allCampaignsData;
 
   // Fetch tasks with backend filtering
-  const { data: allTasksData, isLoading, error, isFetching } = useQuery<PaginatedReviewTaskResponse, Error>({
+  const { data: allTasksData, isLoading, error, isFetching, refetch } = useQuery<PaginatedReviewTaskResponse, Error>({
     queryKey: ["/review-tasks/enhanced", {
       task_type: "match_suggestion",
       ...(statusFilter !== "all" && { status: statusFilter }),
@@ -832,8 +832,8 @@ export default function Approvals() {
               <XCircle className="h-12 w-12 text-red-500 mx-auto mb-3" />
               <h3 className="text-lg font-semibold text-red-700 mb-2">Failed to Load Review Tasks</h3>
               <p className="text-red-600 mb-4">{error.message}</p>
-              <Button 
-                onClick={() => window.location.reload()}
+              <Button
+                onClick={() => refetch()}
                 variant="outline"
                 className="border-red-300 text-red-600 hover:bg-red-100"
               >
