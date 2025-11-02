@@ -1,35 +1,37 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogHeader, 
-  DialogTitle, 
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
   DialogDescription,
-  DialogFooter 
+  DialogFooter
 } from "@/components/ui/dialog";
 import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { usePitchCapabilities } from "@/hooks/usePitchCapabilities";
 import { useQueryClient } from "@tanstack/react-query";
-import { 
-  Sparkles, 
-  Loader2, 
+import {
+  Sparkles,
+  Loader2,
   Lock,
-  CheckCircle,
-  AlertCircle,
-  X
+  AlertCircle
 } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Badge } from "@/components/ui/badge";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
 
 interface BatchMatch {
   match_id: number;
   media_name?: string;
-  status?: "pending" | "generating" | "success" | "failed";
-  error?: string;
 }
 
 interface BatchAIGenerateButtonProps {
@@ -49,15 +51,14 @@ export function BatchAIGenerateButton({
 }: BatchAIGenerateButtonProps) {
   const [isGenerating, setIsGenerating] = useState(false);
   const [showBatchDialog, setShowBatchDialog] = useState(false);
-  const [batchProgress, setBatchProgress] = useState(0);
-  const [processedMatches, setProcessedMatches] = useState<BatchMatch[]>([]);
-  const [currentlyProcessing, setCurrentlyProcessing] = useState<string | null>(null);
-  
+  const [showTemplateSelection, setShowTemplateSelection] = useState(false);
+  const [selectedTemplate, setSelectedTemplate] = useState("ai_pitch_authority_v2");
+
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { canUseAI, isFreePlan, capabilities, isAdmin } = usePitchCapabilities();
 
-  const handleBatchGenerate = async () => {
+  const handleInitiateBatchGenerate = () => {
     if (!canUseAI) {
       toast({
         title: "Upgrade Required",
@@ -67,99 +68,82 @@ export function BatchAIGenerateButton({
       return;
     }
 
-    setIsGenerating(true);
-    setShowBatchDialog(true);
-    setBatchProgress(0);
-    setProcessedMatches([]);
-
-    const results = [];
-    const updatedMatches: BatchMatch[] = [...matches].map(m => ({ ...m, status: "pending" as BatchMatch["status"] }));
-    setProcessedMatches(updatedMatches);
-
-    for (let i = 0; i < matches.length; i++) {
-      const match = matches[i];
-      setCurrentlyProcessing(match.media_name || `Match ${match.match_id}`);
-      
-      // Update status to generating
-      updatedMatches[i].status = "generating" as BatchMatch["status"];
-      setProcessedMatches([...updatedMatches]);
-
-      try {
-        // Use updated v2 templates based on user role
-        const templateId = isAdmin ? "admin_pitch_authority_v2" : "ai_pitch_authority_v2";
-
-        const response = await apiRequest("POST", "/pitches/generate", {
-          match_id: match.match_id,
-          pitch_template_id: templateId
-        });
-
-        if (!response.ok) {
-          const errorData = await response.json().catch(() => ({ detail: "Failed to generate" }));
-          throw new Error(errorData.detail);
-        }
-
-        const result = await response.json();
-        results.push(result);
-        
-        // Update status to success
-        updatedMatches[i].status = "success" as BatchMatch["status"];
-        setProcessedMatches([...updatedMatches]);
-      } catch (error: any) {
-        // Update status to failed
-        updatedMatches[i].status = "failed" as BatchMatch["status"];
-        updatedMatches[i].error = error.message;
-        setProcessedMatches([...updatedMatches]);
-        results.push({ error: error.message, match_id: match.match_id });
-      }
-
-      // Update progress
-      setBatchProgress(((i + 1) / matches.length) * 100);
-    }
-
-    setCurrentlyProcessing(null);
-    setIsGenerating(false);
-
-    // Show summary
-    const successCount = updatedMatches.filter(m => m.status === "success").length;
-    const failedCount = updatedMatches.filter(m => m.status === "failed").length;
-
-    if (successCount > 0) {
-      toast({
-        title: "Batch Generation Complete",
-        description: `Successfully generated ${successCount} pitch${successCount > 1 ? 'es' : ''}${failedCount > 0 ? `. ${failedCount} failed.` : '.'}`,
-      });
+    // For admins, skip template selection and go straight to generation
+    if (isAdmin) {
+      handleBatchGenerate();
     } else {
-      toast({
-        title: "Batch Generation Failed",
-        description: "Failed to generate pitches. Please try again.",
-        variant: "destructive",
-      });
-    }
-
-    // Refresh data - more comprehensive refresh
-    queryClient.invalidateQueries({ queryKey: ["/pitches"] });
-    queryClient.invalidateQueries({ queryKey: ["approvedMatchesForPitching"] });
-    queryClient.invalidateQueries({ queryKey: ["pitchDraftsForReview"] });
-    queryClient.invalidateQueries({ queryKey: ["pitchesReadyToSend"] });
-    
-    // Also force immediate refetch for instant updates
-    queryClient.refetchQueries({ queryKey: ["pitchDraftsForReview"] });
-
-    if (onComplete) {
-      onComplete(results);
+      // For paid_basic users, show template selection dialog
+      setShowTemplateSelection(true);
     }
   };
 
-  const getStatusIcon = (status?: string) => {
-    switch (status) {
-      case "success":
-        return <CheckCircle className="h-4 w-4 text-green-600" />;
-      case "failed":
-        return <X className="h-4 w-4 text-red-600" />;
-      case "generating":
-        return <Loader2 className="h-4 w-4 animate-spin text-blue-600" />;
-      default:
-        return <div className="h-4 w-4 rounded-full border-2 border-gray-300" />;
+  const handleBatchGenerate = async () => {
+    setShowTemplateSelection(false);
+    setIsGenerating(true);
+    setShowBatchDialog(true);
+
+    try {
+      // Determine template based on user role
+      const templateId = isAdmin ? "admin_pitch_authority_v2" : selectedTemplate;
+
+      // Build batch payload
+      const batchPayload = matches.map(match => ({
+        match_id: match.match_id,
+        pitch_template_id: templateId
+      }));
+
+      // Call batch endpoint
+      const response = await apiRequest("POST", "/pitches/generate-batch", batchPayload);
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ detail: "Failed to generate batch" }));
+        throw new Error(errorData.detail || "Failed to generate batch");
+      }
+
+      const result = await response.json();
+
+      // Extract counts from response
+      const successCount = result.results?.successful?.length || 0;
+      const failedCount = result.results?.failed?.length || 0;
+      const duplicateCount = result.results?.duplicates?.length || 0;
+
+      // Show summary toast
+      if (successCount > 0) {
+        toast({
+          title: "Batch Generation Complete",
+          description: `Successfully generated ${successCount} pitch${successCount > 1 ? 'es' : ''}${failedCount > 0 ? `. ${failedCount} failed` : ''}${duplicateCount > 0 ? `. ${duplicateCount} duplicate${duplicateCount > 1 ? 's' : ''} skipped` : ''}.`,
+        });
+      } else {
+        toast({
+          title: "Batch Generation Failed",
+          description: `Failed to generate pitches${failedCount > 0 ? `: ${failedCount} error${failedCount > 1 ? 's' : ''}` : ''}. Please try again.`,
+          variant: "destructive",
+        });
+      }
+
+      // Refresh data - comprehensive refresh
+      queryClient.invalidateQueries({ queryKey: ["/pitches"] });
+      queryClient.invalidateQueries({ queryKey: ["approvedMatchesForPitching"] });
+      queryClient.invalidateQueries({ queryKey: ["pitchDraftsForReview"] });
+      queryClient.invalidateQueries({ queryKey: ["pitchesReadyToSend"] });
+
+      // Force immediate refetch for instant updates
+      queryClient.refetchQueries({ queryKey: ["pitchDraftsForReview"] });
+
+      if (onComplete) {
+        onComplete(result.results?.successful || []);
+      }
+
+    } catch (error: any) {
+      toast({
+        title: "Batch Generation Error",
+        description: error.message || "An unexpected error occurred. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsGenerating(false);
+      // Keep dialog open briefly to show completion
+      setTimeout(() => setShowBatchDialog(false), 1500);
     }
   };
 
@@ -177,7 +161,7 @@ export function BatchAIGenerateButton({
             action: (
               <Button 
                 size="sm" 
-                onClick={() => window.open('https://calendly.com/gentoftech/catch-up-call3', '_blank')}
+                onClick={() => window.open('https://calendly.com/alex-podcastguestlaunch/30min', '_blank')}
               >
                 Book Demo
               </Button>
@@ -197,81 +181,49 @@ export function BatchAIGenerateButton({
         size={size}
         variant={variant}
         className={`${className} ${variant === 'default' ? 'bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white' : ''}`}
-        onClick={handleBatchGenerate}
+        onClick={handleInitiateBatchGenerate}
         disabled={isGenerating || matches.length === 0}
       >
         <Sparkles className="h-4 w-4 mr-2" />
         Generate {matches.length} Pitch{matches.length !== 1 ? 'es' : ''}
       </Button>
 
-      {/* Batch Generation Progress Dialog */}
-      <Dialog open={showBatchDialog} onOpenChange={(open) => !isGenerating && setShowBatchDialog(open)}>
-        <DialogContent className="sm:max-w-[600px]" hideCloseButton={isGenerating}>
+      {/* Template Selection Dialog (for paid_basic users) */}
+      <Dialog open={showTemplateSelection} onOpenChange={setShowTemplateSelection}>
+        <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Sparkles className="h-5 w-5 text-purple-600" />
-              Batch AI Generation {isGenerating && '(Processing...)'}
+              Select Pitch Template
             </DialogTitle>
             <DialogDescription>
-              {isGenerating
-                ? `Please wait while we generate ${matches.length} personalized pitches. This may take a few minutes.`
-                : `Successfully processed ${matches.length} pitches.`
-              }
+              Choose a template for generating {matches.length} pitch{matches.length !== 1 ? 'es' : ''}
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4 py-4">
-            {/* Progress Bar */}
             <div className="space-y-2">
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-600">Progress</span>
-                <span className="font-medium">{Math.round(batchProgress)}%</span>
-              </div>
-              <Progress value={batchProgress} className="h-2" />
-              {currentlyProcessing && (
-                <p className="text-sm text-gray-600">
-                  Currently processing: <span className="font-medium">{currentlyProcessing}</span>
-                </p>
-              )}
-            </div>
-
-            {/* Match List */}
-            <ScrollArea className="h-[200px] border rounded-lg p-3">
-              <div className="space-y-2">
-                {processedMatches.map((match) => (
-                  <div 
-                    key={match.match_id} 
-                    className="flex items-center justify-between p-2 rounded-md bg-gray-50"
-                  >
-                    <div className="flex items-center gap-2">
-                      {getStatusIcon(match.status)}
-                      <span className="text-sm">
-                        {match.media_name || `Match ${match.match_id}`}
-                      </span>
+              <Label htmlFor="template-select">Template</Label>
+              <Select value={selectedTemplate} onValueChange={setSelectedTemplate}>
+                <SelectTrigger id="template-select">
+                  <SelectValue placeholder="Select a template" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ai_pitch_authority_v2">
+                    <div className="flex flex-col items-start">
+                      <span className="font-medium">Authority Template</span>
+                      <span className="text-xs text-gray-500">Professional and authoritative tone</span>
                     </div>
-                    {match.status === "failed" && match.error && (
-                      <span className="text-xs text-red-600">{match.error}</span>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </ScrollArea>
-
-            {/* Summary Stats */}
-            {!isGenerating && processedMatches.some(m => m.status === "success" || m.status === "failed") && (
-              <div className="flex gap-2">
-                <Badge variant="default" className="bg-green-600">
-                  <CheckCircle className="h-3 w-3 mr-1" />
-                  {processedMatches.filter(m => m.status === "success").length} Success
-                </Badge>
-                {processedMatches.filter(m => m.status === "failed").length > 0 && (
-                  <Badge variant="destructive">
-                    <X className="h-3 w-3 mr-1" />
-                    {processedMatches.filter(m => m.status === "failed").length} Failed
-                  </Badge>
-                )}
-              </div>
-            )}
+                  </SelectItem>
+                  <SelectItem value="ai_pitch_smart_v2">
+                    <div className="flex flex-col items-start">
+                      <span className="font-medium">Smart Template</span>
+                      <span className="text-xs text-gray-500">Conversational and engaging tone</span>
+                    </div>
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
 
             {/* AI Limits Warning */}
             {capabilities?.limits?.ai_generations_per_month !== 'unlimited' && (
@@ -285,15 +237,43 @@ export function BatchAIGenerateButton({
           </div>
 
           <DialogFooter>
-            {!isGenerating && (
-              <Button
-                variant="outline"
-                onClick={() => setShowBatchDialog(false)}
-              >
-                Close
-              </Button>
-            )}
+            <Button variant="outline" onClick={() => setShowTemplateSelection(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleBatchGenerate} className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700">
+              <Sparkles className="h-4 w-4 mr-2" />
+              Generate Pitches
+            </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Batch Generation Progress Dialog */}
+      <Dialog open={showBatchDialog} onOpenChange={(open) => !isGenerating && setShowBatchDialog(open)}>
+        <DialogContent className="sm:max-w-[400px]" hideCloseButton={isGenerating}>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Sparkles className="h-5 w-5 text-purple-600" />
+              {isGenerating ? 'Generating Pitches...' : 'Generation Complete'}
+            </DialogTitle>
+            <DialogDescription>
+              {isGenerating
+                ? `Processing ${matches.length} pitch${matches.length !== 1 ? 'es' : ''} in parallel. This may take a moment.`
+                : `Batch generation finished.`
+              }
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-6">
+            {isGenerating && (
+              <div className="flex flex-col items-center justify-center space-y-4">
+                <Loader2 className="h-12 w-12 animate-spin text-purple-600" />
+                <p className="text-sm text-gray-600">
+                  Please wait while AI generates your pitches...
+                </p>
+              </div>
+            )}
+          </div>
         </DialogContent>
       </Dialog>
     </>
