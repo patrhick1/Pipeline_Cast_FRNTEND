@@ -1,0 +1,76 @@
+{
+  "slug": "leadership-insights",
+  "title": "From Unknown Author to Sought-After Guest",
+  "client": {
+    "name": "Emily Rodriguez",
+    "company": "Leadership Insights",
+    "role": "Author & Speaker",
+    "avatarUrl": "/images/clients/emily-rodriguez.jpg",
+    "industry": "Professional Development",
+    "companySize": "Solo entrepreneur",
+    "website": "https://leadershipinsights.com"
+  },
+  "icp": "Business leaders and executives seeking leadership development",
+  "challenge": "As a first-time author, Emily struggled to get noticed by podcast hosts. Her cold outreach emails went unanswered, and she lacked the positioning expertise to craft compelling pitches.",
+  "solution": "PGL positioned Emily as a leadership expert, crafted pitches that highlighted her unique frameworks from her book, and targeted podcasts where business leaders listen. We managed all outreach and emphasized her actionable insights.",
+  "timeline": "8 weeks from start to 6th booking",
+  "metrics": {
+    "bookings": 6,
+    "timeframeWeeks": 8,
+    "pitchesSent": 32,
+    "responseRate": 0.22,
+    "placementRate": 0.19,
+    "bookSales": 450,
+    "speakingGigs": 3,
+    "avgAudienceSize": 15000
+  },
+  "results": [
+    "6 confirmed podcast bookings in 2 months",
+    "Appeared on shows with 15K+ average audience",
+    "Booked 3 paid speaking engagements",
+    "Sold 450+ books directly attributed to podcasts",
+    "Built credibility as leadership thought leader"
+  ],
+  "highlights": [
+    "Featured on shows she never thought she could access",
+    "22% response rate from professional positioning",
+    "Fastest case: pitch sent Monday, booked by Friday",
+    "Speaking opportunities worth $18K combined",
+    "Book sales increased 300% post-podcast appearances"
+  ],
+  "quotes": [
+    {
+      "text": "The team at PGL understands positioning. Their pitches landed me on shows I never thought I'd get on. The hosts were actually excited to have me. Worth every penny—the ROI in book sales and speaking gigs was immediate.",
+      "attribution": "Emily Rodriguez, Author & Speaker",
+      "featured": true
+    }
+  ],
+  "testimonialImage": "/PGL Assets/Client Case Studies/Website (1000x800)/3.png",
+  "before": {
+    "title": "Before PGL",
+    "points": [
+      "Unknown in podcasting world",
+      "Generic pitches getting ignored",
+      "No responses from target shows",
+      "Uncertain about positioning",
+      "Limited book sales momentum"
+    ]
+  },
+  "after": {
+    "title": "After PGL",
+    "points": [
+      "Recognized as leadership expert",
+      "Compelling, personalized pitches",
+      "Featured on top business podcasts",
+      "Clear, powerful positioning",
+      "300% increase in book sales"
+    ]
+  },
+  "featured": true,
+  "publishedDate": "2024-09-10",
+  "tags": ["Leadership", "Author", "Speaking", "Professional Development"],
+  "seo": {
+    "title": "Emily Rodriguez Case Study: From Unknown to Sought-After | PGL",
+    "description": "How author Emily Rodriguez landed 6 podcast bookings in 8 weeks and increased book sales 300% using professional positioning from PGL's DFY service."
+  }
+}

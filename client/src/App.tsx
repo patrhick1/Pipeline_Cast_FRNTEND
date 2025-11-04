@@ -53,6 +53,14 @@ import Pricing from "@/pages/Pricing"; // Pricing page
 import Billing from "@/pages/Billing"; // Billing page
 import BillingSuccess from "@/pages/BillingSuccess"; // Billing success page
 
+// New Marketing Pages
+import Bookings from "@/pages/Bookings"; // Services & pricing page
+import CaseStudies from "@/pages/CaseStudies"; // Case studies index
+import CaseStudyDetail from "@/pages/CaseStudyDetail"; // Individual case study
+import Blog from "@/pages/Blog"; // Blog index
+import BlogPost from "@/pages/BlogPost"; // Individual blog post
+import AboutUs from "@/pages/AboutUs"; // About page (feature-flagged)
+
 
 function Router() {
   const { user, isAuthenticated, isLoading } = useAuth();
@@ -78,7 +86,19 @@ function Router() {
       <Route path="/privacy" component={PrivacyPolicy} /> {/* Privacy policy page */}
       <Route path="/terms" component={TermsOfService} /> {/* Terms of service page */}
       <Route path="/contact" component={Contact} /> {/* Contact page */}
-      
+
+      {/* New Marketing Pages - accessible to everyone */}
+      <Route path="/bookings" component={Bookings} /> {/* Services & pricing */}
+      <Route path="/case-studies" component={CaseStudies} /> {/* Case studies index */}
+      <Route path="/case-studies/:slug" component={CaseStudyDetail} /> {/* Individual case study */}
+      <Route path="/blog" component={Blog} /> {/* Blog index */}
+      <Route path="/blog/:slug" component={BlogPost} /> {/* Individual blog post */}
+
+      {/* Conditional About page based on feature flag */}
+      {import.meta.env.VITE_SHOW_ABOUT === 'true' && (
+        <Route path="/about-us" component={AboutUs} />
+      )}
+
       {!isAuthenticated ? (
         <>
           <Route path="/" component={Home} />

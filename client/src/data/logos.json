@@ -1,0 +1,32 @@
+{
+  "podcasts": [
+    {
+      "id": "podcast-1",
+      "name": "The SaaS Podcast",
+      "logoUrl": "/images/logos/podcasts/saas-podcast.png",
+      "websiteUrl": "https://example.com",
+      "category": "Business"
+    },
+    {
+      "id": "podcast-2",
+      "name": "Founder Stories",
+      "logoUrl": "/images/logos/podcasts/founder-stories.png",
+      "websiteUrl": "https://example.com",
+      "category": "Entrepreneurship"
+    }
+  ],
+  "clients": [
+    {
+      "id": "client-1",
+      "name": "Acme Corporation",
+      "logoUrl": "/images/logos/clients/acme.png",
+      "industry": "B2B SaaS"
+    },
+    {
+      "id": "client-2",
+      "name": "TechStart Inc",
+      "logoUrl": "/images/logos/clients/techstart.png",
+      "industry": "Technology"
+    }
+  ]
+}

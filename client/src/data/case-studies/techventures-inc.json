@@ -1,0 +1,76 @@
+{
+  "slug": "techventures-inc",
+  "title": "From Hours of Research to Consistent Bookings",
+  "client": {
+    "name": "Michael Chen",
+    "company": "TechVentures Inc",
+    "role": "CEO",
+    "avatarUrl": "/images/clients/michael-chen.jpg",
+    "industry": "Technology",
+    "companySize": "25 employees",
+    "website": "https://techventures.com"
+  },
+  "icp": "Tech entrepreneurs and startup founders",
+  "challenge": "Michael was spending countless hours researching podcasts with minimal success. His self-written pitches had poor response rates, and he struggled to maintain consistent outreach while running his company.",
+  "solution": "PGL's DFY service eliminated all manual work. We researched 50+ tech-focused podcasts, created personalized pitches highlighting Michael's startup journey, and managed all communication. Michael's involvement: approving shows once per week.",
+  "timeline": "3 months from kickoff to 7th booking",
+  "metrics": {
+    "bookings": 7,
+    "timeframeWeeks": 12,
+    "pitchesSent": 38,
+    "responseRate": 0.26,
+    "placementRate": 0.18,
+    "timeSaved": "60 hours",
+    "newSubscribers": 425,
+    "speakingGigs": 3
+  },
+  "results": [
+    "7 confirmed podcast bookings in 3 months",
+    "Grew newsletter by 425 qualified subscribers",
+    "Booked 3 paid speaking engagements from podcast appearances",
+    "Reduced outreach time from 10+ hrs/week to 15 min/week",
+    "Established thought leadership in startup ecosystem"
+  ],
+  "highlights": [
+    "26% response rate—5x better than DIY attempts",
+    "First booking within 3 weeks of starting",
+    "Time savings: 60+ hours over 3 months",
+    "3 paid speaking opportunities worth $12K total",
+    "Consistent pipeline of bookings month-over-month"
+  ],
+  "quotes": [
+    {
+      "text": "Before PGL, I spent hours researching podcasts with minimal results. Now I just approve their recommendations and show up to record. It's been a game-changer. The speaking gigs alone paid for the service multiple times over.",
+      "attribution": "Michael Chen, CEO at TechVentures Inc",
+      "featured": true
+    }
+  ],
+  "testimonialImage": "/PGL Assets/Client Case Studies/Website (1000x800)/2.png",
+  "before": {
+    "title": "Before PGL",
+    "points": [
+      "10+ hours/week researching podcasts",
+      "5% response rate on pitches",
+      "Sporadic outreach due to time constraints",
+      "Missing ideal podcast opportunities",
+      "No systematic follow-up process"
+    ]
+  },
+  "after": {
+    "title": "After PGL",
+    "points": [
+      "15 minutes/week reviewing matches",
+      "26% response rate with pro pitches",
+      "Consistent weekly bookings",
+      "Featured on top tech podcasts",
+      "Time to focus on growing business"
+    ]
+  },
+  "featured": true,
+  "publishedDate": "2024-10-22",
+  "tags": ["Technology", "Startups", "CEO", "B2B"],
+  "seo": {
+    "title": "TechVentures Inc Case Study: 7 Bookings in 3 Months | PGL",
+    "description": "How TechVentures Inc CEO went from 10+ hours/week of DIY outreach to 7 confirmed bookings and $12K in speaking gigs using PGL's DFY service."
+  }
+}

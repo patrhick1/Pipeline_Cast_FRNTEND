@@ -1,0 +1,94 @@
+{
+  "company": {
+    "name": "Podcast Guest Launch",
+    "tagline": "Scale podcast guest appearances without the grind",
+    "contactEmail": "hello@podcastguestlaunch.com",
+    "phone": "",
+    "address": {
+      "street": "",
+      "city": "",
+      "state": "",
+      "zip": "",
+      "country": "USA"
+    }
+  },
+  "bookingUrl": "https://calendly.com/alex-podcastguestlaunch/30min",
+  "social": {
+    "twitter": "",
+    "linkedin": "",
+    "facebook": ""
+  },
+  "metrics": {
+    "avgPlacementRate": 0.175,
+    "verifiedOnly": true
+  },
+  "guarantee": "5 Placements in 5 Months Guaranteed: If you don't get 5 confirmed bookings within 5 months of kickoff, we keep working at no extra charge until you do—or you get your money back.",
+  "pricing": {
+    "dfy": {
+      "name": "Done-For-You Booking",
+      "price": 1000,
+      "currency": "USD",
+      "placements": 5,
+      "duration": "5 months",
+      "guaranteeType": "money-back",
+      "inclusions": [
+        "Professional media kit that sells you",
+        "Comprehensive podcast research & qualification",
+        "Personalized pitch creation for each show",
+        "All outreach and follow-up communication",
+        "Booking coordination & scheduling",
+        "Pre-interview briefing materials",
+        "Placement tracking & reporting"
+      ]
+    },
+    "monthly": {
+      "name": "Monthly Plans",
+      "description": "Custom monthly retainers available",
+      "contactRequired": true
+    }
+  },
+  "process": {
+    "steps": [
+      {
+        "number": 1,
+        "title": "Approve Target Shows",
+        "description": "We research and present vetted podcast matches. You approve shows that align with your goals. Takes 10 minutes per week.",
+        "icon": "target"
+      },
+      {
+        "number": 2,
+        "title": "We Pitch & Handle Back-and-Forth",
+        "description": "Our team crafts personalized pitches. We handle all correspondence and follow-ups. You stay updated via dashboard.",
+        "icon": "mail"
+      },
+      {
+        "number": 3,
+        "title": "You Record—Done",
+        "description": "Receive booking confirmations and prep materials. Show up and deliver value. We track placements and ROI.",
+        "icon": "mic"
+      }
+    ]
+  },
+  "faq": [
+    {
+      "question": "What's included in the $1,000 package?",
+      "answer": "Our DFY service includes comprehensive podcast research, personalized pitch creation, all outreach and follow-ups, booking coordination, scheduling, and pre-interview prep materials. We handle everything from start to finish."
+    },
+    {
+      "question": "How soon can I expect my first booking?",
+      "answer": "Most clients receive their first booking within 2-4 weeks of starting. You're guaranteed 5 bookings within 5 months, or we keep working at no extra charge until you reach 5—or you get your money back."
+    },
+    {
+      "question": "Who writes the pitches?",
+      "answer": "Our team writes all pitches using proven templates with a 17.5% success rate. Each pitch is personalized to the podcast and highlights why you'd be a great fit for their audience."
+    },
+    {
+      "question": "Can I approve shows before outreach?",
+      "answer": "Absolutely! We present vetted podcast matches and you approve which shows we pitch to. You have full control over where you appear."
+    },
+    {
+      "question": "What if I don't get 5 bookings?",
+      "answer": "Our guarantee is simple: if you don't get 5 confirmed bookings within 5 months, we keep working at no additional cost until you do. If you're still not satisfied, we offer a full money-back guarantee."
+    }
+  ]
+}

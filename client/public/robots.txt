@@ -1,0 +1,18 @@
+# https://www.robotstxt.org/robotstxt.html
+User-agent: *
+Allow: /
+
+# Disallow admin and authenticated areas
+Disallow: /admin
+Disallow: /settings
+Disallow: /billing
+Disallow: /my-campaigns
+Disallow: /campaign-management
+Disallow: /pitch-outreach
+Disallow: /inbox
+Disallow: /placement-tracking
+Disallow: /approvals
+Disallow: /profile-setup
+
+# Sitemap location
+Sitemap: https://podcastguestlaunch.com/sitemap.xml
