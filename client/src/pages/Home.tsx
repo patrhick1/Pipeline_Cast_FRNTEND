@@ -11,8 +11,8 @@ import StickyCta from "@/components/common/StickyCta";
 import PainSolutionGrid from "@/components/home/PainSolutionGrid";
 import ProcessSteps from "@/components/home/ProcessSteps";
 import GuaranteeBand from "@/components/home/GuaranteeBand";
+import PodcastShowcase from "@/components/home/PodcastShowcase";
 import PricingTeaser from "@/components/home/PricingTeaser";
-import TrustStrip from "@/components/home/TrustStrip";
 import Faq from "@/components/common/Faq";
 
 // Import testimonial images directly
@@ -86,12 +86,15 @@ export default function Home() {
       {/* Hero Section - Updated with DFY messaging */}
       <section className="pt-24 pb-20 bg-gradient-to-b from-indigo-600 to-indigo-800 text-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center relative z-10">
-          <div className="max-w-3xl mx-auto">
+          <div className="max-w-4xl mx-auto">
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6 leading-tight">
-              Scale Podcast Guest Appearances Without the Grind
+              Get Booked on 5 Podcasts in 6 Months—Guaranteed
             </h1>
-            <p className="text-lg md:text-xl mb-6 text-indigo-100 max-w-2xl mx-auto">
-              We create a media kit that sells you, then research, pitch, and book shows where your ICP is already listening.
+            <p className="text-2xl md:text-3xl font-semibold mb-6 text-yellow-300">
+              $1,000. No guesswork. No endless outreach. Just results.
+            </p>
+            <p className="text-lg md:text-xl mb-6 text-indigo-100 max-w-3xl mx-auto leading-relaxed">
+              Stop wasting hours pitching podcasts that never respond. Podcast Guest Launch gets SaaS founders, coaches, and business leaders booked on shows where their ideal clients are already listening—without the hassle of cold outreach, scheduling nightmares, or ghosted emails.
             </p>
             <div className="inline-block bg-white/10 backdrop-blur-sm rounded-full px-6 py-2 mb-10">
               <p className="text-sm font-medium">
@@ -116,9 +119,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Trust Strip */}
-      <TrustStrip />
-
       {/* Pain vs Solution Grid */}
       <PainSolutionGrid />
 
@@ -127,6 +127,9 @@ export default function Home() {
 
       {/* Guarantee Band */}
       <GuaranteeBand />
+
+      {/* Podcast Showcase */}
+      <PodcastShowcase />
 
       {/* Social Proof / Testimonials - Now using data */}
       <section className="py-20 bg-gradient-to-b from-white to-gray-50">
