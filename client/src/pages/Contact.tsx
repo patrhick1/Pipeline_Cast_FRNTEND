@@ -5,9 +5,22 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Mail, MessageSquare, Phone, MapPin, Clock, Send, CheckCircle, AlertCircle, Headphones, BookOpen, Bug, Zap } from "lucide-react";
+import { ArrowLeft, Mail, MessageSquare, Clock, Send, CheckCircle, AlertCircle, Headphones, BookOpen, Bug, Zap } from "lucide-react";
 import { Link } from "wouter";
 import { useToast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/queryClient";
+
+// Map frontend category values to backend expected format
+const categoryMap: Record<string, string> = {
+  "general": "General Inquiry",
+  "support": "Technical Support",
+  "billing": "Billing Question",
+  "partnership": "Partnership Opportunity",
+  "media": "Media/Press Inquiry",
+  "feature": "Feature Request",
+  "bug": "Bug Report",
+  "other": "Other"
+};
 
 export default function Contact() {
   const { toast } = useToast();
@@ -24,21 +37,51 @@ export default function Contact() {
     e.preventDefault();
     setIsSubmitting(true);
 
-    // Simulate form submission
-    setTimeout(() => {
+    try {
+      const response = await apiRequest(
+        "POST",
+        "/public/contact/submit",
+        {
+          name: formData.name,
+          email: formData.email,
+          category: categoryMap[formData.category] || formData.category,
+          subject: formData.subject,
+          message: formData.message,
+        }
+      );
+
+      const data = await response.json();
+
+      if (response.ok) {
+        toast({
+          title: "Message Sent!",
+          description: data.message || "We've received your message and will get back to you within 24-48 hours.",
+        });
+        // Clear form
+        setFormData({
+          name: "",
+          email: "",
+          subject: "",
+          category: "",
+          message: ""
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: data.detail || "Failed to send message. Please try again.",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error("Contact form submission error:", error);
       toast({
-        title: "Message Sent!",
-        description: "We've received your message and will get back to you within 24-48 hours.",
+        title: "Error",
+        description: "An error occurred while sending your message. Please try again.",
+        variant: "destructive",
       });
-      setFormData({
-        name: "",
-        email: "",
-        subject: "",
-        category: "",
-        message: ""
-      });
+    } finally {
       setIsSubmitting(false);
-    }, 1500);
+    }
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -116,31 +159,6 @@ export default function Contact() {
                     <p className="font-medium text-gray-900">Email</p>
                     <p className="text-sm text-gray-600">support@podcastguestlaunch.com</p>
                     <p className="text-xs text-gray-500 mt-1">We'll respond within 24-48 hours</p>
-                  </div>
-                </div>
-
-                <div className="flex items-start gap-3">
-                  <div className="p-2 bg-green-100 rounded-lg">
-                    <Phone className="w-5 h-5 text-green-600" />
-                  </div>
-                  <div>
-                    <p className="font-medium text-gray-900">Phone</p>
-                    <p className="text-sm text-gray-600">1-800-PGL-HELP</p>
-                    <p className="text-xs text-gray-500 mt-1">Mon-Fri, 9am-5pm EST</p>
-                  </div>
-                </div>
-
-                <div className="flex items-start gap-3">
-                  <div className="p-2 bg-blue-100 rounded-lg">
-                    <MapPin className="w-5 h-5 text-blue-600" />
-                  </div>
-                  <div>
-                    <p className="font-medium text-gray-900">Office</p>
-                    <p className="text-sm text-gray-600">
-                      123 Podcast Lane<br />
-                      Suite 456<br />
-                      Media City, MC 12345
-                    </p>
                   </div>
                 </div>
 
@@ -279,8 +297,7 @@ export default function Contact() {
                       <div className="text-sm text-blue-900">
                         <p className="font-medium mb-1">Response Time</p>
                         <p className="text-blue-800">
-                          We typically respond to all inquiries within 24-48 hours during business days. 
-                          For urgent matters, please call our support line.
+                          We typically respond to all inquiries within 24-48 hours during business days.
                         </p>
                       </div>
                     </div>
