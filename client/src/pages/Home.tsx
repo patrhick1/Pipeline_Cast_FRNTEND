@@ -88,13 +88,13 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center relative z-10">
           <div className="max-w-4xl mx-auto">
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6 leading-tight">
-              Get Booked on 5 Podcasts in 6 Months—Guaranteed
+              Get Booked on 5 Podcasts in 5 Months - Guaranteed
             </h1>
             <p className="text-2xl md:text-3xl font-semibold mb-6 text-yellow-300">
               $1,000. No guesswork. No endless outreach. Just results.
             </p>
             <p className="text-lg md:text-xl mb-6 text-indigo-100 max-w-3xl mx-auto leading-relaxed">
-              Stop wasting hours pitching podcasts that never respond. Podcast Guest Launch gets SaaS founders, coaches, and business leaders booked on shows where their ideal clients are already listening—without the hassle of cold outreach, scheduling nightmares, or ghosted emails.
+              Stop wasting hours pitching podcasts that never respond. Podcast Guest Launch gets SaaS founders, coaches, and business leaders booked on shows where their ideal clients are already listening - without the hassle of cold outreach, scheduling nightmares, or ghosted emails.
             </p>
             <div className="inline-block bg-white/10 backdrop-blur-sm rounded-full px-6 py-2 mb-10">
               <p className="text-sm font-medium">
@@ -215,14 +215,6 @@ export default function Home() {
               ))}
             </div>
 
-            <div className="text-center mt-8">
-              <Link href="/case-studies">
-                <Button variant="outline" className="text-indigo-600 border-indigo-600 hover:bg-indigo-50">
-                  View All Case Studies
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </Button>
-              </Link>
-            </div>
           </div>
         </div>
       </section>
@@ -238,7 +230,7 @@ export default function Home() {
               Frequently Asked Questions
             </h2>
             <p className="text-lg text-gray-600">
-              Everything you need to know about our DFY service
+              Everything you need to know about our Done-For-You service
             </p>
           </div>
 
@@ -262,7 +254,7 @@ export default function Home() {
             Ready to Get Booked on {siteData.pricing.dfy.placements} Quality Podcasts?
           </h2>
           <p className="text-xl mb-8 text-indigo-100">
-            ${siteData.pricing.dfy.price.toLocaleString()} for {siteData.pricing.dfy.placements} guaranteed placements in {siteData.pricing.dfy.duration} — or your money back.
+            ${siteData.pricing.dfy.price.toLocaleString()} for {siteData.pricing.dfy.placements} guaranteed placements in {siteData.pricing.dfy.duration} - or your money back.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <a href={siteData.bookingUrl} target="_blank" rel="noopener noreferrer">

@@ -29,7 +29,7 @@ export default function CaseStudies() {
             Real Results from Real Clients
           </h1>
           <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-            See how entrepreneurs and thought leaders are growing their influence through our DFY podcast booking service
+            See how entrepreneurs and thought leaders are growing their influence through our Done-For-You podcast booking service
           </p>
         </div>
       </section>

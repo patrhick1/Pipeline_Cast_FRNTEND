@@ -126,7 +126,7 @@ export default function PricingPlans({ currentPlan, onSelectPlan, isLoading }: P
         case 'paid_premium':
           title = 'Done-For-You';
           desc = 'Let the PGL team handle everything. We find podcasts, pitch hosts, and secure bookings for you';
-          buttonText = 'Get Started with DFY';
+          buttonText = 'Get Started with Done-For-You';
           badge = 'Premium Service';
           break;
         default:

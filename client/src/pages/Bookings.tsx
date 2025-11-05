@@ -13,7 +13,7 @@ export default function Bookings() {
   const pricingFaq = [
     {
       question: "How is this different from your self-service platform?",
-      answer: "Our DFY service means we do all the work for you—research, pitching, follow-ups, and booking coordination. You simply approve the podcast matches we present. It's completely hands-off for you."
+      answer: "Our Done-For-You service means we do all the work for you: research, pitching, follow-ups, and booking coordination. You simply approve the podcast matches we present. It's completely hands-off for you."
     },
     {
       question: "Can I choose which podcasts to target?",
@@ -29,7 +29,7 @@ export default function Bookings() {
     },
     {
       question: "How do you measure success?",
-      answer: "Success is measured by confirmed podcast bookings—where you receive a confirmed date and time to record. We track every pitch, response, and booking in your dashboard."
+      answer: "Success is measured by confirmed podcast bookings - where you receive a confirmed date and time to record. We track every pitch, response, and booking in your dashboard."
     }
   ];
 
@@ -81,7 +81,7 @@ export default function Bookings() {
               {
                 step: 1,
                 title: "Book Strategy Call",
-                description: "Schedule a free 15-minute call to discuss your goals, ICP, and ideal podcast targets."
+                description: "Schedule a free 15-minute call to discuss your goals, ICP, and ideal podcast targets. We conduct a mock interview to understand your story and the best angles for pitching, then create a customized media kit and outreach strategy."
               },
               {
                 step: 2,
@@ -101,7 +101,7 @@ export default function Bookings() {
               {
                 step: 5,
                 title: "Money-Back Guarantee",
-                description: "If we don't deliver 5 bookings within 5 months, we keep working free until you reach 5—or you get your money back. No questions asked."
+                description: "If we don't deliver 5 bookings within 5 months, we keep working free until you reach 5 - or you get your money back. No questions asked."
               }
             ].map((item) => (
               <div key={item.step} className="bg-white rounded-lg border-2 border-gray-200 p-6 flex gap-4">
@@ -125,10 +125,10 @@ export default function Bookings() {
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
             <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-              DIY vs. Done-For-You
+              Do-It-Yourself vs. Done-For-You
             </h2>
             <p className="text-lg text-gray-600">
-              See why clients choose our DFY service
+              See why clients choose our Done-For-You service
             </p>
           </div>
 
@@ -137,8 +137,8 @@ export default function Bookings() {
               <thead>
                 <tr className="border-b-2 border-gray-200">
                   <th className="text-left py-4 px-4 text-gray-900 font-semibold">Feature</th>
-                  <th className="text-center py-4 px-4 text-gray-600 font-semibold">DIY Approach</th>
-                  <th className="text-center py-4 px-4 text-indigo-600 font-semibold bg-indigo-50">PGL DFY Service</th>
+                  <th className="text-center py-4 px-4 text-gray-600 font-semibold">Do-It-Yourself Approach</th>
+                  <th className="text-center py-4 px-4 text-indigo-600 font-semibold bg-indigo-50">PGL Done-For-You Service</th>
                 </tr>
               </thead>
               <tbody>
@@ -186,7 +186,7 @@ export default function Bookings() {
               Pricing Questions
             </h2>
             <p className="text-lg text-gray-600">
-              Common questions about our DFY service
+              Common questions about our Done-For-You service
             </p>
           </div>
 

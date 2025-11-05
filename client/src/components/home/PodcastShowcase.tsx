@@ -48,7 +48,7 @@ export default function PodcastShowcase() {
             Podcasts We've Placed Clients On
           </h2>
           <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-            We've secured placements on top-tier shows across industries—SaaS, marketing, finance, and more
+            We've secured placements on top-tier shows across industries: SaaS, marketing, finance, and more
           </p>
         </div>
 

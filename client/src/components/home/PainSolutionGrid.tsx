@@ -59,7 +59,7 @@ export default function PainSolutionGrid() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-12">
           <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-            Stop Struggling With DIY Outreach
+            Stop Struggling With Do-It-Yourself Outreach
           </h2>
           <p className="text-lg text-gray-600 max-w-2xl mx-auto">
             Let us handle the tedious work while you focus on delivering value
@@ -73,7 +73,7 @@ export default function PainSolutionGrid() {
               <span className="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center mr-3">
                 <X className="h-5 w-5 text-red-600" />
               </span>
-              DIY Podcast Outreach
+              Do-It-Yourself Podcast Outreach
             </h3>
             <ul className="space-y-4">
               {painPoints.map((point, index) => {

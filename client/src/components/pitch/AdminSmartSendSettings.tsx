@@ -105,7 +105,7 @@ export function AdminSmartSendSettings() {
 
       toast({
         title: "Settings Saved",
-        description: "Global Smart Send schedule has been updated successfully. This applies to all Premium (DFY) campaigns.",
+        description: "Global Smart Send schedule has been updated successfully. This applies to all Premium (Done-For-You) campaigns.",
       });
 
       // Invalidate the query to refresh data
@@ -227,7 +227,7 @@ export function AdminSmartSendSettings() {
               Global Smart Send Schedule
             </CardTitle>
             <CardDescription className="mt-1">
-              Configure automated sending schedule for all Premium (DFY) client campaigns
+              Configure automated sending schedule for all Premium (Done-For-You) client campaigns
             </CardDescription>
           </div>
           <Badge variant="default">Admin Only</Badge>

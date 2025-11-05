@@ -1790,7 +1790,7 @@ export default function PitchOutreach() {
               <div>
                 <p className="text-sm font-medium">Smart Send Schedule for Premium Campaigns</p>
                 <p className="text-sm text-gray-600 mt-1">
-                  Premium (DFY) campaign sending schedules are managed globally.
+                  Premium (Done-For-You) campaign sending schedules are managed globally.
                   Go to <Link href="/settings" className="text-primary hover:underline">Settings → Admin Settings</Link> to configure the global schedule.
                 </p>
               </div>

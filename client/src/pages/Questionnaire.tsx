@@ -726,7 +726,7 @@ function ProfessionalBioSection({ form }: any) {
         <FormItem>
           <FormLabel>About You & Your Work *</FormLabel>
           <FormDescription>
-            In a few sentences, tell us about yourself and your work. Don't worry about wording—just share what you do and what you're passionate about.
+            In a few sentences, tell us about yourself and your work. Don't worry about wording, just share what you do and what you're passionate about.
           </FormDescription>
           <FormControl>
             <AutoTextarea 
