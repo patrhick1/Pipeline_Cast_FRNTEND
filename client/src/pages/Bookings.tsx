@@ -81,7 +81,7 @@ export default function Bookings() {
               {
                 step: 1,
                 title: "Book Strategy Call",
-                description: "Schedule a free 15-minute call to discuss your goals, ICP, and ideal podcast targets. We conduct a mock interview to understand your story and the best angles for pitching, then create a customized media kit and outreach strategy."
+                description: "Schedule a free 30-minute call to discuss your goals, ICP, and ideal podcast targets. We conduct a mock interview to understand your story and the best angles for pitching, then create a customized media kit and outreach strategy."
               },
               {
                 step: 2,
