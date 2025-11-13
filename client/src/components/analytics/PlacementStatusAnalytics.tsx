@@ -71,12 +71,14 @@ interface StatusHistoryData {
     };
   }>;
   conversion_funnel: {
-    contacted: number;
+    responded: number;
+    interested: number;
     confirmed: number;
     scheduled: number;
     recorded: number;
     published: number;
     paid: number;
+    interest_rate: number;
     confirmation_rate: number;
     recording_rate: number;
     publish_rate: number;
@@ -162,9 +164,10 @@ export default function PlacementStatusAnalytics({ campaignId, days = 30 }: Plac
 
   // Prepare data for charts
   const funnelData = analytics.conversion_funnel ? [
-    { stage: 'Interested', value: analytics.conversion_funnel.contacted || 0, fill: '#22c55e' },
-    { stage: 'Confirmed', value: analytics.conversion_funnel.confirmed || 0, fill: '#10b981' },
-    { stage: 'Scheduled', value: analytics.conversion_funnel.scheduled || 0, fill: '#6366f1' },
+    { stage: 'Responded', value: analytics.conversion_funnel.responded || 0, fill: '#22c55e' },
+    { stage: 'Interested', value: analytics.conversion_funnel.interested || 0, fill: '#10b981' },
+    { stage: 'Confirmed', value: analytics.conversion_funnel.confirmed || 0, fill: '#6366f1' },
+    { stage: 'Scheduled', value: analytics.conversion_funnel.scheduled || 0, fill: '#3b82f6' },
     { stage: 'Recorded', value: analytics.conversion_funnel.recorded || 0, fill: '#ec4899' },
     { stage: 'Published', value: analytics.conversion_funnel.published || 0, fill: '#14b8a6' },
     { stage: 'Paid', value: analytics.conversion_funnel.paid || 0, fill: '#10b981' }
@@ -242,7 +245,7 @@ export default function PlacementStatusAnalytics({ campaignId, days = 30 }: Plac
           <CardContent>
             <div className="text-2xl font-bold">{(analytics.conversion_funnel?.confirmation_rate || 0).toFixed(1)}%</div>
             <p className="text-xs text-gray-500 mt-1">
-              Contacted to confirmed
+              Responded to confirmed
             </p>
           </CardContent>
         </Card>
@@ -259,7 +262,7 @@ export default function PlacementStatusAnalytics({ campaignId, days = 30 }: Plac
           <CardContent>
             <div className="text-2xl font-bold">{(analytics.conversion_funnel?.recording_rate || 0).toFixed(1)}%</div>
             <p className="text-xs text-gray-500 mt-1">
-              Contacted to recorded
+              Responded to recorded
             </p>
           </CardContent>
         </Card>
@@ -276,7 +279,7 @@ export default function PlacementStatusAnalytics({ campaignId, days = 30 }: Plac
           <CardContent>
             <div className="text-2xl font-bold">{(analytics.conversion_funnel?.publish_rate || 0).toFixed(1)}%</div>
             <p className="text-xs text-gray-500 mt-1">
-              Contacted to published
+              Responded to published
             </p>
           </CardContent>
         </Card>
