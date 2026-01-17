@@ -144,9 +144,9 @@ export const MatchIntelligenceCard = ({
             </div>
           )}
           {match.vetting_reasoning && (
-            <div className="bg-purple-50 border border-purple-200 rounded-md p-3 mb-4">
-              <strong className="text-purple-800">Fit Assessment:</strong>
-              <p className="text-xs text-purple-900 italic mt-1">"{match.vetting_reasoning}"</p>
+            <div className="bg-teal-50 border border-teal-200 rounded-md p-3 mb-4">
+              <strong className="text-teal-800">Fit Assessment:</strong>
+              <p className="text-xs text-teal-900 italic mt-1">"{match.vetting_reasoning}"</p>
             </div>
           )}
         </div>
@@ -340,11 +340,11 @@ export const MatchIntelligenceCard = ({
           </div>
         </div>
 
-        <div className="intelligence-item p-3 bg-purple-50 border border-purple-200 rounded-md">
-          <strong className="flex items-center text-purple-800">
-             <Check className="h-4 w-4 mr-2 text-purple-600"/> Fit Assessment
+        <div className="intelligence-item p-3 bg-teal-50 border border-teal-200 rounded-md">
+          <strong className="flex items-center text-teal-800">
+             <Check className="h-4 w-4 mr-2 text-teal-600"/> Fit Assessment
           </strong>
-          <p className="reasoning text-xs text-purple-900 italic mt-1 pl-6">"{match.vetting_reasoning || 'This podcast is a good fit based on content alignment.'}"</p>
+          <p className="reasoning text-xs text-teal-900 italic mt-1 pl-6">"{match.vetting_reasoning || 'This podcast is a good fit based on content alignment.'}"</p>
         </div>
 
       </div>

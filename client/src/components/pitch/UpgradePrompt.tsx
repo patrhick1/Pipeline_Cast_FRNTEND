@@ -29,11 +29,11 @@ export function UpgradePrompt({
 
   if (variant === 'inline') {
     return (
-      <div className="bg-gradient-to-r from-purple-50 to-blue-50 border border-purple-200 rounded-lg p-4 my-4">
+      <div className="bg-gradient-to-r from-navy/5 to-teal/5 border border-teal/20 rounded-lg p-4 my-4">
         <div className="flex items-start justify-between">
           <div className="flex-1">
             <div className="flex items-center gap-2 mb-2">
-              <Sparkles className="h-5 w-5 text-purple-600" />
+              <Sparkles className="h-5 w-5 text-teal" />
               <h4 className="font-semibold text-gray-900">Premium Feature</h4>
               <Badge variant="secondary" className="text-xs">Upgrade Required</Badge>
             </div>
@@ -51,7 +51,7 @@ export function UpgradePrompt({
           </div>
           <Button 
             onClick={handleUpgrade}
-            className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white"
+            className="bg-gradient-to-r from-navy to-teal hover:from-navy-700 hover:to-teal-600 text-white"
           >
             Book Demo
             <ArrowRight className="ml-2 h-4 w-4" />
@@ -63,7 +63,7 @@ export function UpgradePrompt({
 
   if (variant === 'banner') {
     return (
-      <Card className="bg-gradient-to-r from-purple-500 to-blue-500 text-white border-0 shadow-lg">
+      <Card className="bg-gradient-to-r from-navy to-teal text-white border-0 shadow-lg">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-white">
             <Sparkles className="h-6 w-6" />
@@ -85,7 +85,7 @@ export function UpgradePrompt({
           <Button 
             onClick={handleUpgrade}
             variant="secondary"
-            className="bg-white text-purple-700 hover:bg-gray-100"
+            className="bg-white text-navy hover:bg-gray-100"
           >
             Upgrade to Premium
             <ArrowRight className="ml-2 h-4 w-4" />

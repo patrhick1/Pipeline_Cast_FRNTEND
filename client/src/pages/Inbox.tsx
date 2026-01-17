@@ -242,7 +242,7 @@ export default function Inbox() {
       {shouldShowPaywall && (
         <UpgradeBanner
           featureName="Email Inbox"
-          featureDescription="Manage email conversations, track responses, and handle podcast outreach communications."
+          featureDescription="Manage email conversations, track responses, and handle podcast guest communications."
         />
       )}
 

@@ -9,7 +9,7 @@ export default function ProcessSteps() {
   };
 
   return (
-    <section className="py-20 bg-gradient-to-r from-indigo-50 to-purple-50">
+    <section className="py-20 bg-gradient-to-r from-navy/5 to-teal/5">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-12">
           <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
@@ -26,11 +26,11 @@ export default function ProcessSteps() {
             return (
               <div key={step.number} className="text-center">
                 <div className="relative mb-6">
-                  <div className="w-20 h-20 bg-indigo-600 rounded-full flex items-center justify-center mx-auto shadow-lg">
+                  <div className="w-20 h-20 bg-navy rounded-full flex items-center justify-center mx-auto shadow-lg">
                     <span className="text-3xl font-bold text-white">{step.number}</span>
                   </div>
-                  <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-12 h-12 bg-indigo-100 rounded-full flex items-center justify-center">
-                    <Icon className="h-6 w-6 text-indigo-600" />
+                  <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-12 h-12 bg-teal/10 rounded-full flex items-center justify-center">
+                    <Icon className="h-6 w-6 text-teal" />
                   </div>
                 </div>
                 <h3 className="text-xl font-bold text-gray-900 mb-3">{step.title}</h3>

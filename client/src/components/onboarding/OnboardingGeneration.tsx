@@ -199,10 +199,10 @@ export default function OnboardingGeneration({ campaignId, onComplete }: Onboard
   // Loading state
   if (!campaign || (isGenerating && !generatedContent)) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-pink-50 flex items-center justify-center p-4">
+      <div className="min-h-screen bg-gradient-to-br from-navy/5 via-white to-teal/5 flex items-center justify-center p-4">
         <div className="max-w-2xl w-full space-y-8 text-center">
-          <div className="inline-flex items-center justify-center w-20 h-20 bg-purple-100 rounded-full mb-4 animate-pulse">
-            <Wand2 className="h-10 w-10 text-purple-600" />
+          <div className="inline-flex items-center justify-center w-20 h-20 bg-navy/10 rounded-full mb-4 animate-pulse">
+            <Wand2 className="h-10 w-10 text-navy" />
           </div>
           
           <div className="space-y-4">
@@ -216,15 +216,15 @@ export default function OnboardingGeneration({ campaignId, onComplete }: Onboard
 
           <div className="space-y-4">
             <div className="flex items-center justify-center gap-3">
-              <Loader2 className="h-5 w-5 animate-spin text-purple-600" />
+              <Loader2 className="h-5 w-5 animate-spin text-navy" />
               <span className="text-gray-700">Analyzing your expertise...</span>
             </div>
             <div className="flex items-center justify-center gap-3">
-              <Loader2 className="h-5 w-5 animate-spin text-purple-600" />
+              <Loader2 className="h-5 w-5 animate-spin text-navy" />
               <span className="text-gray-700">Crafting compelling pitch angles...</span>
             </div>
             <div className="flex items-center justify-center gap-3">
-              <Loader2 className="h-5 w-5 animate-spin text-purple-600" />
+              <Loader2 className="h-5 w-5 animate-spin text-navy" />
               <span className="text-gray-700">Optimizing for podcast discovery...</span>
             </div>
           </div>
@@ -236,7 +236,7 @@ export default function OnboardingGeneration({ campaignId, onComplete }: Onboard
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-pink-50 py-8 px-4">
+    <div className="min-h-screen bg-gradient-to-br from-navy/5 via-white to-teal/5 py-8 px-4">
       <div className="max-w-4xl mx-auto space-y-8">
         {/* Header */}
         <div className="text-center space-y-4">
@@ -259,10 +259,10 @@ export default function OnboardingGeneration({ campaignId, onComplete }: Onboard
         </div>
 
         {/* Bio Preview */}
-        <Card className="border-2 hover:border-purple-200 transition-colors">
+        <Card className="border-2 hover:border-teal/30 transition-colors">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <FileText className="h-5 w-5 text-purple-600" />
+              <FileText className="h-5 w-5 text-navy" />
               Your Professional Bio
             </CardTitle>
           </CardHeader>
@@ -283,10 +283,10 @@ export default function OnboardingGeneration({ campaignId, onComplete }: Onboard
         </Card>
 
         {/* Angles Preview */}
-        <Card className="border-2 hover:border-purple-200 transition-colors">
+        <Card className="border-2 hover:border-teal/30 transition-colors">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Lightbulb className="h-5 w-5 text-purple-600" />
+              <Lightbulb className="h-5 w-5 text-navy" />
               Your Pitch Angles
             </CardTitle>
           </CardHeader>
@@ -303,7 +303,7 @@ export default function OnboardingGeneration({ campaignId, onComplete }: Onboard
                           href={campaign.campaign_angles} 
                           target="_blank" 
                           rel="noopener noreferrer"
-                          className="text-purple-600 hover:text-purple-700 underline inline-flex items-center gap-1"
+                          className="text-navy hover:text-navy-700 underline inline-flex items-center gap-1"
                         >
                           <FileText className="h-4 w-4" />
                           View Angles Document
@@ -363,11 +363,11 @@ export default function OnboardingGeneration({ campaignId, onComplete }: Onboard
 
         {/* Keywords */}
         {campaign?.campaign_keywords && (
-          <Card className="border-2 hover:border-purple-200 transition-colors">
+          <Card className="border-2 hover:border-teal/30 transition-colors">
             <CardHeader>
               <CardTitle className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <Sparkles className="h-5 w-5 text-purple-600" />
+                  <Sparkles className="h-5 w-5 text-navy" />
                   Discovery Keywords
                 </div>
                 {!isEditingKeywords ? (
@@ -375,7 +375,7 @@ export default function OnboardingGeneration({ campaignId, onComplete }: Onboard
                     variant="ghost"
                     size="sm"
                     onClick={handleStartEditingKeywords}
-                    className="text-purple-600 hover:text-purple-700"
+                    className="text-navy hover:text-navy-700"
                   >
                     <Edit2 className="h-4 w-4 mr-1" />
                     Edit
@@ -523,17 +523,17 @@ export default function OnboardingGeneration({ campaignId, onComplete }: Onboard
           <Button
             size="lg"
             onClick={handleContinue}
-            className="flex items-center gap-2 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
+            className="flex items-center gap-2 bg-gradient-to-r from-navy to-teal hover:from-navy-700 hover:to-teal-700"
           >
             Continue to Media Kit
             <ArrowRight className="h-4 w-4" />
           </Button>
         </div>
 
-        <Card className="bg-gradient-to-r from-blue-50 to-purple-50 border-2 border-blue-200">
+        <Card className="bg-gradient-to-r from-teal/5 to-navy/5 border-2 border-teal/20">
           <CardContent className="pt-6 text-center">
             <div className="flex items-center justify-center gap-2 mb-2">
-              <Wand2 className="h-5 w-5 text-purple-600" />
+              <Wand2 className="h-5 w-5 text-navy" />
               <h3 className="font-semibold text-gray-900">Remember: This is just the starting point!</h3>
             </div>
             <p className="text-sm text-gray-700">

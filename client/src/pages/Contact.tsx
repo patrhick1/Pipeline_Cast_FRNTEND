@@ -136,7 +136,7 @@ export default function Contact() {
             </div>
             <h1 className="text-4xl font-bold text-gray-900 mb-2">Contact Us</h1>
             <p className="text-gray-600 max-w-2xl mx-auto">
-              Have questions about Podcast Guest Launch? We're here to help! Reach out to our team and we'll get back to you as soon as possible.
+              Have questions about PipelineCast? We're here to help! Reach out to our team and we'll get back to you as soon as possible.
             </p>
           </div>
         </div>
@@ -157,14 +157,14 @@ export default function Contact() {
                   </div>
                   <div>
                     <p className="font-medium text-gray-900">Email</p>
-                    <p className="text-sm text-gray-600">support@podcastguestlaunch.com</p>
+                    <p className="text-sm text-gray-600">support@pipelinecast.co</p>
                     <p className="text-xs text-gray-500 mt-1">We'll respond within 24-48 hours</p>
                   </div>
                 </div>
 
                 <div className="flex items-start gap-3">
-                  <div className="p-2 bg-purple-100 rounded-lg">
-                    <Clock className="w-5 h-5 text-purple-600" />
+                  <div className="p-2 bg-teal/10 rounded-lg">
+                    <Clock className="w-5 h-5 text-teal" />
                   </div>
                   <div>
                     <p className="font-medium text-gray-900">Business Hours</p>
@@ -389,7 +389,7 @@ export default function Contact() {
 
         {/* Footer */}
         <div className="text-center py-8 mt-12 text-sm text-gray-600">
-          <p>© {new Date().getFullYear()} Podcast Guest Launch. All rights reserved.</p>
+          <p>© {new Date().getFullYear()} PipelineCast. All rights reserved.</p>
           <div className="mt-2 space-x-4">
             <Link href="/terms">
               <a className="hover:text-primary">Terms of Service</a>

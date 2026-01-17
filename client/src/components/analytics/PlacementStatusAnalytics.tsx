@@ -256,7 +256,7 @@ export default function PlacementStatusAnalytics({ campaignId, days = 30 }: Plac
               <CardTitle className="text-sm font-medium text-gray-600">
                 Recording Rate
               </CardTitle>
-              <Activity className="w-5 h-5 text-purple-600" />
+              <Activity className="w-5 h-5 text-teal-600" />
             </div>
           </CardHeader>
           <CardContent>

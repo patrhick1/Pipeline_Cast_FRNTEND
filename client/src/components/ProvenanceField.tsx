@@ -26,7 +26,7 @@ interface ProvenanceFieldProps {
 const sourceInfo: { [key: string]: { icon: React.ReactNode; text: string; color: string } } = {
   'manual': { icon: <CheckCircle className="h-4 w-4" />, text: 'Manually Verified', color: 'text-green-600' },
   'api_listennotes': { icon: <Info className="h-4 w-4" />, text: 'From Listen Notes API', color: 'text-blue-600' },
-  'llm_discovery': { icon: <BrainCircuit className="h-4 w-4" />, text: 'AI Discovered', color: 'text-purple-600' },
+  'llm_discovery': { icon: <BrainCircuit className="h-4 w-4" />, text: 'AI Discovered', color: 'text-teal' },
 };
 
 export function ProvenanceField({ mediaId, fieldName, label, value, provenance }: ProvenanceFieldProps) {

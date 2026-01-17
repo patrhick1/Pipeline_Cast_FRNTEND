@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { KeyRound, Eye, EyeOff, CheckCircle2 } from "lucide-react";
 import { useLocation, Link } from "wouter";
 import { useToast } from "@/hooks/use-toast";
-import logoName from "@/img/PGL logo name.png";
+import logoWordmark from "@/img/pipeline icon and wordmark.png";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -106,13 +106,13 @@ export default function ResetPasswordPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-600 to-indigo-800">
+    <div className="min-h-screen bg-gradient-to-br from-navy to-navy-800">
       <div className="min-h-screen flex items-center justify-center p-4">
         <div className="max-w-md w-full">
           <Card className="shadow-2xl">
             <CardContent className="p-8">
               <div className="text-center mb-8">
-                <img src={logoName} alt="Podcast Guest Launch" className="h-12 mx-auto mb-4" />
+                <img src={logoWordmark} alt="PipelineCast" className="h-12 mx-auto mb-4" />
                 <h1 className="text-2xl font-bold text-gray-900 mb-2">Reset Your Password</h1>
                 <p className="text-gray-600">Enter your new password below</p>
               </div>

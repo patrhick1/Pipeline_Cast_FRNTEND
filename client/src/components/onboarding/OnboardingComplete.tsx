@@ -147,11 +147,11 @@ export default function OnboardingComplete({ campaignId, onComplete }: Onboardin
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-pink-50 to-blue-50 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-navy/5 via-teal/5 to-white flex items-center justify-center p-4">
       <div className="max-w-4xl w-full space-y-8 animate-in fade-in duration-1000">
         {/* Success Message */}
         <div className="text-center space-y-4">
-          <div className="inline-flex items-center justify-center w-24 h-24 bg-gradient-to-br from-green-400 to-blue-500 rounded-full mb-4 animate-bounce">
+          <div className="inline-flex items-center justify-center w-24 h-24 bg-gradient-to-br from-teal to-navy rounded-full mb-4 animate-bounce">
             <CheckCircle2 className="h-12 w-12 text-white" />
           </div>
           
@@ -165,17 +165,17 @@ export default function OnboardingComplete({ campaignId, onComplete }: Onboardin
         </div>
 
         {/* Profile Summary */}
-        <Card className="p-6 bg-white/80 backdrop-blur border-2 border-purple-100">
+        <Card className="p-6 bg-white/80 backdrop-blur border-2 border-teal/20">
           <div className="space-y-4">
             <h3 className="font-semibold text-lg text-gray-900">Your Profile Summary</h3>
             
             <div className="grid md:grid-cols-3 gap-4">
-              <div className="text-center p-4 bg-purple-50 rounded-lg">
-                <div className="text-2xl font-bold text-purple-600">1</div>
+              <div className="text-center p-4 bg-navy/10 rounded-lg">
+                <div className="text-2xl font-bold text-navy">1</div>
                 <div className="text-sm text-gray-600 mt-1">Professional Bio</div>
               </div>
-              <div className="text-center p-4 bg-pink-50 rounded-lg">
-                <div className="text-2xl font-bold text-pink-600">
+              <div className="text-center p-4 bg-teal/10 rounded-lg">
+                <div className="text-2xl font-bold text-teal">
                   {(() => {
                     if (!campaign?.campaign_angles) return "10+";
                     // Check if it's a URL
@@ -251,7 +251,7 @@ export default function OnboardingComplete({ campaignId, onComplete }: Onboardin
                 onClick={() => step.action ? navigate(step.action) : copyMediaKitLink()}
               >
                 <div className="flex flex-col items-center text-center space-y-3">
-                  <div className="w-12 h-12 bg-gradient-to-br from-purple-100 to-pink-100 rounded-lg flex items-center justify-center text-purple-600">
+                  <div className="w-12 h-12 bg-gradient-to-br from-navy/10 to-teal/10 rounded-lg flex items-center justify-center text-navy">
                     {step.icon}
                   </div>
                   <h4 className="font-semibold text-gray-900">{step.title}</h4>
@@ -267,7 +267,7 @@ export default function OnboardingComplete({ campaignId, onComplete }: Onboardin
           <Button
             size="lg"
             onClick={onComplete}
-            className="px-8 py-6 text-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-200 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
+            className="px-8 py-6 text-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-200 bg-gradient-to-r from-navy to-teal hover:from-navy-700 hover:to-teal-700"
           >
             <Rocket className="mr-2 h-5 w-5" />
             Go to Dashboard

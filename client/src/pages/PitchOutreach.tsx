@@ -205,11 +205,11 @@ function ReadyForDraftTab({
         <div className="space-y-4">
             {/* Batch AI Generation for all approved matches */}
             {canUseAI && approvedMatches.length > 1 && (
-                <div className="bg-gradient-to-r from-purple-50 to-blue-50 border border-purple-200 rounded-lg p-4">
+                <div className="bg-gradient-to-r from-navy/5 to-teal/5 border border-teal/20 rounded-lg p-4">
                     <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
                         <div>
-                            <h3 className="font-medium text-purple-900">Generate AI Pitches for All</h3>
-                            <p className="text-sm text-purple-700">
+                            <h3 className="font-medium text-navy">Generate AI Pitches for All</h3>
+                            <p className="text-sm text-teal">
                                 Create personalized initial pitches for all {approvedMatches.length} approved matches at once.
                             </p>
                         </div>

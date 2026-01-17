@@ -146,7 +146,7 @@ export default function SmartReplies({ threadId, onSelectReply, className }: Sma
     return (
       <Card className={cn("p-4", className)}>
         <div className="flex items-center gap-2 mb-3">
-          <RefreshCw className="w-4 h-4 animate-spin text-purple-500" />
+          <RefreshCw className="w-4 h-4 animate-spin text-teal-500" />
           <h3 className="text-sm font-medium">Generating smart replies...</h3>
         </div>
       </Card>
@@ -162,7 +162,7 @@ export default function SmartReplies({ threadId, onSelectReply, className }: Sma
       <Card className={cn("p-4", className)}>
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
-            <Sparkles className="w-4 h-4 text-purple-500" />
+            <Sparkles className="w-4 h-4 text-teal-500" />
             <h3 className="text-sm font-medium">Smart Replies</h3>
           </div>
           <Button

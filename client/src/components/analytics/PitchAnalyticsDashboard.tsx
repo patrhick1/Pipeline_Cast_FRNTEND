@@ -148,7 +148,7 @@ export default function PitchAnalyticsDashboard({ campaignId, days = 30, planTyp
       value: Math.round(pitchMetrics?.reply_rate || 0),
       subtitle: `${pitchMetrics?.by_status?.replied || 0} replies`,
       icon: MessageSquare,
-      color: 'text-purple-600',
+      color: 'text-teal-600',
       isCount: false
     },
     {
@@ -172,7 +172,7 @@ export default function PitchAnalyticsDashboard({ campaignId, days = 30, planTyp
 
   const COLORS = {
     pending: '#94a3b8',
-    replied: '#8b5cf6',
+    replied: '#0D9488',
     booked: '#10b981',
     accepted: '#10b981', // Backwards compatibility
     rejected: '#ef4444',
@@ -288,7 +288,7 @@ export default function PitchAnalyticsDashboard({ campaignId, days = 30, planTyp
                         <Line
                           type="monotone"
                           dataKey="replied"
-                          stroke="#8b5cf6"
+                          stroke="#0D9488"
                           name="Replied"
                           strokeWidth={2}
                         />
@@ -311,7 +311,7 @@ export default function PitchAnalyticsDashboard({ campaignId, days = 30, planTyp
                                 {day.sent} sent
                               </span>
                               {day.replied > 0 && (
-                                <span className="flex items-center gap-1 text-purple-600">
+                                <span className="flex items-center gap-1 text-teal-600">
                                   <MessageSquare className="w-3 h-3" />
                                   {day.replied} replied
                                 </span>
@@ -333,7 +333,7 @@ export default function PitchAnalyticsDashboard({ campaignId, days = 30, planTyp
                     <div key={event.id} className="flex items-start gap-4 pb-4 border-b last:border-0">
                       <div className="p-2 rounded-full bg-gray-100">
                         {event.type === 'email_sent' && <Mail className="w-4 h-4 text-blue-600" />}
-                        {event.type === 'email_replied' && <MessageSquare className="w-4 h-4 text-purple-600" />}
+                        {event.type === 'email_replied' && <MessageSquare className="w-4 h-4 text-teal-600" />}
                         {event.type === 'booking_confirmed' && <CheckCircle className="w-4 h-4 text-emerald-600" />}
                         {event.type === 'placement_completed' && <Target className="w-4 h-4 text-orange-600" />}
                       </div>

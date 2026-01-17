@@ -17,12 +17,12 @@ export function FreeUserUpgradeCard({ variant = 'detailed', context = 'banner' }
 
   if (variant === 'compact') {
     return (
-      <Card className="bg-gradient-to-r from-purple-50 via-blue-50 to-purple-50 border-purple-200 shadow-sm hover:shadow-md transition-shadow">
+      <Card className="bg-gradient-to-r from-navy/5 via-teal/5 to-navy/5 border-teal/20 shadow-sm hover:shadow-md transition-shadow">
         <CardContent className="p-4">
           <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-white rounded-lg shadow-sm">
-                <Sparkles className="h-5 w-5 text-purple-600" />
+                <Sparkles className="h-5 w-5 text-teal" />
               </div>
               <div>
                 <h4 className="font-semibold text-sm text-gray-900">Unlock AI-Powered Pitching</h4>
@@ -34,7 +34,7 @@ export function FreeUserUpgradeCard({ variant = 'detailed', context = 'banner' }
             <Button
               onClick={handleUpgrade}
               size="sm"
-              className="bg-purple-600 hover:bg-purple-700 text-white whitespace-nowrap"
+              className="bg-teal hover:bg-teal-600 text-white whitespace-nowrap"
             >
               Upgrade
             </Button>
@@ -45,16 +45,16 @@ export function FreeUserUpgradeCard({ variant = 'detailed', context = 'banner' }
   }
 
   return (
-    <Card className="bg-gradient-to-br from-purple-50 via-white to-blue-50 border-purple-200 shadow-lg">
+    <Card className="bg-gradient-to-br from-navy/5 via-white to-teal/5 border-teal/20 shadow-lg">
       <CardHeader className="pb-4">
         <div className="flex items-center justify-between">
           <CardTitle className="text-lg flex items-center gap-2">
-            <div className="p-2 bg-gradient-to-r from-purple-500 to-blue-500 rounded-lg">
+            <div className="p-2 bg-gradient-to-r from-navy to-teal rounded-lg">
               <Sparkles className="h-5 w-5 text-white" />
             </div>
             Supercharge Your Outreach with Premium
           </CardTitle>
-          <Badge className="bg-purple-100 text-purple-700 hover:bg-purple-200">
+          <Badge className="bg-teal/10 text-teal hover:bg-teal/20">
             Limited Time Offer
           </Badge>
         </div>
@@ -67,7 +67,7 @@ export function FreeUserUpgradeCard({ variant = 'detailed', context = 'banner' }
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           <div className="flex items-start gap-2">
-            <Brain className="h-4 w-4 text-purple-600 mt-0.5 flex-shrink-0" />
+            <Brain className="h-4 w-4 text-teal mt-0.5 flex-shrink-0" />
             <div>
               <h5 className="font-semibold text-xs text-gray-900">AI-Personalized Pitches</h5>
               <p className="text-xs text-gray-600">
@@ -107,12 +107,12 @@ export function FreeUserUpgradeCard({ variant = 'detailed', context = 'banner' }
           </div>
         </div>
 
-        <div className="bg-purple-50 rounded-lg p-3 border border-purple-100">
+        <div className="bg-teal/5 rounded-lg p-3 border border-teal/10">
           <div className="flex items-center gap-2 mb-2">
-            <CheckCircle className="h-4 w-4 text-purple-600" />
-            <span className="font-semibold text-sm text-purple-900">What You'll Get:</span>
+            <CheckCircle className="h-4 w-4 text-teal" />
+            <span className="font-semibold text-sm text-teal-900">What You'll Get:</span>
           </div>
-          <ul className="space-y-1 text-xs text-purple-700">
+          <ul className="space-y-1 text-xs text-teal-700">
             <li>• Unlimited AI-powered pitch generation</li>
             <li>• Intelligent follow-up sequences (up to 5 touchpoints)</li>
             <li>• Smart Send with optimal timing algorithms</li>
@@ -128,7 +128,7 @@ export function FreeUserUpgradeCard({ variant = 'detailed', context = 'banner' }
           </div>
           <Button
             onClick={handleUpgrade}
-            className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white shadow-md"
+            className="bg-gradient-to-r from-navy to-teal hover:from-navy-700 hover:to-teal-600 text-white shadow-md"
           >
             <Sparkles className="mr-2 h-4 w-4" />
             Upgrade to Premium

@@ -85,7 +85,7 @@ export default function Blog() {
         {/* Header */}
         <div className="text-center mb-12">
           <h1 className="text-4xl font-bold mb-4">
-            Podcast Guest Launch Blog
+            PipelineCast Blog
           </h1>
           <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
             Expert insights, tips, and strategies for landing more podcast interviews

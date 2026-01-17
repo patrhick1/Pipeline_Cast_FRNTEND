@@ -175,7 +175,7 @@ export default function Dashboard() {
 
 
   const handleBookDemo = () => {
-    window.open("https://calendly.com/alex-podcastguestlaunch/30min", "_blank");
+    window.open("https://calendly.com/paschal-pipelinecast/30min", "_blank");
   };
 
   if (authLoading) {
@@ -360,14 +360,14 @@ export default function Dashboard() {
             </CardContent>
           </Card>
 
-          <Card className="bg-gradient-to-br from-primary to-purple-700 text-white">
+          <Card className="bg-gradient-to-br from-navy to-teal text-white">
             <CardContent className="p-6">
               <h3 className="text-lg font-semibold mb-2">Need Help Getting Started?</h3>
-              <p className="text-purple-100 text-sm mb-4">
-                Book a personalized demo with our podcast booking experts to maximize your success.
+              <p className="text-gray-100 text-sm mb-4">
+                Book a personalized demo with our team to maximize your podcast-to-pipeline results.
               </p>
               <Button
-                className="w-full bg-white text-primary font-medium hover:bg-gray-100"
+                className="w-full bg-white text-navy font-medium hover:bg-gray-100"
                 onClick={handleBookDemo}
               >
                 <CalendarPlus className="mr-2 h-4 w-4" />

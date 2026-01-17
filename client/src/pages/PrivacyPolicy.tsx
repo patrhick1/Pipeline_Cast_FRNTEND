@@ -66,7 +66,7 @@ export default function PrivacyPolicy() {
         <Card className="mb-6">
           <CardContent className="pt-6">
             <p className="text-gray-700 leading-relaxed">
-              Welcome to Podcast Guest Launch ("PGL," "we," "our," or "us"). We are committed to protecting your personal information and your right to privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our podcast outreach and guest booking platform.
+              Welcome to PipelineCast ( "we," "our," or "us"). We are committed to protecting your personal information and your right to privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our podcast outreach and guest booking platform.
             </p>
             <p className="text-gray-700 leading-relaxed mt-4">
               By using our services, you agree to the collection and use of information in accordance with this policy. If you do not agree with our policies and practices, please do not use our services.

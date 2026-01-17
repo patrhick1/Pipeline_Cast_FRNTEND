@@ -713,12 +713,12 @@ export default function AdminInbox() {
           </Link>
           <Separator orientation="vertical" className="h-6" />
           <div className="flex items-center gap-2">
-            <Mail className="h-5 w-5 text-indigo-500" />
+            <Mail className="h-5 w-5 text-teal" />
             <h1 className="text-lg font-semibold text-gray-900">Shared Inboxes</h1>
           </div>
         </div>
         <div className="text-sm text-gray-500">
-          Professional podcast booking system
+          PipelineCast Admin Portal
         </div>
       </div>
 

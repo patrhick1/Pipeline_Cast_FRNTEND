@@ -74,7 +74,7 @@ export default function TermsOfService() {
         <Card className="mb-6">
           <CardContent className="pt-6">
             <p className="text-gray-700 leading-relaxed">
-              These Terms of Service ("Terms") govern your use of Podcast Guest Launch ("PGL," "we," "our," or "us") 
+              These Terms of Service ("Terms") govern your use of PipelineCast ( "we," "our," or "us") 
               and our podcast outreach and guest booking platform services (the "Services"). By accessing or using our 
               Services, you agree to be bound by these Terms. If you disagree with any part of these terms, you may not 
               access our Services.
@@ -114,7 +114,7 @@ export default function TermsOfService() {
           </CardHeader>
           <CardContent className="space-y-4">
             <p className="text-gray-700">
-              Podcast Guest Launch provides a platform that helps individuals and businesses:
+              Pipeline Cast provides a platform that helps individuals and businesses:
             </p>
             <ul className="list-disc pl-6 space-y-2 text-gray-700">
               <li>Create professional media kits for podcast appearances</li>
@@ -230,8 +230,8 @@ export default function TermsOfService() {
             <div>
               <h3 className="font-semibold text-gray-900 mb-2">Our Intellectual Property</h3>
               <p className="text-gray-700">
-                The Services and their original content, features, and functionality are owned by Podcast Guest Launch 
-                and are protected by international copyright, trademark, patent, trade secret, and other intellectual 
+                The Services and their original content, features, and functionality are owned by Pipeline Cast
+                and are protected by international copyright, trademark, patent, trade secret, and other intellectual
                 property laws.
               </p>
             </div>
@@ -377,8 +377,8 @@ export default function TermsOfService() {
             <div>
               <h3 className="font-semibold text-gray-900 mb-2">Limitation of Liability</h3>
               <p className="text-gray-700">
-                TO THE MAXIMUM EXTENT PERMITTED BY LAW, PODCAST GUEST LAUNCH SHALL NOT BE LIABLE FOR ANY INDIRECT, 
-                INCIDENTAL, SPECIAL, CONSEQUENTIAL, OR PUNITIVE DAMAGES, OR ANY LOSS OF PROFITS OR REVENUES, WHETHER 
+                TO THE MAXIMUM EXTENT PERMITTED BY LAW, PIPELINE CAST SHALL NOT BE LIABLE FOR ANY INDIRECT,
+                INCIDENTAL, SPECIAL, CONSEQUENTIAL, OR PUNITIVE DAMAGES, OR ANY LOSS OF PROFITS OR REVENUES, WHETHER
                 INCURRED DIRECTLY OR INDIRECTLY, OR ANY LOSS OF DATA, USE, GOODWILL, OR OTHER INTANGIBLE LOSSES.
               </p>
             </div>
@@ -388,8 +388,8 @@ export default function TermsOfService() {
             <div>
               <h3 className="font-semibold text-gray-900 mb-2">Indemnification</h3>
               <p className="text-gray-700">
-                You agree to indemnify and hold harmless Podcast Guest Launch and its affiliates from any claims, 
-                damages, losses, liabilities, and expenses arising from your use of the Services or violation of these 
+                You agree to indemnify and hold harmless Pipeline Cast and its affiliates from any claims,
+                damages, losses, liabilities, and expenses arising from your use of the Services or violation of these
                 Terms.
               </p>
             </div>
@@ -437,8 +437,8 @@ export default function TermsOfService() {
             <div>
               <h3 className="font-semibold text-gray-900 mb-2">Entire Agreement</h3>
               <p className="text-gray-700">
-                These Terms, together with our Privacy Policy, constitute the entire agreement between you and Podcast 
-                Guest Launch regarding the use of our Services.
+                These Terms, together with our Privacy Policy, constitute the entire agreement between you and Pipeline
+                Cast regarding the use of our Services.
               </p>
             </div>
           </CardContent>
@@ -459,19 +459,16 @@ export default function TermsOfService() {
             
             <div className="bg-gray-50 rounded-lg p-4 space-y-2">
               <p className="text-gray-700">
-                <strong>Email:</strong> legal@podcastguestlaunch.com
+                <strong>Email:</strong> legal@pipelinecast.co
               </p>
               <p className="text-gray-700">
-                <strong>Support:</strong> support@podcastguestlaunch.com
+                <strong>Support:</strong> support@pipelinecast.co
               </p>
               <p className="text-gray-700">
-                <strong>Website:</strong> www.podcastguestlaunch.com
+                <strong>Website:</strong> www.pipelinecast.co
               </p>
               <p className="text-gray-700">
-                <strong>Mailing Address:</strong><br />
-                Podcast Guest Launch<br />
-                [Your Business Address]<br />
-                [City, State ZIP]
+                <strong>Company:</strong> Pipeline Cast (Remote)
               </p>
             </div>
           </CardContent>
@@ -479,7 +476,7 @@ export default function TermsOfService() {
 
         {/* Footer */}
         <div className="text-center py-8 text-sm text-gray-600">
-          <p>© {new Date().getFullYear()} Podcast Guest Launch. All rights reserved.</p>
+          <p>© {new Date().getFullYear()} Pipeline Cast. All rights reserved.</p>
           <div className="mt-2 space-x-4">
             <Link href="/terms">
               <a className="hover:text-primary">Terms of Service</a>

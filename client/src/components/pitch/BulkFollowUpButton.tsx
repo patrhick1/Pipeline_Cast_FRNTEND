@@ -198,7 +198,7 @@ export function BulkFollowUpButton({
             action: (
               <Button
                 size="sm"
-                onClick={() => window.open('https://calendly.com/alex-podcastguestlaunch/30min', '_blank')}
+                onClick={() => window.open('https://calendly.com/paschal-pipelinecast/30min', '_blank')}
               >
                 Book Demo
               </Button>
@@ -217,7 +217,7 @@ export function BulkFollowUpButton({
       <Button
         size={size}
         variant={variant}
-        className={`${className} ${variant === 'default' ? 'bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white' : ''}`}
+        className={`${className} ${variant === 'default' ? 'bg-gradient-to-r from-navy to-teal hover:from-navy-700 hover:to-teal-600 text-white' : ''}`}
         onClick={() => setShowBulkDialog(true)}
         disabled={disabled || isGenerating}
       >
@@ -230,7 +230,7 @@ export function BulkFollowUpButton({
         <DialogContent className="sm:max-w-[650px]">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Sparkles className="h-5 w-5 text-purple-600" />
+              <Sparkles className="h-5 w-5 text-teal" />
               Bulk Generate Follow-ups
             </DialogTitle>
             <DialogDescription>
@@ -290,7 +290,7 @@ export function BulkFollowUpButton({
             {/* Loading Spinner */}
             {isGenerating && (
               <div className="flex items-center justify-center gap-3 py-4">
-                <Loader2 className="h-6 w-6 animate-spin text-purple-600" />
+                <Loader2 className="h-6 w-6 animate-spin text-teal" />
                 <p className="text-sm text-gray-700 font-medium">AI is generating follow-up pitches...</p>
               </div>
             )}
@@ -371,7 +371,7 @@ export function BulkFollowUpButton({
               <Button
                 onClick={handleBulkGenerate}
                 disabled={isGenerating}
-                className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white"
+                className="bg-gradient-to-r from-navy to-teal hover:from-navy-700 hover:to-teal-600 text-white"
               >
                 {isGenerating ? (
                   <>

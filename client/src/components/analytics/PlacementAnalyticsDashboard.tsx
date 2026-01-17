@@ -142,7 +142,7 @@ export default function PlacementAnalyticsDashboard({ campaignId, days = 30 }: P
               <CardTitle className="text-sm font-medium text-gray-600">
                 Avg Time to Publish
               </CardTitle>
-              <Clock className="w-5 h-5 text-purple-600" />
+              <Clock className="w-5 h-5 text-teal-600" />
             </div>
           </CardHeader>
           <CardContent>

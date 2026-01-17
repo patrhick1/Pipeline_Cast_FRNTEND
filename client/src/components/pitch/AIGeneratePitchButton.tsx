@@ -133,7 +133,7 @@ export function AIGeneratePitchButton({
             action: (
               <Button 
                 size="sm" 
-                onClick={() => window.open('https://calendly.com/alex-podcastguestlaunch/30min', '_blank')}
+                onClick={() => window.open('https://calendly.com/paschal-pipelinecast/30min', '_blank')}
               >
                 Book Demo
               </Button>
@@ -152,7 +152,7 @@ export function AIGeneratePitchButton({
       <Button
         size={size}
         variant={variant}
-        className={`${className} ${variant === 'default' ? 'bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white' : ''}`}
+        className={`${className} ${variant === 'default' ? 'bg-gradient-to-r from-navy to-teal hover:from-navy-700 hover:to-teal-600 text-white' : ''}`}
         onClick={() => setShowTemplateDialog(true)}
         disabled={isGenerating}
       >
@@ -174,7 +174,7 @@ export function AIGeneratePitchButton({
         <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Zap className="h-5 w-5 text-purple-600" />
+              <Zap className="h-5 w-5 text-teal" />
               Generate AI Pitch
             </DialogTitle>
             <DialogDescription>
@@ -263,7 +263,7 @@ export function AIGeneratePitchButton({
             <Button
               onClick={handleGeneratePitch}
               disabled={isGenerating}
-              className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white"
+              className="bg-gradient-to-r from-navy to-teal hover:from-navy-700 hover:to-teal-600 text-white"
             >
               {isGenerating ? (
                 <>

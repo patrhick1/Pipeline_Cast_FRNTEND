@@ -75,8 +75,8 @@ export const STATUS_COLORS: Record<PlacementStatus, string> = {
   responded: 'bg-blue-100 text-blue-800',
   follow_up: 'bg-yellow-100 text-yellow-800',
   interested: 'bg-green-100 text-green-800',
-  form_submitted: 'bg-purple-100 text-purple-800', // Added distinct purple color
-  scheduled: 'bg-indigo-100 text-indigo-800',
+  form_submitted: 'bg-gold-100 text-gold-800', // Added distinct gold color
+  scheduled: 'bg-navy-100 text-navy-800',
   recorded: 'bg-pink-100 text-pink-800',
   published: 'bg-teal-100 text-teal-800',
   paid: 'bg-emerald-100 text-emerald-800',
@@ -93,8 +93,8 @@ export const STATUS_DOT_COLORS: Record<PlacementStatus, string> = {
   responded: 'bg-blue-500',
   follow_up: 'bg-yellow-500',
   interested: 'bg-green-500',
-  form_submitted: 'bg-purple-500', // Added dot color
-  scheduled: 'bg-indigo-500',
+  form_submitted: 'bg-gold-500', // Added dot color
+  scheduled: 'bg-navy-500',
   recorded: 'bg-pink-500',
   published: 'bg-teal-500',
   paid: 'bg-emerald-500',
@@ -152,14 +152,14 @@ export const statusConfig: Record<PlacementStatus | 'default', StatusConfig> = {
   form_submitted: { // Added configuration object
     label: 'Form Submitted',
     icon: FileText,
-    color: 'bg-purple-100 text-purple-800',
-    dotColor: 'bg-purple-500'
+    color: 'bg-gold-100 text-gold-800',
+    dotColor: 'bg-gold-500'
   },
   scheduled: {
     label: 'Scheduled',
     icon: Calendar,
-    color: 'bg-indigo-100 text-indigo-800',
-    dotColor: 'bg-indigo-500'
+    color: 'bg-navy-100 text-navy-800',
+    dotColor: 'bg-navy-500'
   },
   recorded: {
     label: 'Recorded',

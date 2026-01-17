@@ -571,7 +571,7 @@ export default function PublicMediaKitPage() {
                      <CardTitle className="text-2xl font-semibold text-slate-700 text-center">Key Achievements</CardTitle>
                    </CardHeader>
                    <CardContent>
-                     <ul className="list-disc list-inside text-slate-600 space-y-2 marker:text-purple-600">
+                     <ul className="list-disc list-inside text-slate-600 space-y-2 marker:text-teal">
                         {mediaKit.key_achievements.map((achievement, index) => (
                             <li key={index} className="ml-2">{achievement}</li>
                         ))}

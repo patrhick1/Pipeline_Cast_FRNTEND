@@ -170,7 +170,7 @@ export function useConversation(campaignId: string, isOnboarding: boolean = fals
       // Add initial bot message
       const welcomeMessage: Message = {
         id: `bot-${Date.now()}`,
-        text: data.initial_message || "Hi! I'm here to help you create an amazing podcast guest profile. Don't worry about getting everything perfect - you'll be able to edit your media kit after I generate it for you. Let's start with your name - what should I call you?",
+        text: data.initial_message || "Hi! I'm here to help you create your podcast guest profile for PipelineCast. Don't worry about getting everything perfect - you'll be able to edit your media kit after I generate it for you. Let's start with your name - what should I call you?",
         sender: 'bot',
         timestamp: new Date()
       };
@@ -499,7 +499,7 @@ export function useConversation(campaignId: string, isOnboarding: boolean = fals
       // Set new initial message
       const welcomeMessage: Message = {
         id: `bot-${Date.now()}`,
-        text: data.initial_message || "Hi! I'm here to help you create an amazing podcast guest profile. Don't worry about getting everything perfect - you'll be able to edit your media kit after I generate it for you. Let's start with your name - what should I call you?",
+        text: data.initial_message || "Hi! I'm here to help you create your podcast guest profile for PipelineCast. Don't worry about getting everything perfect - you'll be able to edit your media kit after I generate it for you. Let's start with your name - what should I call you?",
         sender: 'bot',
         timestamp: new Date()
       };

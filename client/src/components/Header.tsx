@@ -10,12 +10,12 @@ import {
 } from "@/components/ui/tooltip";
 import { CalendarPlus, Mic, AlertTriangle, ClipboardList } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
-import logoName from "@/img/PGL logo name.png";
+import logoWordmark from "@/img/pipeline icon and wordmark.png";
 
 const pageInfo: Record<string, { title: string; description: string }> = {
   "/": {
     title: "Dashboard",
-    description: "Welcome back! Here's your podcast booking overview.",
+    description: "Welcome back! Here's your pipeline performance overview.",
   },
   "/discover": {
     title: "Discover Podcasts",
@@ -51,13 +51,13 @@ export default function Header() {
   const [location] = useLocation();
   const { user } = useAuth();
   
-  const currentPage = pageInfo[location] || { 
-    title: "PGL", 
-    description: "Professional podcast booking system" 
+  const currentPage = pageInfo[location] || {
+    title: "PipelineCast",
+    description: "Podcast-to-Pipeline Performance Portal"
   };
 
   const handleBookDemo = () => {
-    window.open("https://calendly.com/alex-podcastguestlaunch/30min", "_blank");
+    window.open("https://calendly.com/paschal-pipelinecast/30min", "_blank");
   };
 
 
@@ -68,16 +68,13 @@ export default function Header() {
           <div className="flex items-center min-w-0 flex-1 pl-14 lg:pl-0">
             {/* Responsive Logo: Text with mic icon on mobile, image on desktop */}
             <div className="flex items-center flex-shrink-0">
-              {/* Mobile Logo (text with mic icon) */}
+              {/* Mobile Logo (text) */}
               <div className="flex items-center sm:hidden">
-                <span className="text-lg font-bold text-gray-900">P</span>
-                <Mic className="h-5 w-5 mx-0.5 text-purple-600" />
-                <span className="text-lg font-bold text-gray-900">dcast</span>
-                <span className="text-lg font-semibold text-purple-600 ml-1">Guest</span>
-                <span className="text-lg font-semibold text-gray-900 ml-1">Launch</span>
+                <span className="text-lg font-bold text-navy">Pipeline</span>
+                <span className="text-lg font-semibold text-teal ml-0.5">Cast</span>
               </div>
               {/* Desktop Logo (original image) */}
-              <img src={logoName} alt="Podcast Guest Launch" className="h-8 hidden sm:block" />
+              <img src={logoWordmark} alt="PipelineCast" className="h-8 hidden sm:block" />
             </div>
             <div className="ml-3 sm:ml-6 min-w-0">
               <h2 className="text-base sm:text-xl font-semibold text-gray-700 truncate">{currentPage.title}</h2>

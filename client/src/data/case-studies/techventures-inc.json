@@ -12,7 +12,7 @@
   },
   "icp": "Tech entrepreneurs and startup founders",
   "challenge": "Michael was spending countless hours researching podcasts with minimal success. His self-written pitches had poor response rates, and he struggled to maintain consistent outreach while running his company.",
-  "solution": "PGL's DFY service eliminated all manual work. We researched 50+ tech-focused podcasts, created personalized pitches highlighting Michael's startup journey, and managed all communication. Michael's involvement: approving shows once per week.",
+  "solution": "PipelineCast's DFY service eliminated all manual work. We researched 50+ tech-focused podcasts, created personalized pitches highlighting Michael's startup journey, and managed all communication. Michael's involvement: approving shows once per week.",
   "timeline": "3 months from kickoff to 7th booking",
   "metrics": {
     "bookings": 7,
@@ -40,14 +40,14 @@
   ],
   "quotes": [
     {
-      "text": "Before PGL, I spent hours researching podcasts with minimal results. Now I just approve their recommendations and show up to record. It's been a game-changer. The speaking gigs alone paid for the service multiple times over.",
+      "text": "Before PipelineCast, I spent hours researching podcasts with minimal results. Now I just approve their recommendations and show up to record. It's been a game-changer. The speaking gigs alone paid for the service multiple times over.",
       "attribution": "Michael Chen, CEO at TechVentures Inc",
       "featured": true
     }
   ],
-  "testimonialImage": "/PGL Assets/Client Case Studies/Website (1000x800)/2.png",
+  "testimonialImage": "/PipelineCast Assets/Client Case Studies/Website (1000x800)/2.png",
   "before": {
-    "title": "Before PGL",
+    "title": "Before PipelineCast",
     "points": [
       "10+ hours/week researching podcasts",
       "5% response rate on pitches",
@@ -57,7 +57,7 @@
     ]
   },
   "after": {
-    "title": "After PGL",
+    "title": "After PipelineCast",
     "points": [
       "15 minutes/week reviewing matches",
       "26% response rate with pro pitches",
@@ -70,7 +70,7 @@
   "publishedDate": "2024-10-22",
   "tags": ["Technology", "Startups", "CEO", "B2B"],
   "seo": {
-    "title": "TechVentures Inc Case Study: 7 Bookings in 3 Months | PGL",
-    "description": "How TechVentures Inc CEO went from 10+ hours/week of DIY outreach to 7 confirmed bookings and $12K in speaking gigs using PGL's DFY service."
+    "title": "TechVentures Inc Case Study: 7 Bookings in 3 Months | PipelineCast",
+    "description": "How TechVentures Inc CEO went from 10+ hours/week of DIY outreach to 7 confirmed bookings and $12K in speaking gigs using PipelineCast's DFY service."
   }
 }

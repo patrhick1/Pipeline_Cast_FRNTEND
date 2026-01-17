@@ -155,7 +155,7 @@ export default function Sidebar({ onClose }: SidebarProps = {}) {
             <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center transition-transform group-hover:scale-105">
                 <Mic className="text-primary-foreground h-5 w-5" />
             </div>
-            <h1 className="text-xl font-bold text-sidebar-foreground group-hover:text-primary transition-colors">PGL</h1>
+            <h1 className="text-xl font-bold text-sidebar-foreground group-hover:text-accent transition-colors">PipelineCast</h1>
         </Link>
         {onClose && (
           <Button

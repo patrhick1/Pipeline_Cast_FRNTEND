@@ -147,7 +147,7 @@ export function BulkApproveButton({
             action: (
               <Button
                 size="sm"
-                onClick={() => window.open('https://calendly.com/alex-podcastguestlaunch/30min', '_blank')}
+                onClick={() => window.open('https://calendly.com/paschal-pipelinecast/30min', '_blank')}
               >
                 Book Demo
               </Button>

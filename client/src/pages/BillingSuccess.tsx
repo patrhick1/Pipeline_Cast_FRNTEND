@@ -126,7 +126,7 @@ export default function BillingSuccess() {
             <Card className="mb-8">
               <CardHeader>
                 <div className="flex items-center space-x-2">
-                  <PartyPopper className="h-5 w-5 text-purple-600" />
+                  <PartyPopper className="h-5 w-5 text-teal" />
                   <CardTitle>Subscription Activated</CardTitle>
                 </div>
                 <CardDescription>

@@ -164,14 +164,14 @@ export const PitchReviewCard = ({ task, onApprove, onReject, isActionPending }: 
 
           {/* Pitch Preview */}
           {pitchPreview && (
-            <div className="intelligence-item p-3 bg-purple-50 border border-purple-200 rounded-md">
-              <strong className="flex items-center text-purple-800">
-                <Check className="h-4 w-4 mr-2 text-purple-600"/> Pitch Preview
+            <div className="intelligence-item p-3 bg-teal/5 border border-teal/20 rounded-md">
+              <strong className="flex items-center text-teal">
+                <Check className="h-4 w-4 mr-2 text-teal"/> Pitch Preview
               </strong>
-              <p className="reasoning text-xs text-purple-900 italic mt-1 pl-6">
+              <p className="reasoning text-xs text-teal-900 italic mt-1 pl-6">
                 "{pitchPreview}"
                 {task.pitch_body_full && task.pitch_body_full.length > 500 && (
-                  <span className="text-xs text-purple-700 not-italic">...truncated</span>
+                  <span className="text-xs text-teal-700 not-italic">...truncated</span>
                 )}
               </p>
             </div>

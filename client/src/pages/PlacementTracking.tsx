@@ -973,7 +973,7 @@ export default function PlacementTracking() {
                 <p className="text-xs text-gray-500">Completed Placements</p>
                 <div className="text-xl font-bold">{summaryLoading ? <Skeleton className="h-6 w-12"/> : (analyticsSummary?.completed_placements || 0)}</div>
               </div>
-              <PodcastIcon className="h-5 w-5 text-purple-600" />
+              <PodcastIcon className="h-5 w-5 text-teal" />
             </div>
           </CardContent>
         </Card>

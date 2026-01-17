@@ -177,7 +177,7 @@ export default function PricingPlans({ currentPlan, onSelectPlan, isLoading }: P
           </div>
           <h2 className="text-4xl md:text-5xl lg:text-6xl font-bold">
             Choose Your Path to
-            <span className="bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent"> Podcast Success</span>
+            <span className="bg-gradient-to-r from-primary to-teal bg-clip-text text-transparent"> Podcast Success</span>
           </h2>
           <p className="text-lg md:text-xl text-center text-muted-foreground mt-6 max-w-2xl">
             Whether you prefer to manage your own outreach or have our expert team handle everything, we have the perfect plan for you.
@@ -242,12 +242,12 @@ const PlanCard = ({ plan, currentPlan, onSelect, isLoading }: PlanCardProps) => 
       {isHighlighted && (
         <>
           <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-primary to-transparent"></div>
-          <div className="absolute top-1/2 inset-x-0 mx-auto h-32 -rotate-45 w-full bg-gradient-to-r from-primary to-purple-600 rounded-full blur-[8rem] opacity-20 -z-10"></div>
+          <div className="absolute top-1/2 inset-x-0 mx-auto h-32 -rotate-45 w-full bg-gradient-to-r from-primary to-teal rounded-full blur-[8rem] opacity-20 -z-10"></div>
         </>
       )}
       
       {plan.badge && (
-        <div className="absolute top-4 right-4 bg-gradient-to-r from-primary to-purple-600 text-white px-3 py-1 rounded-full text-xs font-semibold">
+        <div className="absolute top-4 right-4 bg-gradient-to-r from-primary to-teal text-white px-3 py-1 rounded-full text-xs font-semibold">
           {plan.badge}
         </div>
       )}
@@ -302,7 +302,7 @@ const PlanCard = ({ plan, currentPlan, onSelect, isLoading }: PlanCardProps) => 
           size="lg" 
           className={cn(
             "w-full",
-            isHighlighted && !isCurrentPlan && "bg-gradient-to-r from-primary to-purple-600 hover:from-primary/90 hover:to-purple-600/90"
+            isHighlighted && !isCurrentPlan && "bg-gradient-to-r from-primary to-teal hover:from-primary/90 hover:to-teal/90"
           )}
           variant={isHighlighted && !isCurrentPlan ? "default" : isCurrentPlan ? "secondary" : "outline"}
           onClick={onSelect}
@@ -377,12 +377,12 @@ const Plan = ({ plan, billingPeriod, currentPlan, onSelect, isLoading }: PlanPro
       {isHighlighted && (
         <>
           <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-primary to-transparent"></div>
-          <div className="absolute top-1/2 inset-x-0 mx-auto h-32 -rotate-45 w-full bg-gradient-to-r from-primary to-purple-600 rounded-full blur-[8rem] opacity-20 -z-10"></div>
+          <div className="absolute top-1/2 inset-x-0 mx-auto h-32 -rotate-45 w-full bg-gradient-to-r from-primary to-teal rounded-full blur-[8rem] opacity-20 -z-10"></div>
         </>
       )}
       
       {plan.badge && (
-        <div className="absolute top-4 right-4 bg-gradient-to-r from-primary to-purple-600 text-white px-3 py-1 rounded-full text-xs font-semibold">
+        <div className="absolute top-4 right-4 bg-gradient-to-r from-primary to-teal text-white px-3 py-1 rounded-full text-xs font-semibold">
           {plan.badge}
         </div>
       )}
@@ -442,7 +442,7 @@ const Plan = ({ plan, billingPeriod, currentPlan, onSelect, isLoading }: PlanPro
           size="lg" 
           className={cn(
             "w-full",
-            isHighlighted && !isCurrentPlan && "bg-gradient-to-r from-primary to-purple-600 hover:from-primary/90 hover:to-purple-600/90"
+            isHighlighted && !isCurrentPlan && "bg-gradient-to-r from-primary to-teal hover:from-primary/90 hover:to-teal/90"
           )}
           variant={isHighlighted && !isCurrentPlan ? "default" : isCurrentPlan ? "secondary" : "outline"}
           onClick={onSelect}

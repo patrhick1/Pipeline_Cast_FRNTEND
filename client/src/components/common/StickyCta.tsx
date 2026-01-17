@@ -38,10 +38,10 @@ export default function StickyCta() {
       >
         <Button
           size="lg"
-          className="bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg hover:shadow-xl transition-all px-6 py-6 rounded-2xl"
+          className="bg-teal hover:bg-teal-600 text-navy shadow-lg hover:shadow-xl transition-all px-6 py-6 rounded-2xl font-semibold"
         >
           <Phone className="mr-2 h-5 w-5" />
-          Book Free Call
+          Book a Call
         </Button>
       </a>
     </div>

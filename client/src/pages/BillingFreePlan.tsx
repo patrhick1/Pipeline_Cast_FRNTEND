@@ -171,12 +171,12 @@ export default function BillingFreePlan() {
               Have questions about our plans?
             </p>
             <div className="flex items-center justify-center gap-4">
-              <a href="https://calendly.com/alex-podcastguestlaunch/30min" target="_blank" rel="noopener noreferrer">
+              <a href="https://calendly.com/paschal-pipelinecast/30min" target="_blank" rel="noopener noreferrer">
                 <Button size="lg" variant="outline">
                   Schedule a Demo
                 </Button>
               </a>
-              <a href="mailto:support@podcastguestlaunch.com">
+              <a href="mailto:support@pipelinecast.co">
                 <Button size="lg" variant="ghost">
                   Contact Support
                 </Button>

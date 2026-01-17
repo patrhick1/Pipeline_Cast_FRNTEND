@@ -6,7 +6,7 @@ export default function AboutUs() {
           About Us
         </h1>
         <p className="text-lg text-gray-600">
-          Learn about the team behind Podcast Guest Launch.
+          Learn about the team behind PipelineCast.
         </p>
         {/* Content will be added in Phase 6 */}
       </div>

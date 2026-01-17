@@ -11,7 +11,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useLocation, Link } from "wouter"; // Added Link
 import { useToast } from "@/hooks/use-toast";
 import { queryClient } from "@/lib/queryClient"; // appQueryClient is not needed, use queryClient directly
-import logoName from "@/img/PGL logo name.png";
+import logoWordmark from "@/img/pipeline icon and wordmark.png";
 
 export default function Landing() {
   const [email, setEmail] = useState("");
@@ -53,7 +53,7 @@ export default function Landing() {
       window.history.replaceState({}, document.title, window.location.pathname);
     } else if (message === "google-signup-success") {
       toast({
-        title: "Welcome to PGL! 🎉",
+        title: "Welcome to PipelineCast! 🎉",
         description: "Your account has been created. Check your email for an onboarding link to set up your profile.",
         duration: 8000
       });
@@ -256,13 +256,13 @@ export default function Landing() {
 
   return (
     <>
-      <div className="min-h-screen bg-gradient-to-br from-indigo-600 to-indigo-800">
+      <div className="min-h-screen bg-gradient-to-br from-navy to-navy-800">
         <div className="min-h-screen flex items-center justify-center p-4">
           <div className="max-w-md w-full">
             <Card className="shadow-2xl">
               <CardContent className="p-8">
                 <div className="text-center mb-8">
-                  <img src={logoName} alt="Podcast Guest Launch" className="h-12 mx-auto mb-4" />
+                  <img src={logoWordmark} alt="PipelineCast" className="h-12 mx-auto mb-4" />
                   <h1 className="text-2xl font-bold text-gray-900 mb-2">Welcome Back</h1>
                   <p className="text-gray-600">Sign in to your account</p>
                 </div>

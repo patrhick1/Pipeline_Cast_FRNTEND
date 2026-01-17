@@ -55,7 +55,7 @@ const PLAN_DETAILS = {
   paid_premium: {
     name: "Premium Plan",
     icon: Crown,
-    color: "bg-purple-100 text-purple-700",
+    color: "bg-teal/10 text-teal",
     description: "Advanced features for podcast professionals"
   }
 };

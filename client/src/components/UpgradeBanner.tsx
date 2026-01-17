@@ -29,7 +29,7 @@ export function UpgradeBanner({ featureName, featureDescription }: UpgradeBanner
 
   return (
     <div className="sticky top-0 z-50 animate-in slide-in-from-top duration-300">
-      <div className="bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-600 text-white shadow-lg">
+      <div className="bg-gradient-to-r from-navy via-teal to-navy text-white shadow-lg">
         <div className="max-w-7xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between gap-4">
             {/* Left side - Feature info */}
@@ -42,7 +42,7 @@ export function UpgradeBanner({ featureName, featureDescription }: UpgradeBanner
                   <h3 className="font-semibold text-lg">Unlock {featureName}</h3>
                   <Crown className="w-5 h-5 text-yellow-300" />
                 </div>
-                <p className="text-sm text-indigo-100">{featureDescription}</p>
+                <p className="text-sm text-teal-100">{featureDescription}</p>
               </div>
             </div>
 
@@ -51,7 +51,7 @@ export function UpgradeBanner({ featureName, featureDescription }: UpgradeBanner
               <Button
                 onClick={handleUpgrade}
                 size="lg"
-                className="bg-white text-indigo-600 hover:bg-indigo-50 font-semibold shadow-lg hidden sm:flex"
+                className="bg-white text-navy hover:bg-teal/10 font-semibold shadow-lg hidden sm:flex"
               >
                 Upgrade Now
                 <ArrowRight className="ml-2 h-4 w-4" />
@@ -59,7 +59,7 @@ export function UpgradeBanner({ featureName, featureDescription }: UpgradeBanner
               <Button
                 onClick={handleUpgrade}
                 size="sm"
-                className="bg-white text-indigo-600 hover:bg-indigo-50 font-semibold shadow-lg sm:hidden"
+                className="bg-white text-navy hover:bg-teal/10 font-semibold shadow-lg sm:hidden"
               >
                 Upgrade
               </Button>
@@ -76,7 +76,7 @@ export function UpgradeBanner({ featureName, featureDescription }: UpgradeBanner
       </div>
 
       {/* Subtle gradient border at bottom */}
-      <div className="h-1 bg-gradient-to-r from-transparent via-indigo-400 to-transparent" />
+      <div className="h-1 bg-gradient-to-r from-transparent via-teal-400 to-transparent" />
     </div>
   );
 }

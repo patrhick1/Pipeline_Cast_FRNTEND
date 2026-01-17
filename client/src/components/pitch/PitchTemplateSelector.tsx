@@ -146,7 +146,7 @@ export function PitchTemplateSelector({ matchId, mediaName, campaignName, onSucc
       case 'casual':
         return 'bg-yellow-100 text-yellow-700';
       case 'enthusiastic':
-        return 'bg-purple-100 text-purple-700';
+        return 'bg-teal/10 text-teal';
       default:
         return 'bg-gray-100 text-gray-700';
     }

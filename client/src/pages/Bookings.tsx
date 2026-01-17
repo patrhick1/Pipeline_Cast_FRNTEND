@@ -42,7 +42,7 @@ export default function Bookings() {
       <StickyCta />
 
       {/* Hero Section */}
-      <section className="pt-24 pb-12 bg-gradient-to-b from-indigo-50 to-white">
+      <section className="pt-24 pb-12 bg-gradient-to-b from-navy/5 to-white">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6">
             Performance-Based Podcast Booking
@@ -106,7 +106,7 @@ export default function Bookings() {
             ].map((item) => (
               <div key={item.step} className="bg-white rounded-lg border-2 border-gray-200 p-6 flex gap-4">
                 <div className="flex-shrink-0">
-                  <div className="w-12 h-12 bg-indigo-600 text-white rounded-full flex items-center justify-center font-bold text-xl">
+                  <div className="w-12 h-12 bg-navy text-white rounded-full flex items-center justify-center font-bold text-xl">
                     {item.step}
                   </div>
                 </div>
@@ -138,22 +138,22 @@ export default function Bookings() {
                 <tr className="border-b-2 border-gray-200">
                   <th className="text-left py-4 px-4 text-gray-900 font-semibold">Feature</th>
                   <th className="text-center py-4 px-4 text-gray-600 font-semibold">Do-It-Yourself Approach</th>
-                  <th className="text-center py-4 px-4 text-indigo-600 font-semibold bg-indigo-50">PGL Done-For-You Service</th>
+                  <th className="text-center py-4 px-4 text-teal font-semibold bg-teal/10">PipelineCast Done-For-You</th>
                 </tr>
               </thead>
               <tbody>
                 {[
-                  { feature: "Time Investment", diy: "20+ hours/week", pgl: "10 min/week" },
-                  { feature: "Success Rate", diy: "2-5% typical", pgl: "17.5% guaranteed" },
-                  { feature: "Pitches Written", diy: "You handle all", pgl: "We handle all" },
-                  { feature: "Follow-ups", diy: "You track", pgl: "We track" },
-                  { feature: "Bookings", diy: "Hope for best", pgl: "5 guaranteed" },
-                  { feature: "Cost", diy: "Your time", pgl: "$1,000" }
+                  { feature: "Time Investment", diy: "20+ hours/week", pipelinecast: "10 min/week" },
+                  { feature: "Success Rate", diy: "2-5% typical", pipelinecast: "17.5% guaranteed" },
+                  { feature: "Pitches Written", diy: "You handle all", pipelinecast: "We handle all" },
+                  { feature: "Follow-ups", diy: "You track", pipelinecast: "We track" },
+                  { feature: "Bookings", diy: "Hope for best", pipelinecast: "5 guaranteed" },
+                  { feature: "Cost", diy: "Your time", pipelinecast: "$1,000" }
                 ].map((row, index) => (
                   <tr key={index} className="border-b border-gray-100">
                     <td className="py-4 px-4 font-medium text-gray-900">{row.feature}</td>
                     <td className="py-4 px-4 text-center text-gray-600">{row.diy}</td>
-                    <td className="py-4 px-4 text-center font-medium text-indigo-600 bg-indigo-50">{row.pgl}</td>
+                    <td className="py-4 px-4 text-center font-medium text-teal bg-teal/10">{row.pipelinecast}</td>
                   </tr>
                 ))}
               </tbody>
@@ -201,7 +201,7 @@ export default function Bookings() {
             Don't just take our word for it
           </p>
           <Link href="/case-studies">
-            <Button variant="outline" className="text-indigo-600 border-indigo-600 hover:bg-indigo-50">
+            <Button variant="outline" className="text-teal border-teal hover:bg-teal/10">
               View Client Success Stories
               <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
@@ -210,13 +210,13 @@ export default function Bookings() {
       </section>
 
       {/* Final CTA */}
-      <section className="py-20 bg-gradient-to-r from-indigo-700 to-indigo-900 text-white">
+      <section className="py-20 bg-gradient-to-r from-navy to-navy-800 text-white">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <h2 className="text-3xl md:text-4xl font-bold mb-4">
             Ready to Launch Your Podcast Guest Career?
           </h2>
-          <p className="text-xl mb-8 text-indigo-100 max-w-2xl mx-auto">
-            Join entrepreneurs and thought leaders who use PGL to get booked on top podcasts
+          <p className="text-xl mb-8 text-gray-300 max-w-2xl mx-auto">
+            Join entrepreneurs and thought leaders who use PipelineCast to get booked on top podcasts
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <a href={siteData.bookingUrl} target="_blank" rel="noopener noreferrer">
@@ -225,7 +225,7 @@ export default function Bookings() {
                 <ArrowRight className="ml-2 h-5 w-5" />
               </Button>
             </a>
-            <a href="mailto:hello@podcastguestlaunch.com">
+            <a href="mailto:hello@pipelinecast.co">
               <Button size="lg" variant="outline" className="border-white text-white bg-transparent hover:bg-white/10 px-8 py-6 text-lg">
                 Contact Sales
               </Button>

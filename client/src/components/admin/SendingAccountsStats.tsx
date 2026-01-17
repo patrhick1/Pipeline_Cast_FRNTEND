@@ -39,8 +39,8 @@ export function SendingAccountsStats({ stats }: SendingAccountsStatsProps) {
       title: 'Total Capacity',
       value: totalDailyCapacity.toLocaleString(),
       icon: TrendingUp,
-      color: 'text-purple-600',
-      bgColor: 'bg-purple-100'
+      color: 'text-teal-600',
+      bgColor: 'bg-teal-100'
     },
     {
       title: 'Near Limit',

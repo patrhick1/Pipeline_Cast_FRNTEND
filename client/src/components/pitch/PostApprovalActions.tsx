@@ -112,8 +112,8 @@ export function PostApprovalActions({
                   <Button
                     size="sm"
                     variant="default"
-                    className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white"
-                    onClick={() => window.open('https://calendly.com/alex-podcastguestlaunch/30min', '_blank')}
+                    className="bg-gradient-to-r from-navy to-teal hover:from-navy-700 hover:to-teal-600 text-white"
+                    onClick={() => window.open('https://calendly.com/paschal-pipelinecast/30min', '_blank')}
                   >
                     <Sparkles className="h-4 w-4 mr-2" />
                     Book Demo

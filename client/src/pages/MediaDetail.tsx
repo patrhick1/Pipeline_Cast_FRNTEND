@@ -434,7 +434,7 @@ export default function MediaDetail() {
                   
                   {episode.ai_episode_summary && (
                     <div className="mt-3 pt-2 border-t">
-                      <h5 className="text-xs font-semibold text-gray-700 mb-0.5 flex items-center"><Brain className="h-3.5 w-3.5 mr-1.5 text-purple-600" />AI Summary</h5>
+                      <h5 className="text-xs font-semibold text-gray-700 mb-0.5 flex items-center"><Brain className="h-3.5 w-3.5 mr-1.5 text-teal" />AI Summary</h5>
                       <p className="text-sm text-gray-600 line-clamp-3">{episode.ai_episode_summary}</p>
                     </div>
                   )}

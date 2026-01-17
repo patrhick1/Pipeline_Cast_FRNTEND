@@ -25,10 +25,10 @@ export function LockedOverlay({
         className="absolute inset-0 bg-white/95 backdrop-blur-sm flex items-center justify-center z-40 cursor-pointer group transition-all hover:bg-white/98"
       >
         <div className="text-center">
-          <div className="inline-flex items-center justify-center w-12 h-12 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-full mb-3 group-hover:scale-110 transition-transform">
+          <div className="inline-flex items-center justify-center w-12 h-12 bg-gradient-to-r from-navy to-teal rounded-full mb-3 group-hover:scale-110 transition-transform">
             <Lock className="w-6 h-6 text-white" />
           </div>
-          <p className="text-sm font-medium text-gray-700 group-hover:text-indigo-600 transition-colors">
+          <p className="text-sm font-medium text-gray-700 group-hover:text-teal transition-colors">
             {message}
           </p>
         </div>
@@ -38,13 +38,13 @@ export function LockedOverlay({
 
   return (
     <div
-      className="absolute inset-0 bg-gradient-to-br from-white/95 via-indigo-50/95 to-purple-50/95 backdrop-blur-sm flex items-center justify-center z-40 cursor-pointer group transition-all"
+      className="absolute inset-0 bg-gradient-to-br from-white/95 via-navy/5 to-teal/5 backdrop-blur-sm flex items-center justify-center z-40 cursor-pointer group transition-all"
     >
       <div className="max-w-md mx-auto text-center px-6 py-8">
         {/* Lock Icon with Gradient Background */}
         <div className="relative inline-flex items-center justify-center mb-6">
-          <div className="absolute inset-0 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-full blur-xl opacity-50 group-hover:opacity-70 transition-opacity" />
-          <div className="relative bg-gradient-to-r from-indigo-600 to-purple-600 rounded-full p-6 group-hover:scale-110 transition-transform">
+          <div className="absolute inset-0 bg-gradient-to-r from-navy to-teal rounded-full blur-xl opacity-50 group-hover:opacity-70 transition-opacity" />
+          <div className="relative bg-gradient-to-r from-navy to-teal rounded-full p-6 group-hover:scale-110 transition-transform">
             <Lock className="w-10 h-10 text-white" />
           </div>
         </div>
@@ -61,7 +61,7 @@ export function LockedOverlay({
         <Button
           onClick={handleClick}
           size="lg"
-          className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white shadow-lg group-hover:shadow-xl transition-shadow"
+          className="bg-gradient-to-r from-navy to-teal hover:from-navy-700 hover:to-teal-600 text-white shadow-lg group-hover:shadow-xl transition-shadow"
         >
           Upgrade to Access
           <ArrowRight className="ml-2 h-5 w-5" />

@@ -1,8 +1,8 @@
 {
   "company": {
-    "name": "Podcast Guest Launch",
-    "tagline": "Scale podcast guest appearances without the grind",
-    "contactEmail": "hello@podcastguestlaunch.com",
+    "name": "PipelineCast",
+    "tagline": "Podcast-to-Pipeline for Fractional CFOs",
+    "contactEmail": "support@pipelinecast.co",
     "phone": "",
     "address": {
       "street": "",
@@ -12,7 +12,7 @@
       "country": "USA"
     }
   },
-  "bookingUrl": "https://calendly.com/alex-podcastguestlaunch/30min",
+  "bookingUrl": "https://calendly.com/paschal-pipelinecast/30min",
   "social": {
     "twitter": "",
     "linkedin": "",

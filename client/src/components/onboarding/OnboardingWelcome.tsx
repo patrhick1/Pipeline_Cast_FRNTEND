@@ -68,12 +68,12 @@ export default function OnboardingWelcome({ userName, campaignId, onComplete }: 
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-navy/5 via-white to-teal/5 flex items-center justify-center p-4">
       <div className="max-w-4xl w-full space-y-8 animate-in fade-in duration-500">
         {/* Hero Section */}
         <div className="text-center space-y-4">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-100 rounded-full mb-4">
-            <Sparkles className="h-8 w-8 text-blue-600" />
+          <div className="inline-flex items-center justify-center w-16 h-16 bg-teal/10 rounded-full mb-4">
+            <Sparkles className="h-8 w-8 text-teal" />
           </div>
           
           <h1 className="text-4xl font-bold text-gray-900">
@@ -110,7 +110,7 @@ export default function OnboardingWelcome({ userName, campaignId, onComplete }: 
               style={{ transitionDelay: `${index * 100}ms` }}
             >
               <div className="flex items-start gap-4">
-                <div className="flex-shrink-0 w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center text-blue-600">
+                <div className="flex-shrink-0 w-10 h-10 bg-teal/10 rounded-lg flex items-center justify-center text-teal">
                   {benefit.icon}
                 </div>
                 <div>
@@ -123,7 +123,7 @@ export default function OnboardingWelcome({ userName, campaignId, onComplete }: 
         </div>
 
         {/* Process Overview */}
-        <Card className="p-8 bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-100">
+        <Card className="p-8 bg-gradient-to-r from-teal/5 to-navy/5 border-2 border-teal/20">
           <h2 className="text-lg font-semibold text-gray-900 mb-4">Here's how it works:</h2>
           <div className="space-y-3">
             <div className="flex items-center gap-3">
@@ -150,7 +150,7 @@ export default function OnboardingWelcome({ userName, campaignId, onComplete }: 
           <Button 
             size="lg" 
             onClick={onComplete}
-            className="px-8 py-6 text-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-200 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
+            className="px-8 py-6 text-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-200 bg-gradient-to-r from-navy to-teal hover:from-navy-700 hover:to-teal-700"
           >
             Get Started
             <ArrowRight className="ml-2 h-5 w-5" />

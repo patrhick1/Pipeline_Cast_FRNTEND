@@ -161,7 +161,7 @@ export function BatchAIGenerateButton({
             action: (
               <Button 
                 size="sm" 
-                onClick={() => window.open('https://calendly.com/alex-podcastguestlaunch/30min', '_blank')}
+                onClick={() => window.open('https://calendly.com/paschal-pipelinecast/30min', '_blank')}
               >
                 Book Demo
               </Button>
@@ -180,7 +180,7 @@ export function BatchAIGenerateButton({
       <Button
         size={size}
         variant={variant}
-        className={`${className} ${variant === 'default' ? 'bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white' : ''}`}
+        className={`${className} ${variant === 'default' ? 'bg-gradient-to-r from-navy to-teal hover:from-navy-700 hover:to-teal-600 text-white' : ''}`}
         onClick={handleInitiateBatchGenerate}
         disabled={isGenerating || matches.length === 0}
       >
@@ -193,7 +193,7 @@ export function BatchAIGenerateButton({
         <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Sparkles className="h-5 w-5 text-purple-600" />
+              <Sparkles className="h-5 w-5 text-teal" />
               Select Pitch Template
             </DialogTitle>
             <DialogDescription>
@@ -240,7 +240,7 @@ export function BatchAIGenerateButton({
             <Button variant="outline" onClick={() => setShowTemplateSelection(false)}>
               Cancel
             </Button>
-            <Button onClick={handleBatchGenerate} className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700">
+            <Button onClick={handleBatchGenerate} className="bg-gradient-to-r from-navy to-teal hover:from-navy-700 hover:to-teal-600">
               <Sparkles className="h-4 w-4 mr-2" />
               Generate Pitches
             </Button>
@@ -253,7 +253,7 @@ export function BatchAIGenerateButton({
         <DialogContent className="sm:max-w-[400px]" hideCloseButton={isGenerating}>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Sparkles className="h-5 w-5 text-purple-600" />
+              <Sparkles className="h-5 w-5 text-teal" />
               {isGenerating ? 'Generating Pitches...' : 'Generation Complete'}
             </DialogTitle>
             <DialogDescription>
@@ -267,7 +267,7 @@ export function BatchAIGenerateButton({
           <div className="space-y-4 py-6">
             {isGenerating && (
               <div className="flex flex-col items-center justify-center space-y-4">
-                <Loader2 className="h-12 w-12 animate-spin text-purple-600" />
+                <Loader2 className="h-12 w-12 animate-spin text-teal" />
                 <p className="text-sm text-gray-600">
                   Please wait while AI generates your pitches...
                 </p>

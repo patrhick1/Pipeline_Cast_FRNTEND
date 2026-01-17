@@ -91,8 +91,8 @@ export function UpgradePrompt({
   return (
     <Card className="border-2 border-dashed border-gray-300">
       <CardHeader className="text-center">
-        <div className="mx-auto w-16 h-16 bg-gradient-to-br from-purple-100 to-blue-100 rounded-full flex items-center justify-center mb-4">
-          <Icon className="h-8 w-8 text-purple-600" />
+        <div className="mx-auto w-16 h-16 bg-gradient-to-br from-teal-100 to-navy-100 rounded-full flex items-center justify-center mb-4">
+          <Icon className="h-8 w-8 text-teal-600" />
         </div>
         <CardTitle>Upgrade to {planName}</CardTitle>
         <CardDescription>

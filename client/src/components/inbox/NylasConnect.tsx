@@ -188,8 +188,8 @@ export default function NylasConnect({ status }: NylasConnectProps) {
               </div>
             </div>
             <div className="flex gap-3">
-              <div className="p-2 bg-purple-100 rounded-lg h-fit">
-                <Shield className="w-5 h-5 text-purple-600" />
+              <div className="p-2 bg-teal-100 rounded-lg h-fit">
+                <Shield className="w-5 h-5 text-teal-600" />
               </div>
               <div>
                 <p className="font-medium text-sm">Secure & Private</p>

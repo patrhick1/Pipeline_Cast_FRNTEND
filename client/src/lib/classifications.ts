@@ -55,7 +55,7 @@ export const CLASSIFICATION_TYPES: ClassificationConfig[] = [
   {
     value: 'Pay-to-Play',
     label: 'Pay-to-Play',
-    color: 'bg-purple-500',
+    color: 'bg-gold-500',
     category: 'ai'
   },
   {
@@ -68,7 +68,7 @@ export const CLASSIFICATION_TYPES: ClassificationConfig[] = [
   {
     value: 'Follow up',
     label: 'Follow up',
-    color: 'bg-cyan-500',
+    color: 'bg-teal-500',
     category: 'workflow'
   },
   {
@@ -80,7 +80,7 @@ export const CLASSIFICATION_TYPES: ClassificationConfig[] = [
   {
     value: 'Pending review',
     label: 'Pending review',
-    color: 'bg-indigo-500',
+    color: 'bg-navy-500',
     category: 'workflow'
   },
   {

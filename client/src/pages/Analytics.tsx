@@ -66,7 +66,7 @@ export default function Analytics() {
             <div>
               <h1 className="text-3xl font-bold text-gray-900">Analytics & Insights</h1>
               <p className="text-gray-600 mt-2">
-                Track your podcast outreach performance and placement metrics
+                Track your podcast-to-pipeline performance and placement metrics
               </p>
             </div>
           </div>
@@ -163,7 +163,7 @@ export default function Analytics() {
               <CardTitle className="text-sm font-medium text-gray-600">
                 Interested Responses
               </CardTitle>
-              <Users className="w-5 h-5 text-purple-600" />
+              <Users className="w-5 h-5 text-teal" />
             </div>
           </CardHeader>
           <CardContent>
